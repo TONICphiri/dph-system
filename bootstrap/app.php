@@ -18,6 +18,11 @@ return Application::configure(basePath: dirname(__DIR__))
     })
     ->withExceptions(function (Exceptions $exceptions) {
         $exceptions->render(function (\Throwable $exception, $request) {
+            if ($exception instanceof \Illuminate\Auth\AuthenticationException
+                || $exception instanceof ValidationException) {
+                return null;
+            }
+
             $errorService = app(ErrorReferenceService::class);
             $referenceId = $errorService->logError($exception);
 

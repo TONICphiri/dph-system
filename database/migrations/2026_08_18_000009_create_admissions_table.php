@@ -18,9 +18,10 @@ return new class extends Migration
             $table->foreignId('facility_id')->constrained()->nullifyOnDelete();
             $table->string('ward_name')->nullable();
             $table->string('bed_number')->nullable();
-            $table->text('admission_reason');
+            $table->enum('admission_type', ['emergency', 'elective', 'urgent', 'transfer'])->default('elective');
+            $table->text('admission_reason')->nullable();
             $table->foreignId('admitted_by_user_id')->constrained('users')->nullifyOnDelete();
-            $table->timestamp('admitted_at');
+            $table->timestamp('admitted_at')->useCurrent();
             $table->text('discharge_summary')->nullable();
             $table->enum('discharge_status', ['Improved', 'Not Improved', 'Referred', 'Left Against Medical Advice', 'Deceased'])->nullable();
             $table->foreignId('discharged_by_user_id')->nullable()->constrained('users')->nullifyOnDelete();

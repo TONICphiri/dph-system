@@ -27,7 +27,7 @@ return new class extends Migration
             $table->foreignId('dispensed_by_user_id')->nullable()->constrained('users')->nullifyOnDelete();
             $table->timestamp('dispensed_at')->nullable();
             $table->text('notes')->nullable();
-            $table->timestamp('prescribed_at');
+            $table->timestamp('prescribed_at')->useCurrent();
             $table->timestamps();
             $table->index(['patient_id', 'status']);
             $table->index(['encounter_id', 'status']);

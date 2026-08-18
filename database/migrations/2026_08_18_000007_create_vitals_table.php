@@ -27,7 +27,7 @@ return new class extends Migration
             $table->enum('priority_level', ['Low', 'Medium', 'High', 'Emergency'])->default('Low');
             $table->text('notes')->nullable();
             $table->foreignId('recorded_by_user_id')->nullable()->constrained('users')->nullifyOnDelete();
-            $table->timestamp('recorded_at');
+            $table->timestamp('recorded_at')->useCurrent();
             $table->timestamps();
             $table->index(['patient_id', 'recorded_at']);
             $table->index('priority_level');

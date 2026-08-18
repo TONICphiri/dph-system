@@ -247,15 +247,17 @@ class PatientController extends Controller
     /**
      * Save triage/vitals data for patient
      */
-    public function saveTriage(Request $request, Patient $patient)
+    public function saveTriage(Request $request)
     {
         $this->authorize('triage_patient');
+        
+        $patient = Patient::findOrFail($request->patient_id);
         
         $validated = $request->validate([
             'weight' => 'nullable|numeric|min:0',
             'temperature' => 'nullable|numeric|min:30|max:45',
             'systolic_bp' => 'nullable|numeric|min:50|max:250',
-            'diastolic_bp' => 'nullable|numeric|min:30|max=200',
+            'diastolic_bp' => 'nullable|numeric|min:30|max:200',
             'heart_rate' => 'nullable|numeric|min:30|max:200',
             'respiratory_rate' => 'nullable|numeric|min:10|max:50',
             'oxygen_saturation' => 'nullable|numeric|min:50|max:100',
@@ -279,10 +281,16 @@ class PatientController extends Controller
             }
             
             // Create or update vitals
+            $vitalsData = array_merge($validated, [
+                'patient_id' => $patient->id,
+                'recorded_by_user_id' => $this->user()->id,
+                'recorded_at' => now(),
+            ]);
+
             if ($existingVitals) {
-                $existingVitals->update($validated);
+                $existingVitals->update($vitalsData);
             } else {
-                $encounter->vitals()->create($validated);
+                $encounter->vitals()->create($vitalsData);
             }
             
             DB::commit();
@@ -315,9 +323,11 @@ class PatientController extends Controller
     /**
      * Save consultation data for patient
      */
-    public function saveConsultation(Request $request, Patient $patient)
+    public function saveConsultation(Request $request)
     {
         $this->authorize('consult_patient');
+        
+        $patient = Patient::findOrFail($request->patient_id);
         
         $validated = $request->validate([
             'chief_complaint' => 'required|string',
@@ -384,13 +394,15 @@ class PatientController extends Controller
     /**
      * Dispense medication and update inventory
      */
-    public function dispenseMedication(Request $request, Patient $patient)
+    public function dispenseMedication(Request $request)
     {
         $this->authorize('dispense_medication');
         
+        $patient = Patient::findOrFail($request->patient_id);
+        
         $validated = $request->validate([
             'prescription_id' => 'required|exists:prescriptions,id',
-            'quantity_dispensed' => 'required|integer|min:1',
+            'quantity_dispensed' => 'nullable|integer|min:1',
         ]);
         
         try {
@@ -398,17 +410,21 @@ class PatientController extends Controller
             
             $prescription = \App\Models\Prescription::find($validated['prescription_id']);
             
+            $quantityDispensed = $validated['quantity_dispensed'] ?? $prescription->quantity;
+            
             // Update prescription dispensed status
             $prescription->update([
-                'dispensed' => true,
+                'status' => 'dispensed',
                 'dispensed_at' => now(),
-                'quantity_dispensed' => $validated['quantity_dispensed'],
+                'dispensed_by_user_id' => $this->user()->id,
+                'quantity' => $quantityDispensed,
             ]);
             
             // Update inventory
-            $inventoryItem = \App\Models\Inventory::where('medication', $prescription->medication)->first();
+            $inventoryItem = \App\Models\Inventory::where('medication_name', $prescription->medication_name)->first();
             if ($inventoryItem) {
-                $inventoryItem->decrement('stock', $validated['quantity_dispensed']);
+                $inventoryItem->decrement('current_stock', $quantityDispensed);
+                $inventoryItem->updateStatus();
             }
             
             // Create dispensing record or log
@@ -449,9 +465,11 @@ class PatientController extends Controller
     /**
      * Create admission record for patient
      */
-    public function createAdmission(Request $request, Patient $patient)
+    public function createAdmission(Request $request)
     {
         $this->authorize('admit_patient');
+        
+        $patient = Patient::findOrFail($request->patient_id);
         
         $validated = $request->validate([
             'bed_number' => 'required|string',
@@ -462,23 +480,24 @@ class PatientController extends Controller
         try {
             DB::beginTransaction();
             
-            // Create admission record
-            $admission = $patient->admissions()->create([
-                'facility_id' => $this->user()->facility_id,
-                'user_id' => $this->user()->id,
-                'bed_number' => $validated['bed_number'],
-                'ward' => $validated['ward'],
-                'admission_type' => $validated['admission_type'],
-                'admitted_at' => now(),
-                'status' => 'active',
-            ]);
-            
-            // Create initial encounter for admission
+            // Create encounter for the admission
             $encounter = $patient->encounters()->create([
                 'encounter_type' => 'admission',
                 'facility_id' => $this->user()->facility_id,
                 'user_id' => $this->user()->id,
                 'encounter_date' => now(),
+                'status' => 'admitted',
+            ]);
+            
+            // Create admission record
+            $admission = $patient->admissions()->create([
+                'encounter_id' => $encounter->id,
+                'facility_id' => $this->user()->facility_id,
+                'admitted_by_user_id' => $this->user()->id,
+                'bed_number' => $validated['bed_number'],
+                'ward_name' => $validated['ward'],
+                'admission_type' => $validated['admission_type'],
+                'admitted_at' => now(),
                 'status' => 'active',
             ]);
             
@@ -500,9 +519,11 @@ class PatientController extends Controller
     /**
      * Record ward round observations
      */
-    public function wardRound(Request $request, Patient $patient)
+    public function wardRound(Request $request)
     {
         $this->authorize('update_patient');
+        
+        $patient = Patient::findOrFail($request->patient_id);
         
         $validated = $request->validate([
             'temperature' => 'nullable|numeric|min:30|max:45',
@@ -624,7 +645,7 @@ class PatientController extends Controller
     /**
      * Show sync status
      */
-    public function syncStatus(Patient $patient)
+    public function syncStatus()
     {
         $this->authorize('view_sync_queue');
         
@@ -650,11 +671,12 @@ class PatientController extends Controller
         
         try {
             $syncQueue = \App\Models\SyncQueue::create([
+                'facility_id' => $this->user()->facility_id,
                 'record_type' => $validated['record_type'],
                 'record_id' => $validated['record_id'],
-                'data' => json_encode($validated['data']),
+                'action' => 'create',
+                'payload' => json_decode($validated['data'], true),
                 'status' => 'pending',
-                'created_by' => $this->user()->id,
             ]);
             
             // Attempt immediate sync (in production, this would be handled by background job)
@@ -699,9 +721,9 @@ class PatientController extends Controller
     }
     
 /**
-     * Search patient by DHP ID
+     * Remove the specified patient from storage
      */
-    public function searchByDhpId(Request $request)
+    public function destroy(Patient $patient)
     {
         $this->authorize('delete_patient');
 

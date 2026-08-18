@@ -26,7 +26,7 @@ return new class extends Migration
             $table->enum('status', ['active', 'inactive', 'deceased'])->default('active');
             $table->boolean('is_child')->default(false)->comment('Flag for pediatric patients without National ID');
             $table->foreignId('guardian_id')->nullable()->constrained('guardians')->cascadeOnDelete();
-            $table->timestamp('registered_at');
+            $table->timestamp('registered_at')->useCurrent();
             $table->foreignId('registered_by_facility_id')->nullable()->constrained('facilities')->nullifyOnDelete();
             $table->foreignId('registered_by_user_id')->nullable()->constrained('users')->nullifyOnDelete();
             $table->timestamps();

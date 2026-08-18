@@ -40,12 +40,12 @@
                                 <tbody>
                                     @foreach($prescriptions as $prescription)
                                         <tr>
-                                            <td>{{ $prescription->medication }}</td>
-                                            <td>{{ $prescription->strength }}</td>
+                                            <td>{{ $prescription->medication_name }}</td>
+                                            <td>{{ $prescription->dose }}</td>
                                             <td>{{ $prescription->quantity }}</td>
-                                            <td>{{ $prescription->dispensed ? $prescription->quantity_dispensed : 'Not dispensed' }}</td>
+                                            <td>{{ $prescription->status === 'dispensed' ? $prescription->quantity : 'Not dispensed' }}</td>
                                             <td>
-                                                @if(!$prescription->dispensed)
+                                                @if($prescription->status !== 'dispensed')
                                                     <form action="{{ route('pharmacy.dispense', ['patient' => $patient->id, 'prescription_id' => $prescription->id]) }}" method="POST" class="d-inline">
                                                         @method('POST')
                                                         @csrf
@@ -71,9 +71,9 @@
                                 <div class="col-md-4 mb-3">
                                     <div class="card">
                                         <div class="card-body">
-                                            <h5 class="card-title">{{ $item->medication }}</h5>
-                                            <p class="card-text">Stock: {{ $item->stock }}</p>
-                                            @if($item->stock < 10)
+                                            <h5 class="card-title">{{ $item->medication_name }}</h5>
+                                            <p class="card-text">Stock: {{ $item->current_stock }}</p>
+                                            @if($item->current_stock < 10)
                                                 <p class="text-danger">Low stock!</p>
                                             @endif
                                         </div>

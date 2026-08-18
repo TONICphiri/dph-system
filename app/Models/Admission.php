@@ -16,6 +16,7 @@ class Admission extends Model
         'facility_id',
         'ward_name',
         'bed_number',
+        'admission_type',
         'admission_reason',
         'admitted_by_user_id',
         'admitted_at',

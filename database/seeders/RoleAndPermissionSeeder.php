@@ -36,11 +36,13 @@ class RoleAndPermissionSeeder extends Seeder
             // Triage permissions
             'record_vitals',
             'view_vitals',
+            'triage_patient',
 
             // Consultation permissions
             'create_consultation',
             'view_consultations',
             'prescribe_medication',
+            'consult_patient',
 
             // Pharmacy permissions
             'dispense_medication',
@@ -51,6 +53,13 @@ class RoleAndPermissionSeeder extends Seeder
             'admit_patient',
             'manage_admissions',
             'discharge_patient',
+
+            // Patient permissions
+            'update_patient',
+
+            // Sync permissions
+            'view_sync_queue',
+            'upload_sync',
 
             // Facility management
             'manage_facility',
@@ -89,6 +98,7 @@ class RoleAndPermissionSeeder extends Seeder
                 'create_encounter',
                 'record_vitals',
                 'view_vitals',
+                'triage_patient',
             ],
 
             'clinical_officer' => [
@@ -103,6 +113,9 @@ class RoleAndPermissionSeeder extends Seeder
                 'view_prescriptions',
                 'record_vitals',
                 'view_vitals',
+                'consult_patient',
+                'update_patient',
+                'view_sync_queue',
             ],
 
             'doctor' => [
@@ -121,6 +134,10 @@ class RoleAndPermissionSeeder extends Seeder
                 'record_vitals',
                 'view_vitals',
                 'view_reports',
+                'consult_patient',
+                'update_patient',
+                'view_sync_queue',
+                'upload_sync',
             ],
 
             'pharmacist' => [
@@ -130,6 +147,7 @@ class RoleAndPermissionSeeder extends Seeder
                 'view_prescriptions',
                 'manage_inventory',
                 'view_reports',
+                'view_sync_queue',
             ],
 
             'ward_nurse' => [
@@ -139,7 +157,9 @@ class RoleAndPermissionSeeder extends Seeder
                 'view_prescriptions',
                 'record_vitals',
                 'view_vitals',
+                'update_patient',
                 'view_reports',
+                'view_sync_queue',
             ],
 
             'hospital_administrator' => [

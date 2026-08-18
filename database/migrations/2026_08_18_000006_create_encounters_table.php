@@ -16,15 +16,15 @@ return new class extends Migration
             $table->foreignId('patient_id')->constrained()->cascadeOnDelete();
             $table->foreignId('facility_id')->constrained()->nullifyOnDelete();
             $table->foreignId('user_id')->nullable()->constrained()->nullifyOnDelete();
-            $table->enum('encounter_type', ['OPD', 'Emergency', 'Inpatient', 'Follow-up'])->default('OPD');
-            $table->enum('status', ['registered', 'triaged', 'consultation', 'completed', 'admitted'])->default('registered');
+            $table->enum('encounter_type', ['OPD', 'Emergency', 'Inpatient', 'Follow-up', 'triage', 'consultation', 'admission', 'ward_round'])->default('OPD');
+            $table->enum('status', ['registered', 'triaged', 'consultation', 'completed', 'admitted', 'active'])->default('registered');
             $table->text('chief_complaint')->nullable();
             $table->text('history_of_present_illness')->nullable();
             $table->text('examination_findings')->nullable();
             $table->text('diagnosis')->nullable();
             $table->text('treatment_plan')->nullable();
             $table->boolean('requires_admission')->default(false);
-            $table->timestamp('encounter_date');
+            $table->timestamp('encounter_date')->useCurrent();
             $table->timestamp('completed_at')->nullable();
             $table->timestamps();
             $table->index(['patient_id', 'encounter_date']);

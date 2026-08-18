@@ -60,14 +60,14 @@
                                 </tbody>
                             </table>
                         </div>
-                    @else>
+                    @else
                         <div class="alert alert-info">
                             No sync queue items.
                         </div>
                     @endif
                     
                     <div class="mt-4">
-                        <a href="{{ route('patients.show', auth()->patient() ?? 1) }}" class="btn btn-outline-secondary">
+                        <a href="{{ route('dashboard') }}" class="btn btn-outline-secondary">
                             <i class="bi bi-arrow-left me-2"></i> Back to Dashboard
                         </a>
                     </div>
