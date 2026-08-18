@@ -22,7 +22,7 @@ class StorePatientRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'national_id' => 'required|string|max:20|unique:patients,national_id',
+            'national_id' => 'nullable|string|max:20|unique:patients,national_id',
             'first_name' => 'required|string|max:100',
             'last_name' => 'required|string|max:100',
             'date_of_birth' => 'nullable|date|before:today',
@@ -44,11 +44,11 @@ class StorePatientRequest extends FormRequest
     public function messages(): array
     {
         return [
-            'national_id.required' => 'National ID is required',
             'national_id.unique' => 'A patient with this National ID already exists',
             'first_name.required' => 'First name is required',
             'last_name.required' => 'Last name is required',
             'date_of_birth.before' => 'Date of birth must be in the past',
+            'guardian_id.exists' => 'Selected guardian does not exist',
         ];
     }
 }

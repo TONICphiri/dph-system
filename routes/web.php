@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\PatientController;
 use App\Http\Controllers\ProfileController;
 use Illuminate\Support\Facades\Route;
@@ -86,9 +87,8 @@ Route::get('/', function () {
     return redirect('/dashboard');
 });
 
-Route::get('/dashboard', function () {
-    return view('dashboard');
-})->middleware(['auth', 'verified'])->name('dashboard');
+Route::get('/dashboard', DashboardController::class)
+    ->middleware(['auth', 'verified'])->name('dashboard');
 
 Route::middleware('auth')->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
@@ -97,6 +97,7 @@ Route::middleware('auth')->group(function () {
 
     // Patient Management Routes
     Route::resource('patients', PatientController::class);
+    Route::get('/api/patients/search-by-national-id', [PatientController::class, 'searchByNationalId'])->name('patients.search.national-id');
     Route::get('/patients/{patient}/qr-code', [PatientController::class, 'showQrCode'])->name('patients.qr-code');
     Route::get('/api/patients/{patient}/qr-code', [PatientController::class, 'getQrCode'])->name('patients.qr-code.api');
 });

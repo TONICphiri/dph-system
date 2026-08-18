@@ -15,6 +15,21 @@
                     <x-nav-link :href="route('dashboard')" :active="request()->routeIs('dashboard')">
                         {{ __('Dashboard') }}
                     </x-nav-link>
+                    @can('view_patients')
+                        <x-nav-link :href="route('patients.index')" :active="request()->routeIs('patients.*')">
+                            {{ __('Patients') }}
+                        </x-nav-link>
+                    @endcan
+                    @can('dispense_medication')
+                        <x-nav-link :href="route('patients.index')" :active="request()->routeIs('pharmacy*')">
+                            {{ __('Pharmacy') }}
+                        </x-nav-link>
+                    @endcan
+                    @can('view_reports')
+                        <x-nav-link :href="route('dashboard')" :active="false">
+                            {{ __('Reports') }}
+                        </x-nav-link>
+                    @endcan
                 </div>
             </div>
 
@@ -70,6 +85,11 @@
             <x-responsive-nav-link :href="route('dashboard')" :active="request()->routeIs('dashboard')">
                 {{ __('Dashboard') }}
             </x-responsive-nav-link>
+            @can('view_patients')
+                <x-responsive-nav-link :href="route('patients.index')" :active="request()->routeIs('patients.*')">
+                    {{ __('Patients') }}
+                </x-responsive-nav-link>
+            @endcan
         </div>
 
         <!-- Responsive Settings Options -->

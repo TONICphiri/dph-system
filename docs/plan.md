@@ -31,9 +31,9 @@ This plan restates your proposal's methodology and the system blueprint as four 
 
 | Screen | Purpose | Status |
 |---|---|---|
-| Dashboard | Role-aware stat cards (patients today, pending triage, waiting consultation, admitted, low stock) + quick actions | Placeholder only — needs rebuild |
-| Navigation | Role-gated links to Dashboard, Patients, and module-specific screens | Pending |
-| Patient Registration | National ID lookup *before* registering, to prevent duplicate records | Create/index/show/edit exist; ID lookup missing |
+| Dashboard | Role-aware stat cards (patients today, pending triage, waiting consultation, admitted, low stock) + quick actions | ✅ Built — `DashboardController` + stat cards, quick actions, recent patients/encounters |
+| Navigation | Role-gated links to Dashboard, Patients, and module-specific screens | ✅ Patients (gated), Pharmacy (gated), Reports (gated) |
+| Patient Registration | National ID lookup *before* registering, to prevent duplicate records | ✅ Create/index/show/edit exist + National ID lookup box on create screen (`patients.search.national-id` API) |
 | Triage / Consultation / Pharmacy / Admission | Functional but not yet refined with user feedback | Exist, iterate during Sprint construction |
 
 **Done-when:** Clinicians/nurses can walk through registration → triage → consultation → pharmacy on the prototype and give feedback that gets incorporated before construction "hardens" the screens.
@@ -49,8 +49,8 @@ This plan restates your proposal's methodology and the system blueprint as four 
 - [x] `patients.create/store` with automatic DHP ID generation
 - [x] Duplicate National ID guard
 - [x] `patients.index` search (name / national ID / DHP ID) with pagination
-- [ ] National ID lookup on the create screen (the API exists — wire it into the UI so clerks search *before* registering)
-- [ ] Pediatric flow: guardian selection + child record creation, linked to the mother as guardian (per your blueprint's national identification model)
+- [x] National ID lookup on the create screen (wired via `patients.search.national-id` API — clerks search *before* registering)
+- [x] Pediatric flow: guardian selection + child record creation (nullable national_id for children; select existing guardian or register new guardian inline; guardians seeded)
 
 ### Sprint 2 — QR Integration
 **Purpose:** QR codes are what make return visits fast — without this, every visit degrades back to manual National ID lookup.

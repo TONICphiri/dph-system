@@ -13,7 +13,7 @@ return new class extends Migration
     {
         Schema::create('patients', function (Blueprint $table) {
             $table->id();
-            $table->string('national_id')->unique()->comment('National ID of patient');
+            $table->string('national_id')->nullable()->unique()->comment('National ID of patient');
             $table->string('dhp_id')->unique()->comment('Digital Health Passport ID (DHP-YYYY-XXXXXXXX)');
             $table->string('first_name');
             $table->string('last_name');

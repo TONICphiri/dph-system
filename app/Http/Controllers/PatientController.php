@@ -65,14 +65,30 @@ class PatientController extends Controller
         $this->authorize('create_patient');
 
         // Check if patient already exists by National ID
-        $existingPatient = Patient::where('national_id', $request->national_id)->first();
-        if ($existingPatient) {
-            return redirect()->route('patients.show', $existingPatient)
-                          ->with('info', 'Patient record already exists');
+        if ($request->filled('national_id')) {
+            $existingPatient = Patient::where('national_id', $request->national_id)->first();
+            if ($existingPatient) {
+                return redirect()->route('patients.show', $existingPatient)
+                              ->with('info', 'Patient record already exists');
+            }
         }
 
         try {
             DB::beginTransaction();
+
+            // For children, allow inline guardian creation if no guardian selected
+            $guardianId = $request->guardian_id;
+            if ($request->boolean('is_child') && !$guardianId && $request->filled('guardian_first_name')) {
+                $guardian = Guardian::create([
+                    'first_name' => $request->guardian_first_name,
+                    'last_name' => $request->guardian_last_name,
+                    'national_id' => $request->guardian_national_id,
+                    'phone_number' => $request->guardian_phone_number,
+                    'relationship' => $request->guardian_relationship ?? 'Mother',
+                    'status' => 'active',
+                ]);
+                $guardianId = $guardian->id;
+            }
 
             // Generate DHP ID
             $dhpId = Patient::generateDhpId();
@@ -90,7 +106,7 @@ class PatientController extends Controller
                 'village' => $request->village,
                 'district' => $request->district,
                 'is_child' => $request->boolean('is_child', false),
-                'guardian_id' => $request->guardian_id,
+                'guardian_id' => $guardianId,
                 'registered_at' => now(),
                 'registered_by_facility_id' => $this->user()->facility_id,
                 'registered_by_user_id' => $this->user()->id,

@@ -3,6 +3,7 @@
 namespace Database\Seeders;
 
 use App\Models\Facility;
+use App\Models\Guardian;
 use App\Models\User;
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
@@ -114,5 +115,24 @@ class DatabaseSeeder extends Seeder
             'facility_id' => $ndirandeFacility->id,
         ]);
         $ndirandePharmacist->assignRole('pharmacist');
+
+        // Seed sample guardians for the pediatric flow
+        Guardian::create([
+            'first_name' => 'Grace',
+            'last_name' => 'Phiri',
+            'national_id' => 'A765432101',
+            'phone_number' => '+265 888 765 432',
+            'relationship' => 'Mother',
+            'status' => 'active',
+        ]);
+
+        Guardian::create([
+            'first_name' => 'James',
+            'last_name' => 'Mbewe',
+            'national_id' => 'A123987654',
+            'phone_number' => '+265 999 123 456',
+            'relationship' => 'Father',
+            'status' => 'active',
+        ]);
     }
 }
