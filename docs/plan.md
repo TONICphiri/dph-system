@@ -1,140 +1,138 @@
-# Digital Health Passport System — RAD Implementation Plan
+# Digital Health Passport System — Phased Development Plan (RAD)
 
-**Prepared for:** Malawi University of Business and Applied Sciences (MUBAS)
-**Project:** Nationwide Digital Health Passport System
+**Project:** Web-Based Digital Health Passport for Ndirande Community Health Centre
+**Institution:** Malawi University of Business and Applied Sciences (MUBAS)
 **Methodology:** Rapid Application Development (RAD)
-**Stack:** Laravel 12 (PHP 8.2), MySQL, Tailwind/Bootstrap, Alpine.js, QR (simple-qrcode), Spatie Permissions
+**Stack:** Laravel 12 (PHP 8.2), MySQL, Tailwind/Bootstrap, Alpine.js, simple-qrcode, Spatie Permissions
+
+This plan restates your proposal's methodology and the system blueprint as four RAD phases, each broken into concrete sprints. Every phase includes **why it exists** (the reasoning a supervisor or examiner will look for), **what it delivers**, and **how to know it's done** — so the plan can be followed step by step, not just read.
 
 ---
 
-## 0. Current Project Status (verified)
+## Phase 1 — Requirements Planning ✅ *Complete*
 
-Everything below has been verified working before this plan was written:
+**Why this phase exists:** RAD starts by fixing scope before any code is written, so that prototyping in Phase 2 has a stable target. For a health system, this phase is also where you protect patients — it's where roles, permissions, and the data model get decided *before* anyone can accidentally expose a record.
 
-- [x] All 64 PHP files lint clean (using `C:\xampp\php\php.exe`)
-- [x] `php artisan route:list` loads all 51 routes
-- [x] 14 migrations run cleanly (`migrate:fresh --force`) on MySQL `dhp_system`
-- [x] Seeders run: 3 facilities, 9 users, 31 permissions, 8 roles
-- [x] All 25 PHPUnit tests pass
-- [x] App serves on `http://127.0.0.1:8000`; login page + error pages render
-- [x] Vite build assets present in `public/build/`
+**What was delivered:**
+- Workflow diagrams and user roles captured in the architecture blueprint (Registration Clerk, Triage Nurse, Clinical Officer/Doctor, Pharmacist, Ward Nurse, Hospital Administrator).
+- Database draft translated into 14 migrations.
+- Role and permission model seeded (8 roles, 31 permissions via Spatie Permissions).
+- Screen sketches turned into a Blade views skeleton.
 
-**Key environment notes:**
-- Use XAMPP PHP: `C:\xampp\php\php.exe` (the `php` on PATH is WinGet 8.4 with no `php.ini`/`mbstring` — breaks Laravel).
-- MySQL has no Windows service; start manually:
-  `Start-Process "C:\xampp\mysql\bin\mysqld.exe" -ArgumentList "--defaults-file=C:\xampp\mysql\bin\my.ini"`
-- Run the server: `C:\xampp\php\php.exe artisan serve --host=127.0.0.1 --port=8000`
+**Done-when:** Migrations run cleanly, seeders populate roles/permissions/users, and the blueprint document is the agreed source of truth. All verified.
 
 ---
 
-## RAD Phase 1 — Requirements Planning  ✅ (DONE)
+## Phase 2 — User Design (Prototyping) 🔄 *In progress*
 
-Source of truth: `system-description-architecture-blueprint.md`
+**Why this phase exists:** RAD's defining feature is that design isn't finalized on paper — it's tested as a working prototype with the actual users (clinicians, nurses) who will use it daily. This is also where your dissertation's qualitative interviews and observations feed back into the interface, so the prototype reflects real workflow, not assumptions.
 
-- [x] Workflow diagrams / user roles captured in blueprint
-- [x] Database draft implemented as 14 migrations
-- [x] Role & permission model seeded (8 roles, 31 permissions)
-- [x] Screen sketches → translated into Blade views skeleton
+**What it delivers:**
 
----
+| Screen | Purpose | Status |
+|---|---|---|
+| Dashboard | Role-aware stat cards (patients today, pending triage, waiting consultation, admitted, low stock) + quick actions | Placeholder only — needs rebuild |
+| Navigation | Role-gated links to Dashboard, Patients, and module-specific screens | Pending |
+| Patient Registration | National ID lookup *before* registering, to prevent duplicate records | Create/index/show/edit exist; ID lookup missing |
+| Triage / Consultation / Pharmacy / Admission | Functional but not yet refined with user feedback | Exist, iterate during Sprint construction |
 
-## RAD Phase 2 — User Design  (PROTOTYPING)
-
-Feedback loop with clinicians/nurses. Prototype screens should be functional before construction hardens them.
-
-### 2.1 Dashboard Prototype (currently placeholder "You're logged in!")
-- Replace `resources/views/dashboard.blade.php` placeholder with:
-  - Role-aware stat cards (patients today, pending triage, waiting consultation, admitted, low stock)
-  - Quick-action buttons per role (Register Patient, Triage, Consultation, Pharmacy, Admissions)
-- Nav (`resources/views/layouts/navigation.blade.php`) gains links: Dashboard, Patients, plus role-gated links.
-
-### 2.2 Patient Registration Prototype
-- Already exists: `patients.create`, `patients.index`, `patients.show`, `patients.edit`
-- Add **National ID lookup** on the create screen (search before registering to avoid duplicates).
-
-### 2.3 Triage / Consultation / Pharmacy / Admission prototypes
-- Screens exist; iterate layout with user feedback during construction.
+**Done-when:** Clinicians/nurses can walk through registration → triage → consultation → pharmacy on the prototype and give feedback that gets incorporated before construction "hardens" the screens.
 
 ---
 
-## RAD Phase 3 — Construction (SPRINTS)
+## Phase 3 — Construction (Sprints)
+
+**Why this phase exists:** This is where the prototype becomes a real, testable system. RAD breaks construction into short sprints so each module can be built, demoed, and refined independently rather than attempting one large build — this matches your 8-week construction window in the proposal timeline.
 
 ### Sprint 1 — Registration
-- [x] `patients.create/store` — register with DHP ID generation (`Patient::generateDhpId()`)
+**Purpose:** This is the entry point for the entire system — every other module depends on a correctly identified, non-duplicated patient record.
+- [x] `patients.create/store` with automatic DHP ID generation
 - [x] Duplicate National ID guard
-- [x] `patients.index` with search (name / national_id / dhp_id), pagination
-- [ ] **Add UI for National ID lookup before registration** (`searchByNationalId` exists as API; add to create screen)
-- [ ] Pediatric flow: guardian selection + child record creation (link to mother as guardian)
+- [x] `patients.index` search (name / national ID / DHP ID) with pagination
+- [ ] National ID lookup on the create screen (the API exists — wire it into the UI so clerks search *before* registering)
+- [ ] Pediatric flow: guardian selection + child record creation, linked to the mother as guardian (per your blueprint's national identification model)
 
 ### Sprint 2 — QR Integration
+**Purpose:** QR codes are what make return visits fast — without this, every visit degrades back to manual National ID lookup.
 - [x] `QrCodeService` (SVG/data URL) + `showQrCode` + `getQrCode` API
-- [ ] Add QR scan/lookup entry on `patients.index` (paste/scan DHP ID → open record)
-- [ ] Verify QR prints on patient show page
+- [ ] QR scan/lookup entry point on `patients.index` (paste/scan DHP ID → open record)
+- [ ] Verify the QR prints correctly on the patient show page
 
 ### Sprint 3 — Triage
-- [x] `patients/triage` GET form + `triage.save` POST (vitals + priority)
-- [x] Vitals written with `patient_id`, `recorded_by_user_id`, `recorded_at`
-- [x] Priority queue concept in blueprint → implement queue ordering on dashboard/consultation list
-- [ ] Abnormal-vitals auto-prioritization (uses `Vital::isAbnormal()`)
+**Purpose:** Triage is the clinical safety layer — it's where abnormal vitals should push a patient up the queue before anything worse happens.
+- [x] Triage GET form + `triage.save` POST (vitals + priority)
+- [x] Vitals recorded with `patient_id`, `recorded_by_user_id`, `recorded_at`
+- [x] Priority queue concept defined in the blueprint
+- [ ] Implement queue ordering on the dashboard/consultation list
+- [ ] Abnormal-vitals auto-prioritization using `Vital::isAbnormal()`
 
 ### Sprint 4 — Consultation
-- [x] `consultation` GET + `consultation.save` POST (complaint, findings, diagnosis, plan, requires_admission)
-- [ ] **Prescription creation inside consultation** — `saveConsultation` currently records notes only; add prescriptions[] inputs → `Prescription` records (medication_name, dose, frequency, quantity, duration, prescribed_at)
-- [ ] Encounter status transitions wired (triaged → consultation → completed)
+**Purpose:** This is the clinical decision-making core — where history, diagnosis, and treatment come together, and where the paper-based system currently fails most (Section 1.1 of your proposal cites fragmented records at referral/consultation as the core problem).
+- [x] Consultation GET + `consultation.save` POST (complaint, findings, diagnosis, plan, admission flag)
+- [ ] Prescription creation *inside* consultation — currently only notes are saved; add `prescriptions[]` inputs to create real `Prescription` records
+- [ ] Wire encounter status transitions: triaged → consultation → completed
 
 ### Sprint 5 — Pharmacy & Inventory
-- [x] `pharmacy` screen lists encounter prescriptions + inventory
-- [x] `pharmacy.dispense` updates prescription `status=dispensed` + decrements `current_stock` + `updateStatus()`
-- [ ] **Inventory management UI** (`manage_inventory` permission): add/edit/restock items, low-stock flags
-- [ ] Only show dispense buttons for pending prescriptions
+**Purpose:** Closes the loop from prescription to medication in hand, and keeps stock counts trustworthy — a stated system objective (reduce duplicate tests/errors, improve medication safety).
+- [x] Pharmacy screen lists encounter prescriptions + inventory
+- [x] `pharmacy.dispense` sets `status=dispensed`, decrements stock
+- [ ] Inventory management UI (`manage_inventory` permission): add/edit/restock, low-stock flags
+- [ ] Only show dispense buttons for prescriptions still pending
 
 ### Sprint 6 — Inpatient (Admission / Ward / Discharge)
-- [x] `admission` form + `admission.create` (creates encounter + admission, correct schema)
-- [x] `ward.round` records observations against latest admission
-- [x] `discharge` POST (final diagnosis, summary, follow-up)
-- [ ] Ward medication administration log (per blueprint §23)
+**Purpose:** Covers the "Inpatient Flow" branch of your blueprint's workflow — patients who need more than an OPD visit.
+- [x] Admission form creates the encounter + admission record
+- [x] Ward round records observations against the latest admission
+- [x] Discharge captures final diagnosis, summary, follow-up
+- [ ] Ward medication administration log (blueprint §23)
 - [ ] Daily progress notes UI
 
 ### Sprint 7 — Synchronization
-- [x] `sync_queue` table + `SyncQueue` model + `sync.status` / `sync.upload` routes
-- [x] `attemptSync()` simulation (95% success)
+**Purpose:** This is what makes the system usable in the low-connectivity, low-resource environment your proposal specifically names as a constraint — hospitals must keep working when the internet doesn't.
+- [x] `sync_queue` table, `SyncQueue` model, `sync.status`/`sync.upload` routes
+- [x] `attemptSync()` simulated (95% success)
 - [ ] Wire sync enqueue into clinical write actions (patients, encounters, vitals, prescriptions, admissions)
-- [ ] Background sync job (`queue:work` / scheduled command) replacing the inline simulation
-- [ ] Sync status dashboard widget
+- [ ] Replace the inline simulation with a real background job (`queue:work` or scheduled command)
+- [ ] Sync status dashboard widget so staff can see whether they're offline
 
 ### Sprint 8 — Reporting
+**Purpose:** This is what turns raw records into something the Hospital Administrator can act on, and it's the evidence layer your dissertation will draw on for evaluation.
 - [x] Permissions exist: `view_reports`, `generate_reports`, `view_audit_logs`
 - [ ] Reports controller + views: patient census, OPD visits, admissions, dispensed meds, inventory
-- [ ] Role-gated access (admin / hospital_administrator)
+- [ ] Role-gated access (admin / hospital_administrator only)
+
+**Cross-cutting backlog (build alongside the sprints above, not after):**
+- User Management (`manage_facility_users`) — no screen exists yet; needed before non-developers can manage staff accounts.
+- Facility Management (`manage_facility`) — seed data exists, no UI.
+- Audit logging on every clinical write action (blueprint §19) — required for accountability and for your ethics/data-security commitments.
+
+**Done-when:** All `[ ]` items above are checked, and a fresh `migrate:fresh --seed` plus `php artisan test` both pass cleanly.
 
 ---
 
-## RAD Phase 4 — Cutover (TESTING & DEPLOYMENT)
+## Phase 4 — Cutover (Testing & Deployment)
+
+**Why this phase exists:** RAD's construction speed only pays off if cutover is disciplined — this is where you prove the system actually works end-to-end, not just module by module, and where your proposal's usability/functionality targets (SUS ≥ 70, 95% pass rate) get measured.
 
 ### Testing
 - [ ] Feature tests for each new module (users, facilities, inventory, prescriptions, reports)
-- [ ] Run: `C:\xampp\php\php.exe artisan test` (all green)
-- [ ] `php artisan migrate:fresh --seed` on a clean database; verify every route responds
-- [ ] Browser smoke test: login as each of the 9 seeded users → perform full OPD + inpatient flow
+- [ ] `php artisan test` — all green
+- [ ] `migrate:fresh --seed` on a clean database, then verify every route responds
+- [ ] Browser smoke test: log in as each of the 9 seeded users and perform a full OPD + inpatient flow
+- [ ] Usability testing with ≥5 healthcare workers, targeting SUS ≥ 70 and a 95% functionality pass rate (per your proposal's Objective d)
 
 ### Deployment
-- [ ] `npm run build` → confirm `public/build/manifest.json` + assets
-- [ ] `php artisan config:cache`, `route:cache`, `view:cache`
-- [ ] Set `APP_ENV=production`, `APP_DEBUG=false` in `.env`
+- [ ] `npm run build` — confirm `public/build/manifest.json` and assets exist
+- [ ] `config:cache`, `route:cache`, `view:cache`
+- [ ] `APP_ENV=production`, `APP_DEBUG=false` in `.env`
 - [ ] HTTPS/TLS on the hosting server
-- [ ] Pilot at one facility, then national rollout
+- [ ] Pilot at Ndirande Health Centre, then plan for wider rollout
+
+**Done-when:** The pilot facility can run a real day of OPD + inpatient activity on the system without a developer in the room, and the usability results are documented for your write-up.
 
 ---
 
-## Cross-cutting Backlog (below RAD core sprints)
-
-- **User Management** (`manage_facility_users`): UserController + `users/` views (list, create, edit, assign role + facility). No user-management screen exists yet.
-- **Facility Management** (`manage_facility`): FacilityController + `facilities/` views. Seed data exists; no UI.
-- **Audit logging**: capture user/time/facility/device per blueprint §19 — on clinical write actions.
-
----
-
-## How to run each verification command (XAMPP)
+## Quick reference: environment commands
 
 ```powershell
 # Start MySQL
@@ -149,9 +147,17 @@ C:\xampp\php\php.exe artisan serve --host=127.0.0.1 --port=8000
 # Tests
 C:\xampp\php\php.exe artisan test
 ```
+Always use `C:\xampp\php\php.exe` — the PATH `php` (WinGet 8.4) has no `php.ini`/mbstring and will break Laravel.
 
 ---
 
-## Status legend
-- [x] Verified working today
-- [ ] Remaining work item (build during the applicable sprint)
+## How the phases map to your proposal's objectives
+
+| Proposal Objective | RAD Phase it's satisfied by |
+|---|---|
+| (a) Elicit ≥10 requirements via interviews | Phase 1 |
+| (b) Design architecture, schema, UI models with supervisor sign-off | Phase 1 → Phase 2 |
+| (c) Build 5 core modules (registration, records, immunization*, lab results*, access control) | Phase 3, Sprints 1–8 |
+| (d) Usability testing, SUS ≥70, 95% pass rate | Phase 4 |
+
+\* Immunization tracking and lab results aren't yet explicit modules in the current blueprint/sprint list — worth flagging with your supervisor if they're required deliverables, since the current scope (Section 5 of the blueprint) explicitly excludes laboratory systems.
