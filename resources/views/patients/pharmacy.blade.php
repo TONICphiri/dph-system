@@ -1,16 +1,27 @@
-@extends('layouts.app')
+<x-app-layout>
+    <x-slot name="header">
+        <h2 class="font-semibold text-xl text-gray-800 dark:text-gray-200 leading-tight">
+            {{ __('Pharmacy - ') . $patient->full_name }}
+        </h2>
+    </x-slot>
 
-@section('content')
-<div class="container mx-4 py-8">
-    <div class="row justify-content-center">
-        <div class="col-md-8">
-            <div class="card shadow-sm">
-                <div class="card-header bg-success text-white">
-                    <h4 class="mb-0">Pharmacy - {{ $patient->full_name }}</h4>
+    <div class="py-12">
+        <div class="max-w-5xl mx-auto sm:px-6 lg:px-8">
+            @if ($message = Session::get('success'))
+                <div class="mb-4 px-4 py-3 rounded bg-green-100 border border-green-400 text-green-700">
+                    <strong>{{ $message }}</strong>
                 </div>
-                <div class="card-body">
-                    <p class="text-muted">Dispense medication and update inventory</p>
-                    
+            @endif
+            @if ($message = Session::get('error'))
+                <div class="mb-4 px-4 py-3 rounded bg-red-100 border border-red-400 text-red-700">
+                    <strong>{{ $message }}</strong>
+                </div>
+            @endif
+
+            <div class="bg-white dark:bg-gray-800 overflow-hidden shadow-sm sm:rounded-lg">
+                <div class="p-6 text-gray-900 dark:text-gray-100">
+                    <p class="text-gray-500 mb-4">Dispense medication and update inventory</p>
+
                     @if($errors->any())
                         <div class="alert alert-danger">
                             <ul>
@@ -20,42 +31,48 @@
                             </ul>
                         </div>
                     @endif
-                    
-                    @if(empty($prescriptions))
-                        <div class="alert alert-info">
+
+                    @if($prescriptions->isEmpty())
+                        <div class="px-4 py-3 rounded bg-blue-100 border border-blue-400 text-blue-700">
                             No prescriptions found for this patient.
                         </div>
                     @else
-                        <div class="table-responsive">
-                            <table class="table table-bordered">
-                                <thead>
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-sm text-left">
+                                <thead class="bg-gray-100 dark:bg-gray-700">
                                     <tr>
-                                        <th>Medication</th>
-                                        <th>Strength</th>
-                                        <th>Quantity Prescribed</th>
-                                        <th>Quantity Dispensed</th>
-                                        <th>Action</th>
+                                        <th class="px-4 py-2">Medication</th>
+                                        <th class="px-4 py-2">Strength</th>
+                                        <th class="px-4 py-2">Quantity</th>
+                                        <th class="px-4 py-2">Status</th>
+                                        <th class="px-4 py-2">Action</th>
                                     </tr>
                                 </thead>
-                                <tbody>
+                                <tbody class="divide-y">
                                     @foreach($prescriptions as $prescription)
-                                        <tr>
-                                            <td>{{ $prescription->medication_name }}</td>
-                                            <td>{{ $prescription->dose }}</td>
-                                            <td>{{ $prescription->quantity }}</td>
-                                            <td>{{ $prescription->status === 'dispensed' ? $prescription->quantity : 'Not dispensed' }}</td>
-                                            <td>
-                                                @if($prescription->status !== 'dispensed')
-                                                    <form action="{{ route('pharmacy.dispense', ['patient' => $patient->id, 'prescription_id' => $prescription->id]) }}" method="POST" class="d-inline">
-                                                        @method('POST')
+                                        <tr class="hover:bg-gray-50 dark:hover:bg-gray-700">
+                                            <td class="px-4 py-2">{{ $prescription->medication_name }}</td>
+                                            <td class="px-4 py-2">{{ $prescription->dose }}</td>
+                                            <td class="px-4 py-2">{{ $prescription->quantity }}</td>
+                                            <td class="px-4 py-2">
+                                                <span class="px-2 py-1 text-xs rounded
+                                                    {{ $prescription->status === 'dispensed' ? 'bg-yellow-100 text-yellow-800' : ($prescription->status === 'pending' ? 'bg-blue-100 text-blue-800' : 'bg-gray-100 text-gray-800') }}">
+                                                    {{ ucfirst($prescription->status) }}
+                                                </span>
+                                            </td>
+                                            <td class="px-4 py-2">
+                                                @if($prescription->status === 'pending')
+                                                    <form action="{{ route('pharmacy.dispense') }}" method="POST" class="d-inline">
                                                         @csrf
-                                                        <button type="submit" class="btn btn-primary btn-sm">
-                                                            <i class="bi bi-droplet me-1"></i> Dispense
+                                                        <input type="hidden" name="patient_id" value="{{ $patient->id }}">
+                                                        <input type="hidden" name="prescription_id" value="{{ $prescription->id }}">
+                                                        <button type="submit" class="px-3 py-1 bg-blue-600 text-white rounded hover:bg-blue-700 text-sm">
+                                                            Dispense
                                                         </button>
                                                     </form>
                                                 @else
-                                                    <span class="btn btn-secondary btn-sm">
-                                                        <i class="bi bi-check me-1"></i> Dispensed
+                                                    <span class="px-3 py-1 bg-gray-200 text-gray-700 rounded text-sm">
+                                                        {{ ucfirst($prescription->status) }}
                                                     </span>
                                                 @endif
                                             </td>
@@ -64,33 +81,30 @@
                                 </tbody>
                             </table>
                         </div>
-                        
-                        <h5>Inventory Stock Levels</h5>
-                        <div class="row mt-4">
+
+                        <h5 class="font-semibold mt-8 mb-3">Inventory Stock Levels</h5>
+                        <div class="grid grid-cols-2 md:grid-cols-3 gap-4">
                             @foreach($inventory as $item)
-                                <div class="col-md-4 mb-3">
-                                    <div class="card">
-                                        <div class="card-body">
-                                            <h5 class="card-title">{{ $item->medication_name }}</h5>
-                                            <p class="card-text">Stock: {{ $item->current_stock }}</p>
-                                            @if($item->current_stock < 10)
-                                                <p class="text-danger">Low stock!</p>
-                                            @endif
-                                        </div>
-                                    </div>
+                                <div class="border border-gray-200 dark:border-gray-600 rounded p-4">
+                                    <h5 class="font-semibold text-sm">{{ $item->medication_name }}</h5>
+                                    <p class="text-sm mt-1">Stock: <strong>{{ $item->current_stock }}</strong> {{ $item->unit_of_measurement }}</p>
+                                    @if($item->status === 'low_stock')
+                                        <p class="text-xs text-yellow-600">Low stock</p>
+                                    @elseif($item->status === 'out_of_stock')
+                                        <p class="text-xs text-red-600">Out of stock</p>
+                                    @endif
                                 </div>
                             @endforeach
                         </div>
                     @endif
-                    
-                    <div class="d-grid gap-2 mt-4">
-                        <a href="{{ route('patients.show', $patient) }}" class="btn btn-outline-secondary">
-                            <i class="bi bi-arrow-left me-2"></i> Back to Patient
+
+                    <div class="mt-6">
+                        <a href="{{ route('patients.show', $patient) }}" class="px-4 py-2 bg-gray-600 text-white rounded hover:bg-gray-700">
+                            Back to Patient
                         </a>
                     </div>
                 </div>
             </div>
         </div>
     </div>
-</div>
-@endsection
+</x-app-layout>

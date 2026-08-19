@@ -471,7 +471,11 @@ class PatientController extends Controller
             DB::beginTransaction();
             
             $prescription = \App\Models\Prescription::find($validated['prescription_id']);
-            
+
+            if ($prescription->status !== 'pending') {
+                throw new \Exception('Only pending prescriptions can be dispensed');
+            }
+
             $quantityDispensed = $validated['quantity_dispensed'] ?? $prescription->quantity;
             
             // Update prescription dispensed status

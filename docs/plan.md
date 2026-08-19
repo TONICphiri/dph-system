@@ -76,8 +76,8 @@ This plan restates your proposal's methodology and the system blueprint as four 
 **Purpose:** Closes the loop from prescription to medication in hand, and keeps stock counts trustworthy — a stated system objective (reduce duplicate tests/errors, improve medication safety).
 - [x] Pharmacy screen lists encounter prescriptions + inventory
 - [x] `pharmacy.dispense` sets `status=dispensed`, decrements stock
-- [ ] Inventory management UI (`manage_inventory` permission): add/edit/restock, low-stock flags
-- [ ] Only show dispense buttons for prescriptions still pending
+- [x] Inventory management UI (`manage_inventory` permission): add/edit/restock, low-stock flags
+- [x] Only show dispense buttons for prescriptions still pending
 
 ### Sprint 6 — Inpatient (Admission / Ward / Discharge)
 **Purpose:** Covers the "Inpatient Flow" branch of your blueprint's workflow — patients who need more than an OPD visit.

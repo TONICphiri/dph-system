@@ -25,6 +25,11 @@
                             {{ __('Pharmacy') }}
                         </x-nav-link>
                     @endcan
+                    @can('manage_inventory')
+                        <x-nav-link :href="route('inventory.index')" :active="request()->routeIs('inventory.*')">
+                            {{ __('Inventory') }}
+                        </x-nav-link>
+                    @endcan
                     @can('view_reports')
                         <x-nav-link :href="route('dashboard')" :active="false">
                             {{ __('Reports') }}

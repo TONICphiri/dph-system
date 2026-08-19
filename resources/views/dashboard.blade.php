@@ -130,7 +130,7 @@
                                 <a href="{{ route('patients.index') }}" class="px-4 py-3 bg-purple-600 text-white rounded hover:bg-purple-700 text-center text-sm">Pharmacy</a>
                             @endcan
                             @can('manage_inventory')
-                                <a href="{{ route('patients.index') }}" class="px-4 py-3 bg-yellow-600 text-white rounded hover:bg-yellow-700 text-center text-sm">Inventory</a>
+                                <a href="{{ route('inventory.index') }}" class="px-4 py-3 bg-yellow-600 text-white rounded hover:bg-yellow-700 text-center text-sm">Inventory</a>
                             @endcan
                         </div>
                     </div>

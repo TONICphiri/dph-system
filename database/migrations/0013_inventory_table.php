@@ -13,7 +13,7 @@ return new class extends Migration
     {
         Schema::create('inventory', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('facility_id')->constrained()->cascadeOnDelete();
+            $table->foreignId('facility_id')->nullable()->constrained()->cascadeOnDelete();
             $table->string('medication_name');
             $table->string('medication_code')->nullable();
             $table->string('strength')->nullable()->comment('e.g., 500mg, 100ml');

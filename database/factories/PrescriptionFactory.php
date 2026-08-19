@@ -19,6 +19,7 @@ class PrescriptionFactory extends Factory
         return [
             'encounter_id' => \App\Models\Encounter::factory(),
             'patient_id' => \App\Models\Patient::factory(),
+            'prescribed_by_user_id' => \App\Models\User::factory(),
             'medication_name' => fake()->randomElement(['Paracetamol', 'Amoxicillin', 'ORS Sachets', 'Coartem', 'Ibuprofen']),
             'dose' => fake()->randomElement(['500mg', '250mg', '1g', '10ml']),
             'frequency' => fake()->randomElement(['3x daily', '2x daily', '1x daily']),
