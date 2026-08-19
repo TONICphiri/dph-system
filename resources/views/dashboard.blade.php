@@ -160,6 +160,9 @@
                             @can('manage_inventory')
                                 <a href="{{ route('inventory.index') }}" class="px-4 py-3 bg-yellow-600 text-white rounded hover:bg-yellow-700 text-center text-sm">Inventory</a>
                             @endcan
+                            @can('view_reports')
+                                <a href="{{ route('reports.index') }}" class="px-4 py-3 bg-indigo-600 text-white rounded hover:bg-indigo-700 text-center text-sm">Reports</a>
+                            @endcan
                         </div>
                     </div>
                 </div>

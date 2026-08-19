@@ -4,6 +4,7 @@ use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\InventoryController;
 use App\Http\Controllers\PatientController;
 use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\ReportsController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/test-server-error', function () {
@@ -119,6 +120,14 @@ Route::middleware('auth')->group(function () {
     Route::get('/inventory/{item}/edit', [InventoryController::class, 'edit'])->name('inventory.edit');
     Route::put('/inventory/{item}', [InventoryController::class, 'update'])->name('inventory.update');
     Route::post('/inventory/{item}/restock', [InventoryController::class, 'restock'])->name('inventory.restock');
+
+    // Reports Routes
+    Route::get('/reports', [ReportsController::class, 'index'])->name('reports.index');
+    Route::get('/reports/census', [ReportsController::class, 'census'])->name('reports.census');
+    Route::get('/reports/opd-visits', [ReportsController::class, 'opdVisits'])->name('reports.opd-visits');
+    Route::get('/reports/admissions', [ReportsController::class, 'admissions'])->name('reports.admissions');
+    Route::get('/reports/dispensed-meds', [ReportsController::class, 'dispensedMeds'])->name('reports.dispensed-meds');
+    Route::get('/reports/inventory', [ReportsController::class, 'inventory'])->name('reports.inventory');
 
     // Patient Management Routes
     Route::resource('patients', PatientController::class);

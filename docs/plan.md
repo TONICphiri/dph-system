@@ -98,8 +98,8 @@ This plan restates your proposal's methodology and the system blueprint as four 
 ### Sprint 8 — Reporting
 **Purpose:** This is what turns raw records into something the Hospital Administrator can act on, and it's the evidence layer your dissertation will draw on for evaluation.
 - [x] Permissions exist: `view_reports`, `generate_reports`, `view_audit_logs`
-- [ ] Reports controller + views: patient census, OPD visits, admissions, dispensed meds, inventory
-- [ ] Role-gated access (admin / hospital_administrator only)
+- [x] Reports controller + views: patient census, OPD visits, admissions, dispensed meds, inventory
+- [x] Role-gated access (admin / hospital_administrator only)
 
 **Cross-cutting backlog (build alongside the sprints above, not after):**
 - User Management (`manage_facility_users`) — no screen exists yet; needed before non-developers can manage staff accounts.

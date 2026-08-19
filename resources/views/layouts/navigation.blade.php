@@ -31,7 +31,7 @@
                         </x-nav-link>
                     @endcan
                     @can('view_reports')
-                        <x-nav-link :href="route('dashboard')" :active="false">
+                        <x-nav-link :href="route('reports.index')" :active="request()->routeIs('reports.*')">
                             {{ __('Reports') }}
                         </x-nav-link>
                     @endcan
