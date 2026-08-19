@@ -512,7 +512,7 @@ class PatientController extends Controller
             \Log::info('Medication dispensed', [
                 'prescription_id' => $prescription->id,
                 'patient_id' => $patient->id,
-                'quantity_dispensed' => $validated['quantity_dispensed'],
+                'quantity_dispensed' => $validated['quantity_dispensed'] ?? null,
                 'dispensed_by' => $this->user()->id,
             ]);
             

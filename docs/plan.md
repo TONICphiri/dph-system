@@ -115,10 +115,10 @@ This plan restates your proposal's methodology and the system blueprint as four 
 **Why this phase exists:** RAD's construction speed only pays off if cutover is disciplined — this is where you prove the system actually works end-to-end, not just module by module, and where your proposal's usability/functionality targets (SUS ≥ 70, 95% pass rate) get measured.
 
 ### Testing
-- [ ] Feature tests for each new module (users, facilities, inventory, prescriptions, reports)
-- [ ] `php artisan test` — all green
-- [ ] `migrate:fresh --seed` on a clean database, then verify every route responds
-- [ ] Browser smoke test: log in as each of the 9 seeded users and perform a full OPD + inpatient flow
+- [x] Feature tests for each new module (users, facilities, inventory, prescriptions, reports)
+- [x] `php artisan test` — all green
+- [x] `migrate:fresh --seed` on a clean database, then verify every route responds
+- [x] Browser smoke test: log in as each of the 9 seeded users and perform a full OPD + inpatient flow
 - [ ] Usability testing with ≥5 healthcare workers, targeting SUS ≥ 70 and a 95% functionality pass rate (per your proposal's Objective d)
 
 ### Deployment
