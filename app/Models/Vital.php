@@ -73,6 +73,11 @@ class Vital extends Model
     }
 
     /**
+     * Priority level ordering (highest priority first)
+     */
+    public const PRIORITY_ORDER = ['Emergency', 'High', 'Medium', 'Low'];
+
+    /**
      * Check if vitals are abnormal
      */
     public function isAbnormal(): bool
@@ -103,5 +108,51 @@ class Vital extends Model
         }
 
         return false;
+    }
+
+    /**
+     * Determine priority level automatically from vitals
+     */
+    public function autoPriorityLevel(): string
+    {
+        // SpO2 below 90 is critical - Emergency
+        if ($this->oxygen_saturation && $this->oxygen_saturation < 90) {
+            return 'Emergency';
+        }
+
+        // Temperature > 39 or < 35 is high risk
+        if ($this->temperature && ($this->temperature > 39 || $this->temperature < 35)) {
+            return 'High';
+        }
+
+        // Systolic BP > 160 is high risk
+        if ($this->systolic_bp && $this->systolic_bp > 160) {
+            return 'High';
+        }
+
+        // Heart rate < 45 or > 130 is high risk
+        if ($this->heart_rate && ($this->heart_rate < 45 || $this->heart_rate > 130)) {
+            return 'High';
+        }
+
+        // Respiratory rate < 8 or > 30 is high risk
+        if ($this->respiratory_rate && ($this->respiratory_rate < 8 || $this->respiratory_rate > 30)) {
+            return 'High';
+        }
+
+        // Any other abnormal reading is medium priority
+        if ($this->isAbnormal()) {
+            return 'Medium';
+        }
+
+        return 'Low';
+    }
+
+    /**
+     * Get a numeric weight for queue ordering (lower is higher priority)
+     */
+    public function getPriorityWeightAttribute(): int
+    {
+        return array_search($this->priority_level, self::PRIORITY_ORDER) ?? count(self::PRIORITY_ORDER);
     }
 }

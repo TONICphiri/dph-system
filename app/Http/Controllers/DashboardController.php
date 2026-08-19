@@ -27,6 +27,22 @@ class DashboardController extends Controller
         $recentPatients = Patient::latest('registered_at')->take(5)->get();
         $recentEncounters = Encounter::with('patient')->latest('encounter_date')->take(5)->get();
 
-        return view('dashboard', compact('stats', 'recentPatients', 'recentEncounters'));
+        // Clinical consultation queue: encounters awaiting consultation,
+        // ordered by vital priority (Emergency first) then by encounter date
+        $consultationQueue = Encounter::with(['patient', 'vitals' => fn ($q) => $q->latest('recorded_at')])
+            ->whereIn('status', ['triaged', 'consultation'])
+            ->get()
+            ->sort(function ($a, $b) {
+                $priorityOrder = \App\Models\Vital::PRIORITY_ORDER;
+                $aWeight = $a->vitals->first()?->priority_weight ?? count($priorityOrder);
+                $bWeight = $b->vitals->first()?->priority_weight ?? count($priorityOrder);
+                if ($aWeight !== $bWeight) {
+                    return $aWeight <=> $bWeight;
+                }
+                return $a->encounter_date->timestamp <=> $b->encounter_date->timestamp;
+            })
+            ->values();
+
+        return view('dashboard', compact('stats', 'recentPatients', 'recentEncounters', 'consultationQueue'));
     }
 }

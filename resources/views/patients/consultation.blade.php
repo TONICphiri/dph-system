@@ -1,15 +1,15 @@
-@extends('layouts.app')
+<x-app-layout>
+    <x-slot name="header">
+        <h2 class="font-semibold text-xl text-gray-800 dark:text-gray-200 leading-tight">
+            {{ __('Consultation - ') . $patient->full_name }}
+        </h2>
+    </x-slot>
 
-@section('content')
-<div class="container mx-4 py-8">
-    <div class="row justify-content-center">
-        <div class="col-md-8">
-            <div class="card shadow-sm">
-                <div class="card-header bg-info text-white">
-                    <h4 class="mb-0">Consultation - {{ $patient->full_name }}</h4>
-                </div>
-                <div class="card-body">
-                    <p class="text-muted">Record consultation details</p>
+    <div class="py-12">
+        <div class="max-w-4xl mx-auto sm:px-6 lg:px-8">
+            <div class="bg-white dark:bg-gray-800 overflow-hidden shadow-sm sm:rounded-lg">
+                <div class="p-6 text-gray-900 dark:text-gray-100">
+                    <p class="text-muted mb-4">Record consultation details</p>
                     
                     @if($errors->any())
                         <div class="alert alert-danger">
@@ -72,5 +72,4 @@
             </div>
         </div>
     </div>
-</div>
-@endsection
+</x-app-layout>

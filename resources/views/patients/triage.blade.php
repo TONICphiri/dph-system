@@ -1,15 +1,15 @@
-@extends('layouts.app')
+<x-app-layout>
+    <x-slot name="header">
+        <h2 class="font-semibold text-xl text-gray-800 dark:text-gray-200 leading-tight">
+            {{ __('Triage - ') . $patient->full_name }}
+        </h2>
+    </x-slot>
 
-@section('content')
-<div class="container mx-4 py-8">
-    <div class="row justify-content-center">
-        <div class="col-md-8">
-            <div class="card shadow-sm">
-                <div class="card-header bg-primary text-white">
-                    <h4 class="mb-0">Triage - {{ $patient->full_name }}</h4>
-                </div>
-                <div class="card-body">
-                    <p class="text-muted">Record vital signs for priority classification</p>
+    <div class="py-12">
+        <div class="max-w-4xl mx-auto sm:px-6 lg:px-8">
+            <div class="bg-white dark:bg-gray-800 overflow-hidden shadow-sm sm:rounded-lg">
+                <div class="p-6 text-gray-900 dark:text-gray-100">
+                    <p class="text-muted mb-4">Record vital signs for priority classification</p>
                     
                     @if($errors->any())
                         <div class="alert alert-danger">
@@ -126,11 +126,11 @@
                                 <div class="form-group">
                                     <label class="form-label">Priority Level</label>
                                     <select name="priority_level" class="form-control">
-                                        <option value="">-- Select Priority Level --</option>
-                                        <option value="critical">Critical</option>
-                                        <option value="high">High</option>
-                                        <option value="medium">Medium</option>
-                                        <option value="low">Low</option>
+                                        <option value="">-- Auto (based on vitals) --</option>
+                                        <option value="Emergency" {{ old('priority_level', $existingVitals?->priority_level ?? '') === 'Emergency' ? 'selected' : '' }}>Emergency</option>
+                                        <option value="High" {{ old('priority_level', $existingVitals?->priority_level ?? '') === 'High' ? 'selected' : '' }}>High</option>
+                                        <option value="Medium" {{ old('priority_level', $existingVitals?->priority_level ?? '') === 'Medium' ? 'selected' : '' }}>Medium</option>
+                                        <option value="Low" {{ old('priority_level', $existingVitals?->priority_level ?? '') === 'Low' ? 'selected' : '' }}>Low</option>
                                     </select>
                                     @error('priority_level')
                                         <span class="invalid-feedback">{{ $message }}</span>
@@ -161,5 +161,4 @@
             </div>
         </div>
     </div>
-</div>
-@endsection
+</x-app-layout>

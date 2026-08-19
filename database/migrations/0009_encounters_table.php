@@ -14,7 +14,7 @@ return new class extends Migration
         Schema::create('encounters', function (Blueprint $table) {
             $table->id();
             $table->foreignId('patient_id')->constrained()->cascadeOnDelete();
-            $table->foreignId('facility_id')->constrained()->nullifyOnDelete();
+            $table->foreignId('facility_id')->nullable()->constrained()->nullifyOnDelete();
             $table->foreignId('user_id')->nullable()->constrained()->nullifyOnDelete();
             $table->enum('encounter_type', ['OPD', 'Emergency', 'Inpatient', 'Follow-up', 'triage', 'consultation', 'admission', 'ward_round'])->default('OPD');
             $table->enum('status', ['registered', 'triaged', 'consultation', 'completed', 'admitted', 'active'])->default('registered');

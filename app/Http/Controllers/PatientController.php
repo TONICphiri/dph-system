@@ -277,7 +277,7 @@ class PatientController extends Controller
             'heart_rate' => 'nullable|numeric|min:30|max:200',
             'respiratory_rate' => 'nullable|numeric|min:10|max:50',
             'oxygen_saturation' => 'nullable|numeric|min:50|max:100',
-            'priority_level' => 'nullable|string|max:20',
+            'priority_level' => 'nullable|string|in:Emergency,High,Medium,Low',
             'notes' => 'nullable|string',
         ]);
         
@@ -292,10 +292,10 @@ class PatientController extends Controller
                     'facility_id' => $this->user()->facility_id,
                     'user_id' => $this->user()->id,
                     'encounter_date' => now(),
-                    'status' => 'active',
+                    'status' => 'registered',
                 ]);
             }
-            
+
             // Create or update vitals
             $vitalsData = array_merge($validated, [
                 'patient_id' => $patient->id,
@@ -303,11 +303,20 @@ class PatientController extends Controller
                 'recorded_at' => now(),
             ]);
 
+            $existingVitals = $encounter->vitals()->latest()->first();
             if ($existingVitals) {
                 $existingVitals->update($vitalsData);
             } else {
-                $encounter->vitals()->create($vitalsData);
+                $existingVitals = $encounter->vitals()->create($vitalsData);
             }
+
+            // Auto-prioritize based on abnormal vitals if no manual priority given
+            if (empty($validated['priority_level'])) {
+                $existingVitals->update(['priority_level' => $existingVitals->autoPriorityLevel()]);
+            }
+
+            // Mark encounter as triaged and move to the consultation queue
+            $encounter->update(['status' => 'triaged']);
             
             DB::commit();
             
@@ -332,6 +341,11 @@ class PatientController extends Controller
         $this->authorize('consult_patient');
         
         $latestEncounter = $patient->encounters()->latest()->first();
+        
+        // Mark the encounter as in consultation so it leaves the waiting queue
+        if ($latestEncounter && $latestEncounter->status === 'triaged') {
+            $latestEncounter->update(['status' => 'consultation']);
+        }
         
         return view('patients.consultation', compact('patient', 'latestEncounter'));
     }

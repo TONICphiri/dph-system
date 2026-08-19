@@ -44,6 +44,71 @@
                 </div>
             </div>
 
+            <div class="bg-white dark:bg-gray-800 overflow-hidden shadow-sm sm:rounded-lg mb-6">
+                <div class="p-6 text-gray-900 dark:text-gray-100">
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="text-lg font-semibold">Consultation Queue</h3>
+                        <span class="text-sm text-gray-500">{{ $consultationQueue->count() }} waiting</span>
+                    </div>
+                    @if ($consultationQueue->count())
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-sm text-left">
+                                <thead class="bg-gray-100 dark:bg-gray-700">
+                                    <tr>
+                                        <th class="px-4 py-2">Priority</th>
+                                        <th class="px-4 py-2">DHP ID</th>
+                                        <th class="px-4 py-2">Name</th>
+                                        <th class="px-4 py-2">Age</th>
+                                        <th class="px-4 py-2">Vitals</th>
+                                        <th class="px-4 py-2">Waiting Since</th>
+                                        <th class="px-4 py-2">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="divide-y">
+                                    @foreach ($consultationQueue as $encounter)
+                                        @php
+                                            $latestVital = $encounter->vitals->first();
+                                            $priority = $latestVital?->priority_level ?? 'Low';
+                                            $priorityClasses = match ($priority) {
+                                                'Emergency' => 'bg-red-100 text-red-800',
+                                                'High' => 'bg-orange-100 text-orange-800',
+                                                'Medium' => 'bg-yellow-100 text-yellow-800',
+                                                default => 'bg-green-100 text-green-800',
+                                            };
+                                        @endphp
+                                        <tr class="hover:bg-gray-50 dark:hover:bg-gray-700">
+                                            <td class="px-4 py-2">
+                                                <span class="px-2 py-1 text-xs rounded font-semibold {{ $priorityClasses }}">
+                                                    {{ $priority }}
+                                                </span>
+                                            </td>
+                                            <td class="px-4 py-2 font-mono text-blue-600">{{ $encounter->patient->dhp_id }}</td>
+                                            <td class="px-4 py-2">{{ $encounter->patient->full_name }}</td>
+                                            <td class="px-4 py-2">{{ $encounter->patient->age ?? 'N/A' }}</td>
+                                            <td class="px-4 py-2 text-xs">
+                                                @if ($latestVital)
+                                                    T:{{ $latestVital->temperature ?? '—' }}°C · HR:{{ $latestVital->heart_rate ?? '—' }} · SpO2:{{ $latestVital->oxygen_saturation ?? '—' }}%
+                                                @else
+                                                    <span class="text-gray-400">No vitals</span>
+                                                @endif
+                                            </td>
+                                            <td class="px-4 py-2 text-xs">{{ $encounter->encounter_date->diffForHumans() }}</td>
+                                            <td class="px-4 py-2">
+                                                @can('consult_patient')
+                                                    <a href="{{ route('consultation', $encounter->patient) }}" class="px-3 py-1 bg-green-600 text-white rounded hover:bg-green-700 text-xs">Start Consultation</a>
+                                                @endcan
+                                            </td>
+                                        </tr>
+                                    @endforeach
+                                </tbody>
+                            </table>
+                        </div>
+                    @else
+                        <p class="text-gray-500 text-sm text-center py-6">No patients waiting for consultation.</p>
+                    @endif
+                </div>
+            </div>
+
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
                 <div class="bg-white dark:bg-gray-800 overflow-hidden shadow-sm sm:rounded-lg">
                     <div class="p-6 text-gray-900 dark:text-gray-100">

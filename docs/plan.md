@@ -63,8 +63,8 @@ This plan restates your proposal's methodology and the system blueprint as four 
 - [x] Triage GET form + `triage.save` POST (vitals + priority)
 - [x] Vitals recorded with `patient_id`, `recorded_by_user_id`, `recorded_at`
 - [x] Priority queue concept defined in the blueprint
-- [ ] Implement queue ordering on the dashboard/consultation list
-- [ ] Abnormal-vitals auto-prioritization using `Vital::isAbnormal()`
+- [x] Implement queue ordering on the dashboard/consultation list
+- [x] Abnormal-vitals auto-prioritization using `Vital::isAbnormal()`
 
 ### Sprint 4 — Consultation
 **Purpose:** This is the clinical decision-making core — where history, diagnosis, and treatment come together, and where the paper-based system currently fails most (Section 1.1 of your proposal cites fragmented records at referral/consultation as the core problem).
