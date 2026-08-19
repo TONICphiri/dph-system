@@ -96,6 +96,10 @@ Route::post('/sync/upload', [PatientController::class, 'syncUpload'])
     ->name('sync.upload')
     ->middleware(['auth']);
 
+Route::post('/sync/retry/{id}', [PatientController::class, 'syncRetry'])
+    ->name('sync.retry')
+    ->middleware(['auth']);
+
 Route::get('/', function () {
     return redirect('/dashboard');
 });

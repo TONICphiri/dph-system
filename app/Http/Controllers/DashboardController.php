@@ -6,6 +6,7 @@ use App\Models\Admission;
 use App\Models\Encounter;
 use App\Models\Inventory;
 use App\Models\Patient;
+use App\Models\SyncQueue;
 use Illuminate\Http\Request;
 
 class DashboardController extends Controller
@@ -27,6 +28,14 @@ class DashboardController extends Controller
         $recentPatients = Patient::latest('registered_at')->take(5)->get();
         $recentEncounters = Encounter::with('patient')->latest('encounter_date')->take(5)->get();
 
+        // Sync status widget: pending/failed counts and connection status
+        $syncStats = [
+            'pending' => SyncQueue::where('status', 'pending')->count(),
+            'failed' => SyncQueue::where('status', 'failed')->count(),
+            'synced' => SyncQueue::where('status', 'synced')->count(),
+            'online' => !empty(config('services.sync.endpoint')),
+        ];
+
         // Clinical consultation queue: encounters awaiting consultation,
         // ordered by vital priority (Emergency first) then by encounter date
         $consultationQueue = Encounter::with(['patient', 'vitals' => fn ($q) => $q->latest('recorded_at')])
@@ -43,6 +52,6 @@ class DashboardController extends Controller
             })
             ->values();
 
-        return view('dashboard', compact('stats', 'recentPatients', 'recentEncounters', 'consultationQueue'));
+        return view('dashboard', compact('stats', 'recentPatients', 'recentEncounters', 'consultationQueue', 'syncStats'));
     }
 }

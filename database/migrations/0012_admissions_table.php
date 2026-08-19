@@ -15,7 +15,7 @@ return new class extends Migration
             $table->id();
             $table->foreignId('encounter_id')->constrained()->cascadeOnDelete();
             $table->foreignId('patient_id')->constrained()->cascadeOnDelete();
-            $table->foreignId('facility_id')->constrained()->nullifyOnDelete();
+            $table->foreignId('facility_id')->nullable()->constrained()->nullifyOnDelete();
             $table->string('ward_name')->nullable();
             $table->string('bed_number')->nullable();
             $table->enum('admission_type', ['emergency', 'elective', 'urgent', 'transfer'])->default('elective');

@@ -44,6 +44,34 @@
                 </div>
             </div>
 
+            @can('view_sync_queue')
+                <div class="bg-white dark:bg-gray-800 overflow-hidden shadow-sm sm:rounded-lg mb-6">
+                    <div class="p-6 text-gray-900 dark:text-gray-100">
+                        <div class="flex justify-between items-center mb-4">
+                            <h3 class="text-lg font-semibold">Sync Status</h3>
+                            <span class="text-sm px-2 py-1 rounded {{ $syncStats['online'] ? 'bg-green-100 text-green-800' : 'bg-orange-100 text-orange-800' }}">
+                                {{ $syncStats['online'] ? 'Online' : 'Offline (simulation)' }}
+                            </span>
+                        </div>
+                        <div class="grid grid-cols-3 gap-4 mb-4">
+                            <div class="text-center">
+                                <p class="text-2xl font-bold text-green-600">{{ $syncStats['synced'] }}</p>
+                                <p class="text-sm text-gray-500">Synced</p>
+                            </div>
+                            <div class="text-center">
+                                <p class="text-2xl font-bold text-blue-600">{{ $syncStats['pending'] }}</p>
+                                <p class="text-sm text-gray-500">Pending</p>
+                            </div>
+                            <div class="text-center">
+                                <p class="text-2xl font-bold text-red-600">{{ $syncStats['failed'] }}</p>
+                                <p class="text-sm text-gray-500">Failed</p>
+                            </div>
+                        </div>
+                        <a href="{{ route('sync.status') }}" class="text-blue-600 hover:underline text-sm">View sync queue</a>
+                    </div>
+                </div>
+            @endcan
+
             <div class="bg-white dark:bg-gray-800 overflow-hidden shadow-sm sm:rounded-lg mb-6">
                 <div class="p-6 text-gray-900 dark:text-gray-100">
                     <div class="flex justify-between items-center mb-4">

@@ -91,9 +91,9 @@ This plan restates your proposal's methodology and the system blueprint as four 
 **Purpose:** This is what makes the system usable in the low-connectivity, low-resource environment your proposal specifically names as a constraint — hospitals must keep working when the internet doesn't.
 - [x] `sync_queue` table, `SyncQueue` model, `sync.status`/`sync.upload` routes
 - [x] `attemptSync()` simulated (95% success)
-- [ ] Wire sync enqueue into clinical write actions (patients, encounters, vitals, prescriptions, admissions)
-- [ ] Replace the inline simulation with a real background job (`queue:work` or scheduled command)
-- [ ] Sync status dashboard widget so staff can see whether they're offline
+- [x] Wire sync enqueue into clinical write actions (patients, encounters, vitals, prescriptions, admissions)
+- [x] Replace the inline simulation with a real background job (`queue:work` or scheduled command)
+- [x] Sync status dashboard widget so staff can see whether they're offline
 
 ### Sprint 8 — Reporting
 **Purpose:** This is what turns raw records into something the Hospital Administrator can act on, and it's the evidence layer your dissertation will draw on for evaluation.

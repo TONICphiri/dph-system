@@ -13,7 +13,7 @@ return new class extends Migration
     {
         Schema::create('sync_queue', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('facility_id')->constrained()->cascadeOnDelete();
+            $table->foreignId('facility_id')->nullable()->constrained()->nullifyOnDelete();
             $table->string('record_type')->comment('patients, encounters, vitals, prescriptions, admissions');
             $table->unsignedBigInteger('record_id');
             $table->enum('action', ['create', 'update', 'delete'])->default('create');

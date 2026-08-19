@@ -4,9 +4,11 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\StorePatientRequest;
 use App\Http\Requests\UpdatePatientRequest;
+use App\Jobs\ProcessSyncQueue;
 use App\Models\Patient;
 use App\Models\Guardian;
 use App\Services\QrCodeService;
+use App\Services\SyncService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
@@ -115,6 +117,8 @@ class PatientController extends Controller
 
             DB::commit();
 
+            SyncService::enqueue('patients', $patient, 'create');
+
             return redirect()->route('patients.show', $patient)
                           ->with('success', "Patient {$patient->full_name} registered successfully. DHP ID: {$patient->dhp_id}");
         } catch (\Exception $e) {
@@ -162,6 +166,8 @@ class PatientController extends Controller
 
         try {
             $patient->update($request->validated());
+
+            SyncService::enqueue('patients', $patient, 'update');
             
             return redirect()->route('patients.show', $patient)
                           ->with('success', 'Patient information updated successfully');
@@ -319,6 +325,9 @@ class PatientController extends Controller
             $encounter->update(['status' => 'triaged']);
             
             DB::commit();
+
+            SyncService::enqueue('encounters', $encounter, 'update');
+            SyncService::enqueue('vitals', $existingVitals, 'create');
             
             return redirect()->route('patients.show', $patient)
                 ->with('success', 'Triage vitals recorded successfully');
@@ -403,13 +412,14 @@ class PatientController extends Controller
             ]);
 
             // Create prescriptions issued during this consultation
+            $createdPrescriptions = collect();
             if (!empty($validated['prescriptions'])) {
                 foreach ($validated['prescriptions'] as $prescriptionData) {
                     if (empty($prescriptionData['medication_name'])) {
                         continue;
                     }
 
-                    $encounter->prescriptions()->create([
+                    $createdPrescriptions->push($encounter->prescriptions()->create([
                         'patient_id' => $patient->id,
                         'prescribed_by_user_id' => $this->user()->id,
                         'medication_name' => $prescriptionData['medication_name'],
@@ -420,11 +430,16 @@ class PatientController extends Controller
                         'instructions' => $prescriptionData['instructions'] ?? null,
                         'status' => 'pending',
                         'prescribed_at' => now(),
-                    ]);
+                    ]));
                 }
             }
             
             DB::commit();
+
+            SyncService::enqueue('encounters', $encounter, 'update');
+            foreach ($createdPrescriptions as $prescription) {
+                SyncService::enqueue('prescriptions', $prescription, 'create');
+            }
             
             return redirect()->route('patients.show', $patient)
                 ->with('success', 'Consultation notes recorded successfully');
@@ -502,6 +517,8 @@ class PatientController extends Controller
             ]);
             
             DB::commit();
+
+            SyncService::enqueue('prescriptions', $prescription, 'update');
             
             return redirect()->route('patients.show', $patient)
                 ->with('success', "Medication dispensed successfully. Stock updated.");
@@ -568,6 +585,9 @@ class PatientController extends Controller
             ]);
             
             DB::commit();
+
+            SyncService::enqueue('encounters', $encounter, 'create');
+            SyncService::enqueue('admissions', $admission, 'create');
             
             return redirect()->route('patients.show', $patient)
                 ->with('success', "Patient admitted to ward {$validated['ward']}, Bed {$validated['bed_number']}");
@@ -817,6 +837,13 @@ class PatientController extends Controller
             }
             
             DB::commit();
+
+            if ($latestAdmission) {
+                SyncService::enqueue('admissions', $latestAdmission, 'update');
+            }
+            if ($latestEncounter) {
+                SyncService::enqueue('encounters', $latestEncounter, 'update');
+            }
             
             return redirect()->route('patients.show', $patient)
                 ->with('success', "Patient discharged. Final diagnosis: {$validated['final_diagnosis']}");
@@ -840,9 +867,10 @@ class PatientController extends Controller
         
         $syncQueue = \App\Models\SyncQueue::latest()->take(20)->get();
         $syncedCount = \App\Models\SyncQueue::where('status', 'synced')->count();
+        $pendingCount = \App\Models\SyncQueue::where('status', 'pending')->count();
         $failedCount = \App\Models\SyncQueue::where('status', 'failed')->count();
         
-        return view('patients.sync-status', compact('syncQueue', 'syncedCount', 'failedCount'));
+        return view('patients.sync-status', compact('syncQueue', 'syncedCount', 'pendingCount', 'failedCount'));
     }
 
     /**
@@ -868,12 +896,8 @@ class PatientController extends Controller
                 'status' => 'pending',
             ]);
             
-            // Attempt immediate sync (in production, this would be handled by background job)
-            $synced = $this->attemptSync($syncQueue);
-            
-            if ($synced) {
-                $syncQueue->update(['status' => 'synced']);
-            }
+            // Dispatch background job to push this record to the national database
+            ProcessSyncQueue::dispatch(50);
             
             return response()->json([
                 'success' => true,
@@ -893,23 +917,6 @@ class PatientController extends Controller
     }
     
     /**
-     * Attempt to sync a sync queue record
-     */
-    protected function attemptSync(\App\Models\SyncQueue $syncQueue)
-    {
-        // In a full implementation, this would make API calls to the national database
-        // For now, mark as synced after a short delay/simulation
-        usleep(500000); // Simulate network delay
-        
-        // Simulate 95% success rate
-        if (mt_rand(1, 100) <= 95) {
-            return true;
-        }
-        
-        return false;
-    }
-    
-/**
      * Remove the specified patient from storage
      */
     public function destroy(Patient $patient)
@@ -976,5 +983,28 @@ class PatientController extends Controller
                 'message' => 'Failed to generate QR code',
             ], 500);
         }
+    }
+
+    /**
+     * Retry a failed sync queue record
+     */
+    public function syncRetry(Request $request, $id)
+    {
+        $this->authorize('view_sync_queue');
+
+        $syncQueue = \App\Models\SyncQueue::findOrFail($id);
+
+        if (!$syncQueue->canRetry()) {
+            return redirect()->back()->with('error', 'Sync record has exceeded the maximum retry count');
+        }
+
+        $syncQueue->update([
+            'status' => 'pending',
+            'error_message' => null,
+        ]);
+
+        ProcessSyncQueue::dispatch(50);
+
+        return redirect()->back()->with('success', 'Sync record queued for retry');
     }
 }
