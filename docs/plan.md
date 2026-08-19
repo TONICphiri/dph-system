@@ -69,8 +69,8 @@ This plan restates your proposal's methodology and the system blueprint as four 
 ### Sprint 4 — Consultation
 **Purpose:** This is the clinical decision-making core — where history, diagnosis, and treatment come together, and where the paper-based system currently fails most (Section 1.1 of your proposal cites fragmented records at referral/consultation as the core problem).
 - [x] Consultation GET + `consultation.save` POST (complaint, findings, diagnosis, plan, admission flag)
-- [ ] Prescription creation *inside* consultation — currently only notes are saved; add `prescriptions[]` inputs to create real `Prescription` records
-- [ ] Wire encounter status transitions: triaged → consultation → completed
+- [x] Prescription creation *inside* consultation — currently only notes are saved; add `prescriptions[]` inputs to create real `Prescription` records
+- [x] Wire encounter status transitions: triaged → consultation → completed
 
 ### Sprint 5 — Pharmacy & Inventory
 **Purpose:** Closes the loop from prescription to medication in hand, and keeps stock counts trustworthy — a stated system objective (reduce duplicate tests/errors, improve medication safety).

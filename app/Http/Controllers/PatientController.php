@@ -347,7 +347,9 @@ class PatientController extends Controller
             $latestEncounter->update(['status' => 'consultation']);
         }
         
-        return view('patients.consultation', compact('patient', 'latestEncounter'));
+        $inventory = \App\Models\Inventory::whereIn('status', ['available', 'low_stock'])->get();
+        
+        return view('patients.consultation', compact('patient', 'latestEncounter', 'inventory'));
     }
 
     /**
@@ -365,6 +367,13 @@ class PatientController extends Controller
             'diagnosis' => 'nullable|string',
             'treatment_plan' => 'nullable|string',
             'requires_admission' => 'nullable|boolean',
+            'prescriptions' => 'nullable|array',
+            'prescriptions.*.medication_name' => 'required_with:prescriptions|string|max:255',
+            'prescriptions.*.dose' => 'required_with:prescriptions|string|max:255',
+            'prescriptions.*.frequency' => 'required_with:prescriptions|string|max:255',
+            'prescriptions.*.quantity' => 'nullable|integer|min:1',
+            'prescriptions.*.duration' => 'nullable|string|max:255',
+            'prescriptions.*.instructions' => 'nullable|string',
         ]);
         
         try {
@@ -385,12 +394,35 @@ class PatientController extends Controller
             // Update encounter with consultation data
             $encounter->update([
                 'chief_complaint' => $validated['chief_complaint'],
-                'examination_findings' => $validated['examination_findings'],
-                'diagnosis' => $validated['diagnosis'],
-                'treatment_plan' => $validated['treatment_plan'],
+                'examination_findings' => $validated['examination_findings'] ?? null,
+                'diagnosis' => $validated['diagnosis'] ?? null,
+                'treatment_plan' => $validated['treatment_plan'] ?? null,
                 'requires_admission' => $validated['requires_admission'] ?? false,
                 'status' => 'completed',
+                'completed_at' => now(),
             ]);
+
+            // Create prescriptions issued during this consultation
+            if (!empty($validated['prescriptions'])) {
+                foreach ($validated['prescriptions'] as $prescriptionData) {
+                    if (empty($prescriptionData['medication_name'])) {
+                        continue;
+                    }
+
+                    $encounter->prescriptions()->create([
+                        'patient_id' => $patient->id,
+                        'prescribed_by_user_id' => $this->user()->id,
+                        'medication_name' => $prescriptionData['medication_name'],
+                        'dose' => $prescriptionData['dose'],
+                        'frequency' => $prescriptionData['frequency'],
+                        'quantity' => $prescriptionData['quantity'] ?? null,
+                        'duration' => $prescriptionData['duration'] ?? null,
+                        'instructions' => $prescriptionData['instructions'] ?? null,
+                        'status' => 'pending',
+                        'prescribed_at' => now(),
+                    ]);
+                }
+            }
             
             DB::commit();
             
