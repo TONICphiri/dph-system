@@ -84,8 +84,8 @@ This plan restates your proposal's methodology and the system blueprint as four 
 - [x] Admission form creates the encounter + admission record
 - [x] Ward round records observations against the latest admission
 - [x] Discharge captures final diagnosis, summary, follow-up
-- [ ] Ward medication administration log (blueprint §23)
-- [ ] Daily progress notes UI
+- [x] Ward medication administration log (blueprint §23)
+- [x] Daily progress notes UI
 
 ### Sprint 7 — Synchronization
 **Purpose:** This is what makes the system usable in the low-connectivity, low-resource environment your proposal specifically names as a constraint — hospitals must keep working when the internet doesn't.

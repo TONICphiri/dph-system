@@ -12,6 +12,16 @@
             <a href="{{ route("patients.qr-code", $patient) }}" class="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700">
                 View QR Code
             </a>
+            @can("update_patient")
+                <a href="{{ route("ward", $patient) }}" class="px-4 py-2 bg-cyan-600 text-white rounded hover:bg-cyan-700">
+                    Ward
+                </a>
+            @endcan
+            @can("admit_patient")
+                <a href="{{ route("admission", $patient) }}" class="px-4 py-2 bg-orange-600 text-white rounded hover:bg-orange-700">
+                    Admit
+                </a>
+            @endcan
         </div>
     </x-slot>
 

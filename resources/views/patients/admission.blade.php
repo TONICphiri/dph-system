@@ -1,15 +1,21 @@
-@extends('layouts.app')
+<x-app-layout>
+    <x-slot name="header">
+        <h2 class="font-semibold text-xl text-gray-800 dark:text-gray-200 leading-tight">
+            {{ __('Admission - ') . $patient->full_name }}
+        </h2>
+    </x-slot>
 
-@section('content')
-<div class="container mx-4 py-8">
-    <div class="row justify-content-center">
-        <div class="col-md-8">
-            <div class="card shadow-sm">
-                <div class="card-header bg-warning text-dark">
-                    <h4 class="mb-0">Admission - {{ $patient->full_name }}</h4>
+    <div class="py-12">
+        <div class="max-w-2xl mx-auto sm:px-6 lg:px-8">
+            @if ($message = Session::get('error'))
+                <div class="mb-4 px-4 py-3 rounded bg-red-100 border border-red-400 text-red-700">
+                    <strong>{{ $message }}</strong>
                 </div>
-                <div class="card-body">
-                    <p class="text-muted">Admit patient to inpatient ward</p>
+            @endif
+
+            <div class="bg-white dark:bg-gray-800 overflow-hidden shadow-sm sm:rounded-lg">
+                <div class="p-6 text-gray-900 dark:text-gray-100">
+                    <p class="text-gray-500 mb-4">Admit patient to inpatient ward</p>
                     
                     @if($errors->any())
                         <div class="alert alert-danger">
@@ -63,5 +69,4 @@
             </div>
         </div>
     </div>
-</div>
-@endsection
+</x-app-layout>

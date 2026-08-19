@@ -658,6 +658,129 @@ class PatientController extends Controller
     }
 
     /**
+     * Show ward dashboard for an admitted patient
+     */
+    public function ward(Patient $patient)
+    {
+        $this->authorize('update_patient');
+
+        $latestAdmission = $patient->admissions()->where('status', 'active')->latest()->first();
+        if (!$latestAdmission) {
+            $latestAdmission = $patient->admissions()->latest()->first();
+        }
+
+        $medicationAdministrations = $latestAdmission
+            ? $latestAdmission->medicationAdministrations()->with('administeredByUser')->get()
+            : collect();
+        $progressNotes = $latestAdmission
+            ? $latestAdmission->progressNotes()->with('recordedByUser')->get()
+            : collect();
+
+        // Active prescriptions for the med administration log
+        $prescriptions = $patient->prescriptions()
+            ->where('status', 'pending')
+            ->orderByDesc('prescribed_at')
+            ->get();
+
+        return view('patients.ward', compact('patient', 'latestAdmission', 'medicationAdministrations', 'progressNotes', 'prescriptions'));
+    }
+
+    /**
+     * Record medication administration
+     */
+    public function administerMedication(Request $request)
+    {
+        $this->authorize('update_patient');
+
+        $patient = Patient::findOrFail($request->patient_id);
+
+        $validated = $request->validate([
+            'medication_name' => 'required|string|max:255',
+            'dose' => 'nullable|string|max:255',
+            'route' => 'nullable|string|max:255',
+            'prescription_id' => 'nullable|exists:prescriptions,id',
+            'administered_at' => 'nullable|date',
+            'notes' => 'nullable|string',
+        ]);
+
+        try {
+            DB::beginTransaction();
+
+            $latestAdmission = $patient->admissions()->where('status', 'active')->latest()->first();
+            if (!$latestAdmission) {
+                throw new \Exception('Patient has no active admission');
+            }
+
+            $latestAdmission->medicationAdministrations()->create([
+                'prescription_id' => $validated['prescription_id'] ?? null,
+                'patient_id' => $patient->id,
+                'administered_by_user_id' => $this->user()->id,
+                'medication_name' => $validated['medication_name'],
+                'dose' => $validated['dose'] ?? null,
+                'route' => $validated['route'] ?? null,
+                'administered_at' => $validated['administered_at'] ?? now(),
+                'notes' => $validated['notes'] ?? null,
+            ]);
+
+            DB::commit();
+
+            return redirect()->route('ward', $patient)
+                ->with('success', "Medication '{$validated['medication_name']}' administered successfully");
+        } catch (\Exception $e) {
+            DB::rollBack();
+            \Log::error('Medication administration failed', [
+                'error' => $e->getMessage(),
+                'patient_id' => $patient->id,
+            ]);
+
+            return redirect()->back()->with('error', $e->getMessage());
+        }
+    }
+
+    /**
+     * Record a daily progress note
+     */
+    public function saveProgressNote(Request $request)
+    {
+        $this->authorize('update_patient');
+
+        $patient = Patient::findOrFail($request->patient_id);
+
+        $validated = $request->validate([
+            'note' => 'required|string',
+        ]);
+
+        try {
+            DB::beginTransaction();
+
+            $latestAdmission = $patient->admissions()->where('status', 'active')->latest()->first();
+            if (!$latestAdmission) {
+                throw new \Exception('Patient has no active admission');
+            }
+
+            $latestAdmission->progressNotes()->create([
+                'patient_id' => $patient->id,
+                'recorded_by_user_id' => $this->user()->id,
+                'note' => $validated['note'],
+                'recorded_at' => now(),
+            ]);
+
+            DB::commit();
+
+            return redirect()->route('ward', $patient)
+                ->with('success', 'Progress note recorded successfully');
+        } catch (\Exception $e) {
+            DB::rollBack();
+            \Log::error('Progress note failed', [
+                'error' => $e->getMessage(),
+                'patient_id' => $patient->id,
+            ]);
+
+            return redirect()->back()->with('error', $e->getMessage());
+        }
+    }
+
+    /**
      * Discharge patient
      */
     public function dischargePatient(Request $request, Patient $patient)

@@ -72,6 +72,18 @@ Route::post('/ward/round', [PatientController::class, 'wardRound'])
     ->name('ward.round')
     ->middleware(['auth']);
 
+Route::get('/ward/{patient}', [PatientController::class, 'ward'])
+    ->name('ward')
+    ->middleware(['auth', 'verified']);
+
+Route::post('/ward/medication-admin', [PatientController::class, 'administerMedication'])
+    ->name('ward.medication-admin')
+    ->middleware(['auth']);
+
+Route::post('/ward/progress-note', [PatientController::class, 'saveProgressNote'])
+    ->name('ward.progress-note')
+    ->middleware(['auth']);
+
 Route::post('/discharge/{patient}', [PatientController::class, 'dischargePatient'])
     ->name('discharge')
     ->middleware(['auth']);

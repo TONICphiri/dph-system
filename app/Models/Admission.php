@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Admission extends Model
 {
@@ -74,6 +75,22 @@ class Admission extends Model
     public function dischargedByUser(): BelongsTo
     {
         return $this->belongsTo(User::class, 'discharged_by_user_id');
+    }
+
+    /**
+     * Get medication administrations during this admission
+     */
+    public function medicationAdministrations(): HasMany
+    {
+        return $this->hasMany(MedicationAdministration::class)->orderByDesc('administered_at');
+    }
+
+    /**
+     * Get progress notes recorded during this admission
+     */
+    public function progressNotes(): HasMany
+    {
+        return $this->hasMany(ProgressNote::class)->orderByDesc('recorded_at');
     }
 
     /**
