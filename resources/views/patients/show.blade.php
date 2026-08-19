@@ -4,11 +4,14 @@
             <h2 class="font-semibold text-xl text-gray-800 dark:text-gray-200 leading-tight">
                 {{ $patient->full_name }}
             </h2>
-            @can("edit_patient")
+@can("edit_patient")
                 <a href="{{ route("patients.edit", $patient) }}" class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">
                     Edit Patient
                 </a>
             @endcan
+            <a href="{{ route("patients.qr-code", $patient) }}" class="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700">
+                View QR Code
+            </a>
         </div>
     </x-slot>
 

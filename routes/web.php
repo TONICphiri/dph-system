@@ -98,6 +98,7 @@ Route::middleware('auth')->group(function () {
     // Patient Management Routes
     Route::resource('patients', PatientController::class);
     Route::get('/api/patients/search-by-national-id', [PatientController::class, 'searchByNationalId'])->name('patients.search.national-id');
+    Route::get('/api/patients/search-by-dhp-id', [PatientController::class, 'searchByDhpId'])->name('patients.search.dhp-id');
     Route::get('/patients/{patient}/qr-code', [PatientController::class, 'showQrCode'])->name('patients.qr-code');
     Route::get('/api/patients/{patient}/qr-code', [PatientController::class, 'getQrCode'])->name('patients.qr-code.api');
 });

@@ -24,7 +24,7 @@
                         @endcan
                     </div>
 
-                    <form method="GET" action="{{ route("patients.index") }}" class="mb-6">
+<form method="GET" action="{{ route("patients.index") }}" class="mb-6">
                         <div class="flex gap-4">
                             <input type="text" name="search" placeholder="Search by name, National ID, or DHP ID" 
                                    value="{{ request("search") }}" class="flex-1 px-4 py-2 border rounded" />
@@ -33,6 +33,19 @@
                             </button>
                         </div>
                     </form>
+
+                    <div class="mb-6 p-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-700 rounded-lg">
+                        <h3 class="font-semibold text-green-800 dark:text-green-200 mb-2">QR / DHP ID Lookup</h3>
+                        <p class="text-sm text-green-700 dark:text-green-300 mb-3">Scan or paste a Digital Health Passport ID to open the patient record instantly.</p>
+                        <div class="flex gap-2">
+                            <input type="text" id="lookup-dhp-id" placeholder="e.g. DHP-2026-00000001"
+                                   class="flex-1 px-4 py-2 border rounded-md shadow-sm" />
+                            <button type="button" id="lookup-dhp-btn" class="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700">
+                                Open Record
+                            </button>
+                        </div>
+                        <div id="lookup-dhp-result" class="mt-3"></div>
+                    </div>
 
                     @if ($patients->count())
                         <div class="overflow-x-auto">
@@ -80,6 +93,59 @@
                     @endif
                 </div>
             </div>
-        </div>
+</div>
     </div>
+
+    <script>
+        const dhpInput = document.getElementById("lookup-dhp-id");
+        const dhpBtn = document.getElementById("lookup-dhp-btn");
+        const dhpResult = document.getElementById("lookup-dhp-result");
+
+        function lookupDhpId() {
+            const value = dhpInput.value.trim();
+            if (!value) {
+                dhpResult.innerHTML = '<p class="text-sm text-red-600">Please enter or scan a DHP ID.</p>';
+                return;
+            }
+
+            dhpResult.innerHTML = '<p class="text-sm text-gray-600">Searching...</p>';
+
+            fetch("{{ route("patients.search.dhp-id") }}?dhp_id=" + encodeURIComponent(value), {
+                headers: { "Accept": "application/json", "X-Requested-With": "XMLHttpRequest" }
+            })
+            .then(function(response) {
+                if (response.status === 404) {
+                    return response.json().then(function(data) {
+                        throw new Error(data.message || "Patient not found");
+                    });
+                }
+                return response.json();
+            })
+            .then(function(data) {
+                if (data.found) {
+                    const p = data.patient;
+                    dhpResult.innerHTML =
+                        '<div class="p-3 bg-green-100 border border-green-400 rounded-lg">' +
+                        '<p class="text-sm text-green-800"><strong>Record found:</strong> ' + p.full_name +
+                        ' (Age: ' + p.age + ')</p>' +
+                        '<a href="/patients/' + p.id + '" class="text-sm text-green-700 underline font-semibold">Open patient record →</a>' +
+                        '</div>';
+                } else {
+                    dhpResult.innerHTML =
+                        '<p class="text-sm text-red-600">No patient found with this DHP ID.</p>';
+                }
+            })
+            .catch(function(err) {
+                dhpResult.innerHTML = '<p class="text-sm text-red-600">' + err.message + '</p>';
+            });
+        }
+
+        dhpBtn.addEventListener("click", lookupDhpId);
+        dhpInput.addEventListener("keypress", function(e) {
+            if (e.key === "Enter") {
+                e.preventDefault();
+                lookupDhpId();
+            }
+        });
+    </script>
 </x-app-layout>

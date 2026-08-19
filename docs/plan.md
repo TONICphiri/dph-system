@@ -55,8 +55,8 @@ This plan restates your proposal's methodology and the system blueprint as four 
 ### Sprint 2 — QR Integration
 **Purpose:** QR codes are what make return visits fast — without this, every visit degrades back to manual National ID lookup.
 - [x] `QrCodeService` (SVG/data URL) + `showQrCode` + `getQrCode` API
-- [ ] QR scan/lookup entry point on `patients.index` (paste/scan DHP ID → open record)
-- [ ] Verify the QR prints correctly on the patient show page
+- [x] QR scan/lookup entry point on `patients.index` (paste/scan DHP ID → open record)
+- [x] Verify the QR prints correctly on the patient show page
 
 ### Sprint 3 — Triage
 **Purpose:** Triage is the clinical safety layer — it's where abnormal vitals should push a patient up the queue before anything worse happens.
