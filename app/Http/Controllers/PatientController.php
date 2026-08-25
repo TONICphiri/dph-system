@@ -229,7 +229,10 @@ class PatientController extends Controller
             'dhp_id' => 'required|string',
         ]);
 
-        $patient = Patient::where('dhp_id', $request->dhp_id)->first();
+        $qrData = QrCodeService::parseQrCodeData($request->dhp_id);
+        $dhpId = trim($qrData['dhp_id'] ?? $request->dhp_id);
+
+        $patient = Patient::where('dhp_id', $dhpId)->first();
 
         if (!$patient) {
             return response()->json([
@@ -947,14 +950,7 @@ class PatientController extends Controller
         $this->authorize('view_patient');
 
         try {
-            $qrCode = QrCodeService::generateQrCodeWithData(
-                $patient->dhp_id,
-                [
-                    'patient_id' => $patient->id,
-                    'full_name' => $patient->full_name,
-                    'national_id' => $patient->national_id,
-                ]
-            );
+            $qrCode = QrCodeService::generateQrCodeSvg($patient->dhp_id);
 
             return view('patients.qr-code', compact('patient', 'qrCode'));
         } catch (\Exception $e) {

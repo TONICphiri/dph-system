@@ -161,3 +161,72 @@ Always use `C:\xampp\php\php.exe` — the PATH `php` (WinGet 8.4) has no `php.in
 | (d) Usability testing, SUS ≥70, 95% pass rate | Phase 4 |
 
 \* Immunization tracking and lab results aren't yet explicit modules in the current blueprint/sprint list — worth flagging with your supervisor if they're required deliverables, since the current scope (Section 5 of the blueprint) explicitly excludes laboratory systems.
+
+
+
+## website flow 
+\* The Paper Health Passport: A Patient Journey in Malawi
+In Malawi, the health passport (or kabuku ka za umoyo) is more than just a notebook; it is a lifelong, portable medical record. The following steps detail a standard journey through a public hospital or health center, from arrival to discharge.
+
+Phase 1: Reception and Triage
+1. Registration and Vital Signs
+Upon arriving at the facility, your first stop is the registration or triage desk. You must present your health passport to the clerk or nurse. Without it, you are typically not permitted to proceed. The nurse records your presenting complaint and measures your baseline vital signs—weight, temperature, blood pressure, and heart rate—writing these figures directly into a new row in the passport.
+
+2. Queue Allocation
+Based on the urgency of your symptoms and the vitals just recorded, the triage nurse uses the book to determine your place in line. The passport acts as your ticket; it is often stacked in a pile or tray to maintain the order of patients waiting to see a clinician.
+
+Phase 2: The Clinical Encounter
+3. History Review
+When your name is called, you move to the consultation room and hand the passport to the clinician (a Clinical Officer, Medical Assistant, or Doctor). The clinician immediately flips through the previous pages. This is a critical moment where they look for chronic conditions, drug allergies, or recent treatments that might inform today's diagnosis.
+
+4. Diagnosis and Documentation
+The clinician examines you and makes a diagnosis. They then write the details of your current visit in the passport, including:
+
+Presenting symptoms (e.g., fever, cough, pain).
+
+Physical examination findings.
+
+The final clinical diagnosis.
+
+5. Laboratory and Diagnostic Requests
+If further investigation is needed (such as a malaria rapid test, sputum test, or X-ray), the clinician writes the specific test request directly on the page of the passport.
+
+6. The Lab Round-Trip
+You take the passport to the laboratory or radiology department. The technician performs the requested test, writes the numerical or qualitative results (e.g., "Malaria Parasites: Positive +++") directly into the same book, and sends you back to the clinician with the results in hand. The clinician reviews the results to confirm or adjust the diagnosis.
+
+Phase 3: Divergence of Care
+At this point, the clinician decides if you are stable enough to go home or if you require hospital supervision.
+
+Path A: Outpatient (Home Care)
+
+7. Outpatient Prescription
+If your condition is manageable at home, the clinician writes the prescription (medication, dosage, frequency, and duration) directly onto the current page of the passport.
+
+8. Pharmacy Fulfillment
+You proceed to the hospital pharmacy and hand the passport through the window or over the counter. The dispenser reads the prescription, retrieves the medication, and dispenses it to you. To prevent double-dispensing or fraud, the dispenser stamps the page or ticks the prescription. You take both your medicine and your passport home.
+
+Path B: Inpatient (Admission)
+
+7. Admission Orders
+If your condition requires monitoring, surgery, or intensive treatment, the clinician writes an admission order in the passport. This note specifies the reason for admission and the ward to which you are assigned (e.g., Female Surgical, Paediatric, or Maternity Ward).
+
+8. Ward Handover and Bedside Record
+You walk to the designated ward and hand the passport to the nurse in charge. From this moment, the passport ceases to be your personal item and becomes a legal medical document. It remains at the nurse's station or is kept in a folder at the foot of your bed.
+
+9. Continuous Bedside Tracking
+During your stay, the passport functions as the central chart. Nurses record vital signs, fluid intake/output, and injected medications. When doctors do their rounds, they write daily progress notes, changes in treatment plans, and surgical notes directly into the booklet. If the booklet runs out of space, supplementary paper charts are folded and stapled inside.
+
+10. Discharge Summary
+When you are deemed fit to leave, the doctor writes a comprehensive discharge summary on a fresh page of the passport. This summary includes:
+
+Final diagnosis.
+
+Key treatments received during the stay.
+
+Results of major investigations.
+
+Instructions for follow-up appointments.
+
+Take-home medications.
+
+The passport is then physically handed back to you. You are responsible for carrying this updated record home and bringing it back for any future medical visits.

@@ -32,6 +32,11 @@
                     <h3 class="text-lg font-semibold text-gray-900 dark:text-gray-100">Inventory</h3>
                     <p class="text-sm text-gray-500 mt-1">Current stock levels, low stock and out of stock items.</p>
                 </a>
+
+                <a href="{{ route('reports.medical-clearance') }}" class="bg-white dark:bg-gray-800 rounded-lg shadow p-6 hover:shadow-md transition border border-sky-100">
+                    <h3 class="text-lg font-semibold text-gray-900 dark:text-gray-100">Medical Travel Clearance</h3>
+                    <p class="text-sm text-gray-500 mt-1">Generate a doctor-signed PDF using National ID or scanned DHP QR code.</p>
+                </a>
             </div>
         </div>
     </div>

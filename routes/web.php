@@ -128,6 +128,8 @@ Route::middleware('auth')->group(function () {
     Route::get('/reports/admissions', [ReportsController::class, 'admissions'])->name('reports.admissions');
     Route::get('/reports/dispensed-meds', [ReportsController::class, 'dispensedMeds'])->name('reports.dispensed-meds');
     Route::get('/reports/inventory', [ReportsController::class, 'inventory'])->name('reports.inventory');
+    Route::get('/reports/medical-clearance', [ReportsController::class, 'medicalClearance'])->name('reports.medical-clearance');
+    Route::post('/reports/medical-clearance/pdf', [ReportsController::class, 'medicalClearancePdf'])->name('reports.medical-clearance.pdf');
 
     // Patient Management Routes
     Route::resource('patients', PatientController::class);

@@ -7,6 +7,8 @@ use App\Models\Encounter;
 use App\Models\Inventory;
 use App\Models\Patient;
 use App\Models\Prescription;
+use App\Services\QrCodeService;
+use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
@@ -189,5 +191,87 @@ class ReportsController extends Controller
         ];
 
         return view('reports.inventory', compact('items', 'stats'));
+    }
+
+    /**
+     * Medical travel clearance report form
+     */
+    public function medicalClearance(Request $request)
+    {
+        $this->authorize('view_reports');
+
+        $patient = null;
+        $identifier = trim((string) $request->query('identifier'));
+
+        if ($identifier !== '') {
+            $patient = $this->findPatientByIdentifier($identifier);
+        }
+
+        $latestEncounter = $patient?->encounters()->with('user')->latest('encounter_date')->first();
+        $activePrescriptions = $patient?->prescriptions()
+            ->whereIn('status', ['pending', 'dispensed'])
+            ->latest('prescribed_at')
+            ->get() ?? collect();
+
+        return view('reports.medical-clearance', compact('patient', 'identifier', 'latestEncounter', 'activePrescriptions'));
+    }
+
+    /**
+     * Generate medical travel clearance PDF
+     */
+    public function medicalClearancePdf(Request $request)
+    {
+        $this->authorize('view_reports');
+
+        $validated = $request->validate([
+            'identifier' => ['required', 'string', 'max:255'],
+            'diagnosis' => ['required', 'string', 'max:2000'],
+            'current_condition' => ['required', 'string', 'max:2000'],
+            'treatment_plan' => ['required', 'string', 'max:2000'],
+            'medications' => ['nullable', 'string', 'max:4000'],
+            'medical_equipment' => ['nullable', 'string', 'max:2000'],
+            'travel_clearance' => ['required', 'string', 'max:2000'],
+            'flight_accommodations' => ['nullable', 'string', 'max:2000'],
+            'physician_name' => ['required', 'string', 'max:255'],
+            'physician_contact' => ['required', 'string', 'max:255'],
+            'issue_date' => ['required', 'date'],
+        ]);
+
+        $patient = $this->findPatientByIdentifier($validated['identifier']);
+
+        if (!$patient) {
+            return redirect()->route('reports.medical-clearance', ['identifier' => $validated['identifier']])
+                ->withErrors(['identifier' => 'No patient was found with this National ID, DHP ID, or scanned QR code.'])
+                ->withInput();
+        }
+
+        $patient->load(['registeredByFacility', 'prescriptions' => function ($query) {
+            $query->whereIn('status', ['pending', 'dispensed'])->latest('prescribed_at');
+        }]);
+
+        $latestEncounter = $patient->encounters()->with('facility', 'user')->latest('encounter_date')->first();
+        $facility = $latestEncounter?->facility ?? $patient->registeredByFacility ?? $request->user()->facility;
+
+        $pdf = Pdf::loadView('reports.pdf.medical-clearance', [
+            'patient' => $patient,
+            'latestEncounter' => $latestEncounter,
+            'facility' => $facility,
+            'report' => $validated,
+            'generatedBy' => $request->user(),
+        ])->setPaper('a4');
+
+        $fileName = 'medical-clearance-' . $patient->dhp_id . '-' . now()->format('YmdHis') . '.pdf';
+
+        return $pdf->download($fileName);
+    }
+
+    private function findPatientByIdentifier(string $identifier): ?Patient
+    {
+        $qrData = QrCodeService::parseQrCodeData($identifier);
+        $lookup = trim($qrData['dhp_id'] ?? $identifier);
+
+        return Patient::where('dhp_id', $lookup)
+            ->orWhere('national_id', $lookup)
+            ->first();
     }
 }

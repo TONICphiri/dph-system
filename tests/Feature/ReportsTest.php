@@ -32,7 +32,8 @@ class ReportsTest extends TestCase
             ->assertSee('Patient Census')
             ->assertSee('OPD Visits')
             ->assertSee('Dispensed Medications')
-            ->assertSee('Inventory');
+            ->assertSee('Inventory')
+            ->assertSee('Medical Travel Clearance');
     }
 
     public function test_reports_denied_without_permission(): void
@@ -43,6 +44,7 @@ class ReportsTest extends TestCase
 
         $this->actingAs($user)->get('/reports')->assertForbidden();
         $this->actingAs($user)->get('/reports/census')->assertForbidden();
+        $this->actingAs($user)->get('/reports/medical-clearance')->assertForbidden();
     }
 
     public function test_census_report_shows_totals(): void
@@ -126,5 +128,71 @@ class ReportsTest extends TestCase
             ->assertSee('Low Stock')
             ->assertSee('Out of Stock')
             ->assertSee('Expired');
+    }
+
+    public function test_medical_clearance_finds_patient_by_national_id(): void
+    {
+        $user = $this->adminUser();
+        $patient = Patient::factory()->create([
+            'first_name' => 'Test',
+            'last_name' => 'Traveller',
+            'national_id' => 'MW123456',
+        ]);
+
+        $this->actingAs($user)->get('/reports/medical-clearance?identifier=MW123456')
+            ->assertStatus(200)
+            ->assertSee($patient->full_name)
+            ->assertSee('Generate Medical PDF');
+    }
+
+    public function test_medical_clearance_pdf_requires_valid_patient_identifier(): void
+    {
+        $user = $this->adminUser();
+
+        $this->actingAs($user)->post('/reports/medical-clearance/pdf', $this->medicalClearancePayload([
+            'identifier' => 'missing-id',
+        ]))
+            ->assertRedirect('/reports/medical-clearance?identifier=missing-id')
+            ->assertSessionHasErrors('identifier');
+    }
+
+    public function test_medical_clearance_pdf_generates_for_patient(): void
+    {
+        $user = $this->adminUser();
+        $patient = Patient::factory()->create([
+            'dhp_id' => 'DHP-2026-00000999',
+            'national_id' => 'MW999999',
+        ]);
+
+        Encounter::factory()->create([
+            'patient_id' => $patient->id,
+            'diagnosis' => 'Stable asthma',
+            'treatment_plan' => 'Continue inhaled treatment',
+        ]);
+
+        $response = $this->actingAs($user)->post('/reports/medical-clearance/pdf', $this->medicalClearancePayload([
+            'identifier' => $patient->dhp_id,
+        ]));
+
+        $response->assertStatus(200)
+            ->assertHeader('content-type', 'application/pdf')
+            ->assertHeader('content-disposition');
+    }
+
+    private function medicalClearancePayload(array $overrides = []): array
+    {
+        return array_merge([
+            'identifier' => 'DHP-2026-00000999',
+            'diagnosis' => 'Stable asthma',
+            'current_condition' => 'Patient is clinically stable.',
+            'treatment_plan' => 'Continue current medication and follow up after travel.',
+            'medications' => 'Salbutamol inhaler - 2 puffs as needed',
+            'medical_equipment' => 'Inhaler spacer',
+            'travel_clearance' => 'Patient is fit for travel with listed accommodations.',
+            'flight_accommodations' => 'Carry inhaler in hand luggage.',
+            'physician_name' => 'Dr. Test User',
+            'physician_contact' => 'doctor@example.test',
+            'issue_date' => now()->format('Y-m-d'),
+        ], $overrides);
     }
 }

@@ -36,13 +36,23 @@
 
                     <div class="mb-6 p-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-700 rounded-lg">
                         <h3 class="font-semibold text-green-800 dark:text-green-200 mb-2">QR / DHP ID Lookup</h3>
-                        <p class="text-sm text-green-700 dark:text-green-300 mb-3">Scan or paste a Digital Health Passport ID to open the patient record instantly.</p>
-                        <div class="flex gap-2">
+                        <p class="text-sm text-green-700 dark:text-green-300 mb-3">Scan a QR code, or paste a Digital Health Passport ID to open the patient record instantly.</p>
+                        <div class="flex flex-col gap-2 sm:flex-row">
                             <input type="text" id="lookup-dhp-id" placeholder="e.g. DHP-2026-00000001"
                                    class="flex-1 px-4 py-2 border rounded-md shadow-sm" />
                             <button type="button" id="lookup-dhp-btn" class="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700">
                                 Open Record
                             </button>
+                            <button type="button" id="scan-qr-btn" class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">
+                                Scan QR Code
+                            </button>
+                            <button type="button" id="stop-scan-btn" class="hidden px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700">
+                                Stop Scan
+                            </button>
+                        </div>
+                        <div id="qr-scanner" class="hidden mt-4">
+                            <video id="qr-video" class="w-full max-w-md rounded-lg border border-green-300 bg-black" autoplay muted playsinline></video>
+                            <p id="qr-scanner-status" class="mt-2 text-sm text-green-700 dark:text-green-300">Point the camera at the patient's DHP QR code.</p>
                         </div>
                         <div id="lookup-dhp-result" class="mt-3"></div>
                     </div>
@@ -99,14 +109,51 @@
     <script>
         const dhpInput = document.getElementById("lookup-dhp-id");
         const dhpBtn = document.getElementById("lookup-dhp-btn");
+        const scanQrBtn = document.getElementById("scan-qr-btn");
+        const stopScanBtn = document.getElementById("stop-scan-btn");
+        const qrScanner = document.getElementById("qr-scanner");
+        const qrVideo = document.getElementById("qr-video");
+        const qrScannerStatus = document.getElementById("qr-scanner-status");
         const dhpResult = document.getElementById("lookup-dhp-result");
+        let qrStream = null;
+        let qrScanInterval = null;
 
-        function lookupDhpId() {
-            const value = dhpInput.value.trim();
+        function parseDhpId(value) {
+            try {
+                const parsed = JSON.parse(value);
+                if (parsed && parsed.dhp_id) {
+                    return parsed.dhp_id;
+                }
+            } catch (e) {}
+
+            return value;
+        }
+
+        function stopQrScanner() {
+            if (qrScanInterval) {
+                clearInterval(qrScanInterval);
+                qrScanInterval = null;
+            }
+
+            if (qrStream) {
+                qrStream.getTracks().forEach(function(track) { track.stop(); });
+                qrStream = null;
+            }
+
+            qrVideo.srcObject = null;
+            qrScanner.classList.add("hidden");
+            stopScanBtn.classList.add("hidden");
+            scanQrBtn.classList.remove("hidden");
+        }
+
+        function lookupDhpId(scannedValue) {
+            const value = parseDhpId((scannedValue || dhpInput.value).trim());
             if (!value) {
                 dhpResult.innerHTML = '<p class="text-sm text-red-600">Please enter or scan a DHP ID.</p>';
                 return;
             }
+
+            dhpInput.value = value;
 
             dhpResult.innerHTML = '<p class="text-sm text-gray-600">Searching...</p>';
 
@@ -141,6 +188,52 @@
         }
 
         dhpBtn.addEventListener("click", lookupDhpId);
+        scanQrBtn.addEventListener("click", function() {
+            if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+                dhpResult.innerHTML = '<p class="text-sm text-red-600">This browser cannot access the camera. Use manual DHP ID lookup instead.</p>';
+                return;
+            }
+
+            if (!window.BarcodeDetector) {
+                dhpResult.innerHTML = '<p class="text-sm text-red-600">This browser does not support built-in QR scanning. Use Chrome/Edge or enter the DHP ID manually.</p>';
+                return;
+            }
+
+            const detector = new BarcodeDetector({ formats: ["qr_code"] });
+
+            navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } })
+                .then(function(stream) {
+                    qrStream = stream;
+                    qrVideo.srcObject = stream;
+                    qrScanner.classList.remove("hidden");
+                    scanQrBtn.classList.add("hidden");
+                    stopScanBtn.classList.remove("hidden");
+                    qrScannerStatus.textContent = "Point the camera at the patient's DHP QR code.";
+
+                    qrScanInterval = setInterval(function() {
+                        if (qrVideo.readyState < 2) {
+                            return;
+                        }
+
+                        detector.detect(qrVideo)
+                            .then(function(codes) {
+                                if (codes.length && codes[0].rawValue) {
+                                    const scannedDhpId = parseDhpId(codes[0].rawValue.trim());
+                                    qrScannerStatus.textContent = "QR code found. Opening record...";
+                                    stopQrScanner();
+                                    lookupDhpId(scannedDhpId);
+                                }
+                            })
+                            .catch(function() {
+                                qrScannerStatus.textContent = "Scanning failed. Try again or enter the DHP ID manually.";
+                            });
+                    }, 500);
+                })
+                .catch(function() {
+                    dhpResult.innerHTML = '<p class="text-sm text-red-600">Camera permission was denied or no camera is available.</p>';
+                });
+        });
+        stopScanBtn.addEventListener("click", stopQrScanner);
         dhpInput.addEventListener("keypress", function(e) {
             if (e.key === "Enter") {
                 e.preventDefault();
