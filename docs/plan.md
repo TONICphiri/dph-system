@@ -7,6 +7,14 @@
 
 This plan restates your proposal's methodology and the system blueprint as four RAD phases, each broken into concrete sprints. Every phase includes **why it exists** (the reasoning a supervisor or examiner will look for), **what it delivers**, and **how to know it's done** — so the plan can be followed step by step, not just read.
 
+### Centralized design principle and efficiency objective
+
+The system must be designed as a centralized digital health passport for Malawi, not as a collection of isolated departmental tools. The patient record should be created once, linked to a unique DHP ID, and then reused across registration, triage, consultation, pharmacy, admission, and discharge. This makes the platform different from conventional Electronic Medical Records (EMRs) and Electronic Health Records (EHRs), which are often institution-centric, department-based, and designed mainly for administrative or clinical documentation rather than a portable patient journey across the full care pathway.
+
+Unlike typical EMR/EHR systems, this project is specifically positioned as a patient-centered, facility-linked, and journey-based health passport. It is designed to follow the patient from arrival at the health centre to discharge, while supporting continuity of care, faster retrieval of historical information, and a simpler, more visible workflow for low-resource clinic settings. It is not a generic replacement for all hospital software; it is a focused digital passport system built to reflect Malawi's practical healthcare reality and to improve queue flow, continuity, and staff efficiency.
+
+To strengthen the value proposition, the interface must also be optimized for efficiency. The user experience should reduce waiting time, minimize duplicate data capture, and make the next step in the patient journey obvious to staff. In practical terms, a clerk, nurse, clinician, pharmacist, and administrator should be able to navigate the same patient record with fewer clicks and clearer task flow, rather than re-entering the same history in separate systems. This is central to the system's adoption, usability, and impact at Ndirande Health Centre.
+
 ---
 
 ## Phase 1 — Requirements Planning ✅ *Complete*
@@ -18,8 +26,10 @@ This plan restates your proposal's methodology and the system blueprint as four 
 - Database draft translated into 14 migrations.
 - Role and permission model seeded (8 roles, 31 permissions via Spatie Permissions).
 - Screen sketches turned into a Blade views skeleton.
+- Centralized patient journey defined around a single DHP ID and a shared patient timeline across the facility.
+- Interface efficiency requirements captured: fewer duplicate steps, role-based dashboards, and streamlined queues for registration, triage, consultation, pharmacy, and discharge.
 
-**Done-when:** Migrations run cleanly, seeders populate roles/permissions/users, and the blueprint document is the agreed source of truth. All verified.
+**Done-when:** Migrations run cleanly, seeders populate roles/permissions/users, the blueprint document is the agreed source of truth, and the system design clearly demonstrates centralization and efficiency gains over fragmented manual or siloed digital processes. All verified.
 
 ---
 
@@ -132,6 +142,72 @@ This plan restates your proposal's methodology and the system blueprint as four 
 
 ---
 
+## To fully function system remaining work
+
+This section identifies the remaining work required to turn the current prototype into a fully functional digital health passport system for Ndirande Community Health Centre and similar Malawi health facilities.
+
+### 1) Complete the administrative backbone
+- Build user management screen for hospital staff.
+- Allow admin to create, edit, deactivate, and assign roles to users.
+- Add facility management screen to manage health facility details.
+- Connect facility and user assignments to the patient flow and permissions model.
+
+### 2) Implement audit logging for all clinical actions
+- Create an audit log table and model.
+- Log every relevant patient, triage, consultation, prescription, pharmacy, admission, and discharge event.
+- Capture who changed the record, when it happened, what action was taken, and the record affected.
+- Provide an administrator view for audit history and accountability.
+
+### 3) Finalize missing clinical workflows
+- Add a formal lab and diagnostic request/result workflow.
+- Link diagnostics to the consultation encounter and patient record.
+- Ensure clinician review of lab results can update diagnosis or treatment.
+- Confirm patient timeline includes all diagnostic updates and follow-up actions.
+
+### 4) Improve data consistency and workflow integrity
+- Validate and fix patient encounter status transitions across registration → triage → consultation → discharge.
+- Prevent duplicate active admissions for the same patient.
+- Guarantee only pending prescriptions can be dispensed.
+- Review ward medication administration and discharge summary workflow for consistency.
+
+### 5) Strengthen the user interface for efficiency
+- Reduce repeated clicks in the patient journey.
+- Improve dashboard visibility for queues, waiting patients, and pending tasks.
+- Add fast patient lookup and direct navigation from triage to consultation to pharmacy.
+- Make the same patient record easy to access across departments without re-entering information.
+
+### 6) Complete production readiness
+- Run `npm run build` and confirm production assets are generated.
+- Run `config:cache`, `route:cache`, and `view:cache`.
+- Set `APP_ENV=production` and `APP_DEBUG=false` before deployment.
+- Configure HTTPS/TLS on the hosting environment.
+- Test the system in a live pilot environment.
+
+### 7) Validate usability and functional performance
+- Conduct usability testing with at least 5 healthcare workers.
+- Measure SUS score and functionality pass rate.
+- Collect feedback on queue flow, patient tracking, and staff workload.
+- Refine the interface based on local operational realities.
+
+### 8) Final handover and pilot deployment
+- Pilot at Ndirande Community Health Centre or similar low-resource setting.
+- Train staff on the patient journey and role-based usage.
+- Monitor workflow efficiency before broader rollout.
+- Fix issues discovered during the pilot before final sign-off.
+
+### Priority order to finish the project
+1. User management and facility management
+2. Audit logging
+3. Workflow consistency and data integrity fixes
+4. Lab/diagnostic module integration
+5. Interface efficiency improvements
+6. Production deployment setup
+7. Pilot testing and final validation
+
+**Done-when:** The system can support a full patient journey from registration to discharge with secure role-based access, clear accountability, operational efficiency, and a pilot-ready production setup.
+
+---
+
 ## Quick reference: environment commands
 
 ```powershell
@@ -159,6 +235,7 @@ Always use `C:\xampp\php\php.exe` — the PATH `php` (WinGet 8.4) has no `php.in
 | (b) Design architecture, schema, UI models with supervisor sign-off | Phase 1 → Phase 2 |
 | (c) Build 5 core modules (registration, records, immunization*, lab results*, access control) | Phase 3, Sprints 1–8 |
 | (d) Usability testing, SUS ≥70, 95% pass rate | Phase 4 |
+| (e) Centralized digital health passport with shared patient data, distinct from EMR/EHR systems, and improved interface efficiency | Phase 1 → Phase 2 → Phase 3 |
 
 \* Immunization tracking and lab results aren't yet explicit modules in the current blueprint/sprint list — worth flagging with your supervisor if they're required deliverables, since the current scope (Section 5 of the blueprint) explicitly excludes laboratory systems.
 

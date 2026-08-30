@@ -51,6 +51,11 @@
                             {{ __('Reports') }}
                         </x-nav-link>
                     @endcan
+                    @canany(['manage_facility', 'manage_facility_users'])
+                        <x-nav-link :href="route('facilities.index')" :active="request()->routeIs('facilities.*') || request()->routeIs('users.*')">
+                            {{ __('Administration') }}
+                        </x-nav-link>
+                    @endcanany
                 </div>
             </div>
 
@@ -143,6 +148,11 @@
                     {{ __('Reports') }}
                 </x-responsive-nav-link>
             @endcan
+            @canany(['manage_facility', 'manage_facility_users'])
+                <x-responsive-nav-link :href="route('facilities.index')" :active="request()->routeIs('facilities.*') || request()->routeIs('users.*')">
+                    {{ __('Administration') }}
+                </x-responsive-nav-link>
+            @endcanany
         </div>
 
         <!-- Responsive Settings Options -->

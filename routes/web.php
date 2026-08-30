@@ -1,10 +1,12 @@
 <?php
 
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\FacilityController;
 use App\Http\Controllers\InventoryController;
 use App\Http\Controllers\PatientController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\ReportsController;
+use App\Http\Controllers\UserController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/test-server-error', function () {
@@ -120,6 +122,10 @@ Route::middleware('auth')->group(function () {
     Route::get('/inventory/{item}/edit', [InventoryController::class, 'edit'])->name('inventory.edit');
     Route::put('/inventory/{item}', [InventoryController::class, 'update'])->name('inventory.update');
     Route::post('/inventory/{item}/restock', [InventoryController::class, 'restock'])->name('inventory.restock');
+
+    // Admin Management Routes
+    Route::resource('facilities', FacilityController::class)->except(['show']);
+    Route::resource('users', UserController::class)->except(['show']);
 
     // Reports Routes
     Route::get('/reports', [ReportsController::class, 'index'])->name('reports.index');
