@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Facility;
 use App\Models\User;
+use App\Models\AuditLog;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\DB;
@@ -56,6 +57,14 @@ class UserController extends Controller
 
             $user->assignRole($validated['role']);
 
+            AuditLog::create([
+                'action' => 'create',
+                'subject_type' => User::class,
+                'subject_id' => $user->id,
+                'user_id' => auth()->id(),
+                'description' => 'User created: ' . $validated['name'] . ' (' . $validated['email'] . ')',
+            ]);
+
             DB::commit();
 
             return redirect()->route('users.index')->with('success', 'User created successfully.');
@@ -104,6 +113,14 @@ class UserController extends Controller
 
             $user->syncRoles([$validated['role']]);
 
+            AuditLog::create([
+                'action' => 'update',
+                'subject_type' => User::class,
+                'subject_id' => $user->id,
+                'user_id' => auth()->id(),
+                'description' => 'User updated: ' . $user->name . ' (' . $user->email . ')',
+            ]);
+
             DB::commit();
 
             return redirect()->route('users.index')->with('success', 'User updated successfully.');
@@ -118,6 +135,14 @@ class UserController extends Controller
     public function destroy(User $user)
     {
         $this->authorize('manage_facility_users');
+
+        AuditLog::create([
+            'action' => 'delete',
+            'subject_type' => User::class,
+            'subject_id' => $user->id,
+            'user_id' => auth()->id(),
+            'description' => 'User deleted: ' . $user->name . ' (' . $user->email . ')',
+        ]);
 
         try {
             $user->delete();

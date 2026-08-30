@@ -117,6 +117,14 @@ class PatientController extends Controller
 
             DB::commit();
 
+            AuditLog::create([
+                'action' => 'create',
+                'subject_type' => Patient::class,
+                'subject_id' => $patient->id,
+                'user_id' => auth()->id(),
+                'description' => 'Patient registered: ' . $patient->full_name . ' (DHP ID: ' . $patient->dhp_id . ') at ' . $this->user()->facility->name,
+            ]);
+
             SyncService::enqueue('patients', $patient, 'create');
 
             return redirect()->route('patients.show', $patient)
@@ -166,6 +174,14 @@ class PatientController extends Controller
 
         try {
             $patient->update($request->validated());
+
+            AuditLog::create([
+                'action' => 'update',
+                'subject_type' => Patient::class,
+                'subject_id' => $patient->id,
+                'user_id' => auth()->id(),
+                'description' => 'Patient information updated: ' . $patient->full_name . ' (DHP ID: ' . $patient->dhp_id . ')',
+            ]);
 
             SyncService::enqueue('patients', $patient, 'update');
             
@@ -329,6 +345,14 @@ class PatientController extends Controller
             
             DB::commit();
 
+            AuditLog::create([
+                'action' => 'update',
+                'subject_type' => Encounter::class,
+                'subject_id' => $encounter->id,
+                'user_id' => auth()->id(),
+                'description' => 'Triage vitals recorded for patient ' . $patient->full_name . ' (DHP ID: ' . $patient->dhp_id . ') - priority: ' . ($existingVitals->priority_level ?? 'none'),
+            ]);
+
             SyncService::enqueue('encounters', $encounter, 'update');
             SyncService::enqueue('vitals', $existingVitals, 'create');
             
@@ -439,6 +463,14 @@ class PatientController extends Controller
             
             DB::commit();
 
+            AuditLog::create([
+                'action' => 'update',
+                'subject_type' => Encounter::class,
+                'subject_id' => $encounter->id,
+                'user_id' => auth()->id(),
+                'description' => 'Consultation recorded for patient ' . $patient->full_name . ' (DHP ID: ' . $patient->dhp_id . ') - diagnosis: ' . ($validated['diagnosis'] ?? 'none') . ', admission: ' . ($validated['requires_admission'] ? 'yes' : 'no'),
+            ]);
+
             SyncService::enqueue('encounters', $encounter, 'update');
             foreach ($createdPrescriptions as $prescription) {
                 SyncService::enqueue('prescriptions', $prescription, 'create');
@@ -521,6 +553,14 @@ class PatientController extends Controller
             
             DB::commit();
 
+            AuditLog::create([
+                'action' => 'update',
+                'subject_type' => Prescription::class,
+                'subject_id' => $prescription->id,
+                'user_id' => auth()->id(),
+                'description' => 'Medication dispensed: ' . $prescription->medication_name . ' for patient ' . $patient->full_name . ' (DHP ID: ' . $patient->dhp_id . ') - quantity: ' . $quantityDispensed,
+            ]);
+
             SyncService::enqueue('prescriptions', $prescription, 'update');
             
             return redirect()->route('patients.show', $patient)
@@ -557,6 +597,13 @@ class PatientController extends Controller
         
         $patient = Patient::findOrFail($request->patient_id);
         
+        // Prevent duplicate active admissions
+        $existingActiveAdmission = $patient->admissions()->where('status', 'active')->latest()->first();
+        if ($existingActiveAdmission) {
+            return redirect()->route('patients.show', $patient)
+                          ->with('error', 'This patient already has an active admission. Discharge the patient before creating a new admission.');
+        }
+        
         $validated = $request->validate([
             'bed_number' => 'required|string',
             'ward' => 'required|string',
@@ -588,6 +635,14 @@ class PatientController extends Controller
             ]);
             
             DB::commit();
+
+            AuditLog::create([
+                'action' => 'create',
+                'subject_type' => Admission::class,
+                'subject_id' => $admission->id,
+                'user_id' => auth()->id(),
+                'description' => 'Patient admitted: ' . $patient->full_name . ' (DHP ID: ' . $patient->dhp_id . ') to ward ' . $validated['ward'] . ' Bed ' . $validated['bed_number'],
+            ]);
 
             SyncService::enqueue('encounters', $encounter, 'create');
             SyncService::enqueue('admissions', $admission, 'create');
@@ -665,8 +720,16 @@ class PatientController extends Controller
             
             $vital->save();
             
-            DB::commit();
-            
+DB::commit();
+
+            AuditLog::create([
+                'action' => 'update',
+                'subject_type' => Vital::class,
+                'subject_id' => $vital->id,
+                'user_id' => auth()->id(),
+                'description' => 'Ward round vitals recorded for patient ' . $patient->full_name . ' (DHP ID: ' . $patient->dhp_id . ') - temp: ' . $vital->temperature . ' HR: ' . $vital->heart_rate,
+            ]);
+
             return redirect()->route('patients.show', $patient)
                 ->with('success', 'Ward round observations recorded successfully');
         } catch (\Exception $e) {
@@ -745,6 +808,14 @@ class PatientController extends Controller
                 'notes' => $validated['notes'] ?? null,
             ]);
 
+            AuditLog::create([
+                'action' => 'create',
+                'subject_type' => 'MedicationAdministration',
+                'subject_id' => null,
+                'user_id' => auth()->id(),
+                'description' => "Medication '{$validated['medication_name']}' administered for patient {$patient->full_name} (DHP ID: {$patient->dhp_id})",
+            ]);
+
             DB::commit();
 
             return redirect()->route('ward', $patient)
@@ -786,6 +857,14 @@ class PatientController extends Controller
                 'recorded_by_user_id' => $this->user()->id,
                 'note' => $validated['note'],
                 'recorded_at' => now(),
+            ]);
+
+            AuditLog::create([
+                'action' => 'create',
+                'subject_type' => 'ProgressNote',
+                'subject_id' => null,
+                'user_id' => auth()->id(),
+                'description' => "Progress note recorded for patient {$patient->full_name} (DHP ID: {$patient->dhp_id})",
             ]);
 
             DB::commit();
@@ -840,6 +919,16 @@ class PatientController extends Controller
             }
             
             DB::commit();
+
+            $admissionId = $latestAdmission ? $latestAdmission->id : null;
+            
+            AuditLog::create([
+                'action' => 'update',
+                'subject_type' => $admissionId ? Admission::class : Encounter::class,
+                'subject_id' => $admissionId,
+                'user_id' => auth()->id(),
+                'description' => 'Patient discharged: ' . $patient->full_name . ' (DHP ID: ' . $patient->dhp_id . ') - diagnosis: ' . $validated['final_diagnosis'],
+            ]);
 
             if ($latestAdmission) {
                 SyncService::enqueue('admissions', $latestAdmission, 'update');
