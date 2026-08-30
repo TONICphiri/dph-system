@@ -71,6 +71,23 @@
                 <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-5">
                     <p class="text-sm text-gray-500 dark:text-gray-400">Total Patients</p>
                     <p class="text-2xl font-bold text-gray-900 dark:text-gray-100">{{ $stats['totalPatients'] }}</p>
+            </div>
+            <div class="mb-4">
+                <div class="bg-white dark:bg-gray-800 rounded-lg p-3 shadow-sm mb-3">
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-2">
+                        <div>
+                            <label class="block text-xs font-medium uppercase tracking-wide text-sky-700 mb-1">Search Patient</label>
+                            <input type="text" id="dbSearch" placeholder="DHP ID, National ID, name" class="mt-1 block w-full rounded border border-sky-300 py-1 px-2 text-sky-800 focus:outline-none focus:ring-2 focus:ring-sky-300">
+                        </div>
+                        <div>
+                            <button type="button" id="dbClearSearch" class="hidden bg-sky-50 text-sky-600 py-1 px-2 rounded text-xs">Clear</button>
+                        </div>
+                    </div>
+                </div>
+                <div id="searchResults" class="mt-2 max-h-40 overflow-y-auto border border-sky-100 rounded-lg bg-sky-50 text-sm">
+                    <div class="p-3 text-center text-sky-500">Type to search...</div>
+                </div>
+            </div>
                 </div>
                 <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-5">
                     <p class="text-sm text-gray-500 dark:text-gray-400">Registered Today</p>

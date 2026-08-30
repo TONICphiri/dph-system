@@ -154,9 +154,16 @@
                                 </div>
                             @endforeach
                         </div>
-                    </div>
-                </div>
-            @endif
+</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Lab Orders Summary -->
+    <div class="bg-white dark:bg-gray-800 overflow-hidden shadow-sm sm:rounded-lg mt-6">
+        <div class="p-6 text-gray-900 dark:text-gray-100">
+            <h3 class="text-lg font-semibold mb-4">Lab Orders</h3>
+            @include('patients.lab-order-summary', ['patient' => $patient])
         </div>
     </div>
 </x-app-layout>

@@ -143,6 +143,14 @@ Route::middleware('auth')->group(function () {
     Route::get('/api/patients/search-by-dhp-id', [PatientController::class, 'searchByDhpId'])->name('patients.search.dhp-id');
     Route::get('/patients/{patient}/qr-code', [PatientController::class, 'showQrCode'])->name('patients.qr-code');
     Route::get('/api/patients/{patient}/qr-code', [PatientController::class, 'getQrCode'])->name('patients.qr-code.api');
+
+    /** Lab Orders Routes */
+    Route::get('/lab/orders', [LabOrderController::class, 'index'])->name('lab.orders.index');
+    Route::get('/lab/orders/create/{patient}', [LabOrderController::class, 'create'])->name('lab.orders.create');
+    Route::post('/lab/orders', [LabOrderController::class, 'store'])->name('lab.orders.store');
+    Route::get('/lab/orders/{labOrder}', [LabOrderController::class, 'show'])->name('lab.orders.show');
+    Route::post('/lab/orders/{labOrder}/results', [LabOrderController::class, 'updateResults'])->name('lab.orders.results');
+    Route::get('/lab/orders/patient/{patient}', [LabOrderController::class, 'patientOrders'])->name('lab.orders.patient');
 });
 
 require __DIR__.'/auth.php';
