@@ -29,6 +29,7 @@
                                 <th class="px-4 py-3 font-semibold">Email</th>
                                 <th class="px-4 py-3 font-semibold">Facility</th>
                                 <th class="px-4 py-3 font-semibold">Role</th>
+                                <th class="px-4 py-3 font-semibold">Status</th>
                                 <th class="px-4 py-3 font-semibold">Actions</th>
                             </tr>
                         </thead>
@@ -37,10 +38,21 @@
                                 <tr>
                                     <td class="px-4 py-3">{{ $user->name }}</td>
                                     <td class="px-4 py-3">{{ $user->email }}</td>
-                                    <td class="px-4 py-3">{{ $user->facility?->name ?? '—' }}</td>
+                                    <td class="px-4 py-3">{{ $user->facility?->name ?? 'â€”' }}</td>
                                     <td class="px-4 py-3">{{ $user->roles->first()?->name ?? 'No role' }}</td>
+                                    <td class="px-4 py-3">
+                                        <span class="inline-flex rounded-full px-2 py-1 text-xs font-semibold {{ $user->status === 'active' ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-200 text-slate-700' }}">
+                                            {{ $user->status ?? 'active' }}
+                                        </span>
+                                    </td>
                                     <td class="px-4 py-3 flex gap-2">
                                         <a href="{{ route('users.edit', $user) }}" class="inline-flex items-center px-3 py-1.5 bg-amber-500 border border-transparent rounded-md font-semibold text-xs text-white hover:bg-amber-600">Edit</a>
+                                        <form action="{{ route('users.toggle-status', $user) }}" method="POST">
+                                            @csrf
+                                            <button type="submit" class="inline-flex items-center px-3 py-1.5 {{ $user->status === 'active' ? 'bg-slate-600' : 'bg-emerald-600' }} border border-transparent rounded-md font-semibold text-xs text-white hover:{{ $user->status === 'active' ? 'bg-slate-700' : 'bg-emerald-700' }}">
+                                                {{ $user->status === 'active' ? 'Deactivate' : 'Activate' }}
+                                            </button>
+                                        </form>
                                         <form action="{{ route('users.destroy', $user) }}" method="POST" onsubmit="return confirm('Delete this user?')">
                                             @csrf
                                             @method('DELETE')
@@ -50,7 +62,7 @@
                                 </tr>
                             @empty
                                 <tr>
-                                    <td colspan="5" class="px-4 py-6 text-center text-slate-500">No users found.</td>
+                                    <td colspan="6" class="px-4 py-6 text-center text-slate-500">No users found.</td>
                                 </tr>
                             @endforelse
                         </tbody>

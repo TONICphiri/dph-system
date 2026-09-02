@@ -42,6 +42,7 @@ class UserController extends Controller
             'password' => ['required', 'string', 'min:8', 'confirmed'],
             'facility_id' => 'required|exists:facilities,id',
             'role' => 'required|string|exists:roles,name',
+            'status' => 'required|string|in:active,inactive',
         ]);
 
         try {
@@ -52,6 +53,7 @@ class UserController extends Controller
                 'email' => $validated['email'],
                 'password' => Hash::make($validated['password']),
                 'facility_id' => $validated['facility_id'],
+                'status' => $validated['status'],
                 'email_verified_at' => now(),
             ]);
 
@@ -95,6 +97,7 @@ class UserController extends Controller
             'email' => 'required|string|email|max:255|unique:users,email,' . $user->id,
             'facility_id' => 'required|exists:facilities,id',
             'role' => 'required|string|exists:roles,name',
+            'status' => 'required|string|in:active,inactive',
             'password' => ['nullable', 'string', 'min:8', 'confirmed'],
         ]);
 
@@ -105,6 +108,7 @@ class UserController extends Controller
                 'name' => $validated['name'],
                 'email' => $validated['email'],
                 'facility_id' => $validated['facility_id'],
+                'status' => $validated['status'],
             ]);
 
             if (!empty($validated['password'])) {
@@ -153,5 +157,26 @@ class UserController extends Controller
 
             return redirect()->back()->with('error', 'Failed to delete user. Please try again.');
         }
+    }
+
+    public function toggleStatus(User $user)
+    {
+        $this->authorize('manage_facility_users');
+
+        $user->update([
+            'status' => $user->status === 'active' ? 'inactive' : 'active',
+        ]);
+
+        AuditLog::create([
+            'action' => 'toggle_status',
+            'subject_type' => User::class,
+            'subject_id' => $user->id,
+            'user_id' => auth()->id(),
+            'description' => 'User status changed to ' . $user->status . ': ' . $user->name . ' (' . $user->email . ')',
+        ]);
+
+        $message = $user->status === 'active' ? 'User activated successfully.' : 'User deactivated successfully.';
+
+        return redirect()->route('users.index')->with('success', $message);
     }
 }

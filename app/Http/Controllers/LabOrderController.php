@@ -7,6 +7,7 @@ use App\Http\Requests\UpdateLabOrderRequest;
 use App\Models\LabOrder;
 use App\Models\Patient;
 use App\Models\Encounter;
+use App\Models\AuditLog;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
@@ -58,8 +59,9 @@ class LabOrderController extends Controller
      */
     public function store(StoreLabOrderRequest $request)
     {
-        $this->authorize('create_patient');
+        $this->authorize('create_lab_orders');
 
+        $patient = Patient::findOrFail($request->patient_id);
         $validated = $request->validated();
 
         try {
@@ -80,6 +82,15 @@ class LabOrderController extends Controller
                 'status' => 'requested',
                 'description' => $validated['description'] ?? null,
                 'requested_by_user_id' => auth()->id(),
+            ]);
+
+            // Log the lab order creation
+            AuditLog::create([
+                'action' => 'create',
+                'subject_type' => LabOrder::class,
+                'subject_id' => $labOrder->id,
+                'user_id' => auth()->id(),
+                'description' => 'Lab order created: ' . $labOrder->test_name . ' for patient ' . $patient->full_name . ' (DHP ID: ' . $patient->dhp_id . ')',
             ]);
 
             DB::commit();
@@ -111,7 +122,7 @@ class LabOrderController extends Controller
      */
     public function updateResults(UpdateLabOrderRequest $request, LabOrder $labOrder)
     {
-        $this->authorize('create_patient');
+        $this->authorize('record_lab_results');
 
         $validated = $request->validated();
 
@@ -121,15 +132,19 @@ class LabOrderController extends Controller
             $labOrder->update([
                 'status' => 'results',
                 'result_value' => $validated['result_value'],
-                'result_units' => $validated['result_units'],
+                'result_units' => $validated['result_units'] ?? null,
                 'result_description' => $validated['result_description'] ?? null,
                 'completed_at' => now(),
             ]);
 
-            // If there's an associated encounter, we could update diagnosis based on results
-            if ($labOrder->encounter) {
-                // No automatic diagnosis update - clinician reviews and decides
-            }
+            // Log the results update
+            AuditLog::create([
+                'action' => 'update',
+                'subject_type' => LabOrder::class,
+                'subject_id' => $labOrder->id,
+                'user_id' => auth()->id(),
+                'description' => 'Lab results recorded for ' . $labOrder->test_name . ' for patient ' . $labOrder->patient->full_name . ' (DHP ID: ' . $labOrder->patient->dhp_id . ') - Result: ' . $validated['result_value'],
+            ]);
 
             DB::commit();
 

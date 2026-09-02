@@ -7,6 +7,12 @@ use App\Http\Requests\UpdatePatientRequest;
 use App\Jobs\ProcessSyncQueue;
 use App\Models\Patient;
 use App\Models\Guardian;
+use App\Models\AuditLog;
+use App\Models\Encounter;
+use App\Models\Prescription;
+use App\Models\Admission;
+use App\Models\Inventory;
+use App\Models\SyncQueue;
 use App\Services\QrCodeService;
 use App\Services\SyncService;
 use Illuminate\Http\Request;
@@ -383,7 +389,7 @@ class PatientController extends Controller
             $latestEncounter->update(['status' => 'consultation']);
         }
         
-        $inventory = \App\Models\Inventory::whereIn('status', ['available', 'low_stock'])->get();
+        $inventory = Inventory::whereIn('status', ['available', 'low_stock'])->get();
         
         return view('patients.consultation', compact('patient', 'latestEncounter', 'inventory'));
     }
@@ -498,7 +504,7 @@ class PatientController extends Controller
         
         $latestEncounter = $patient->encounters()->latest()->first();
         $prescriptions = $latestEncounter ? $latestEncounter->prescriptions : collect();
-        $inventory = \App\Models\Inventory::all();
+        $inventory = Inventory::all();
         
         return view('patients.pharmacy', compact('patient', 'prescriptions', 'inventory'));
     }
@@ -520,7 +526,7 @@ class PatientController extends Controller
         try {
             DB::beginTransaction();
             
-            $prescription = \App\Models\Prescription::find($validated['prescription_id']);
+            $prescription = Prescription::find($validated['prescription_id']);
 
             if ($prescription->status !== 'pending') {
                 throw new \Exception('Only pending prescriptions can be dispensed');
@@ -537,7 +543,7 @@ class PatientController extends Controller
             ]);
             
             // Update inventory
-            $inventoryItem = \App\Models\Inventory::where('medication_name', $prescription->medication_name)->first();
+            $inventoryItem = Inventory::where('medication_name', $prescription->medication_name)->first();
             if ($inventoryItem) {
                 $inventoryItem->decrement('current_stock', $quantityDispensed);
                 $inventoryItem->updateStatus();
@@ -957,10 +963,10 @@ DB::commit();
     {
         $this->authorize('view_sync_queue');
         
-        $syncQueue = \App\Models\SyncQueue::latest()->take(20)->get();
-        $syncedCount = \App\Models\SyncQueue::where('status', 'synced')->count();
-        $pendingCount = \App\Models\SyncQueue::where('status', 'pending')->count();
-        $failedCount = \App\Models\SyncQueue::where('status', 'failed')->count();
+        $syncQueue = SyncQueue::latest()->take(20)->get();
+        $syncedCount = SyncQueue::where('status', 'synced')->count();
+        $pendingCount = SyncQueue::where('status', 'pending')->count();
+        $failedCount = SyncQueue::where('status', 'failed')->count();
         
         return view('patients.sync-status', compact('syncQueue', 'syncedCount', 'pendingCount', 'failedCount'));
     }
@@ -979,7 +985,7 @@ DB::commit();
         ]);
         
         try {
-            $syncQueue = \App\Models\SyncQueue::create([
+            $syncQueue = SyncQueue::create([
                 'facility_id' => $this->user()->facility_id,
                 'record_type' => $validated['record_type'],
                 'record_id' => $validated['record_id'],
@@ -1077,7 +1083,7 @@ DB::commit();
     {
         $this->authorize('view_sync_queue');
 
-        $syncQueue = \App\Models\SyncQueue::findOrFail($id);
+        $syncQueue = SyncQueue::findOrFail($id);
 
         if (!$syncQueue->canRetry()) {
             return redirect()->back()->with('error', 'Sync record has exceeded the maximum retry count');

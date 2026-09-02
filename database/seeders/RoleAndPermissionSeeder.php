@@ -69,6 +69,11 @@ class RoleAndPermissionSeeder extends Seeder
             'view_reports',
             'generate_reports',
 
+            // Lab
+            'view_lab_orders',
+            'create_lab_orders',
+            'record_lab_results',
+
             // Admin
             'manage_permissions',
             'view_audit_logs',
@@ -116,6 +121,8 @@ class RoleAndPermissionSeeder extends Seeder
                 'consult_patient',
                 'update_patient',
                 'view_sync_queue',
+                'create_lab_orders',
+                'view_lab_orders',
             ],
 
             'doctor' => [
@@ -170,6 +177,15 @@ class RoleAndPermissionSeeder extends Seeder
                 'view_reports',
                 'generate_reports',
                 'view_audit_logs',
+            ],
+
+            'lab_technician' => [
+                'view_patients',
+                'view_patient',
+                'view_lab_orders',
+                'record_lab_results',
+                'view_reports',
+                'view_sync_queue',
             ],
         ];
 

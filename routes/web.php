@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\AuditLogController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\FacilityController;
 use App\Http\Controllers\InventoryController;
@@ -126,6 +127,10 @@ Route::middleware('auth')->group(function () {
     // Admin Management Routes
     Route::resource('facilities', FacilityController::class)->except(['show']);
     Route::resource('users', UserController::class)->except(['show']);
+    Route::post('/users/{user}/toggle-status', [UserController::class, 'toggleStatus'])->name('users.toggle-status');
+
+    // Audit Logs Routes
+    Route::get('/audit-logs', [AuditLogController::class, 'index'])->name('audit-logs.index');
 
     // Reports Routes
     Route::get('/reports', [ReportsController::class, 'index'])->name('reports.index');

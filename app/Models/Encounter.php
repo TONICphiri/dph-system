@@ -83,4 +83,12 @@ class Encounter extends Model
     {
         return $this->hasMany(Admission::class);
     }
+
+    /**
+     * Get lab orders for this encounter
+     */
+    public function labOrders(): HasMany
+    {
+        return $this->hasMany(LabOrder::class);
+    }
 }

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Facility;
+use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
@@ -12,9 +13,21 @@ class FacilityController extends Controller
     {
         $this->authorize('manage_facility');
 
-        $facilities = Facility::orderBy('name')->paginate(15);
+        $facilities = Facility::withCount([
+            'users as total_staff',
+            'users as active_staff' => function ($query) {
+                $query->where('status', 'active');
+            },
+        ])->orderBy('name')->paginate(15);
 
-        return view('admin.facilities.index', compact('facilities'));
+        $totalFacilityStaff = User::query()->count();
+        $activeFacilityStaff = User::query()->where('status', 'active')->count();
+
+        return view('admin.facilities.index', [
+            'facilities' => $facilities,
+            'totalFacilityStaff' => $totalFacilityStaff,
+            'activeFacilityStaff' => $activeFacilityStaff,
+        ]);
     }
 
     public function create()

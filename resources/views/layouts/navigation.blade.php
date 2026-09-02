@@ -51,6 +51,11 @@
                             {{ __('Reports') }}
                         </x-nav-link>
                     @endcan
+                    @can('view_audit_logs')
+                        <x-nav-link :href="route('audit-logs.index')" :active="request()->routeIs('audit-logs.*')">
+                            {{ __('Audit Logs') }}
+                        </x-nav-link>
+                    @endcan
                     @canany(['manage_facility', 'manage_facility_users'])
                         <x-nav-link :href="route('facilities.index')" :active="request()->routeIs('facilities.*') || request()->routeIs('users.*')">
                             {{ __('Administration') }}
@@ -146,6 +151,11 @@
             @can('view_reports')
                 <x-responsive-nav-link :href="route('reports.index')" :active="request()->routeIs('reports.*')">
                     {{ __('Reports') }}
+                </x-responsive-nav-link>
+            @endcan
+            @can('view_audit_logs')
+                <x-responsive-nav-link :href="route('audit-logs.index')" :active="request()->routeIs('audit-logs.*')">
+                    {{ __('Audit Logs') }}
                 </x-responsive-nav-link>
             @endcan
             @canany(['manage_facility', 'manage_facility_users'])
