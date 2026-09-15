@@ -6,10 +6,22 @@ use Illuminate\Foundation\Testing\RefreshDatabase as BaseRefreshDatabase;
 
 trait RefreshDatabaseWithoutPrompts
 {
-    use BaseRefreshDatabase;
+    use BaseRefreshDatabase {
+        BaseRefreshDatabase::refreshTestDatabase as baseRefreshTestDatabase;
+    }
 
     /**
      * Refresh the test database without interactive prompts.
+     *
+     * Delegates to the standard implementation: migrate once per process,
+     * then wrap EVERY test in a transaction that is rolled back.
+     *
+     * The previous version ran `migrate:fresh` on every test WITHOUT
+     * opening a transaction, so each Feature test COMMITTED its rows to
+     * the shared in-memory SQLite database. Those rows leaked into later
+     * test classes (e.g. discharge sync rows appearing inside SyncTest
+     * counts) and the repeated migrate:fresh corrupted the shared PDO
+     * state ("no such table" errors). Standard behavior fixes both.
      */
     protected function refreshTestDatabase(): void
     {
@@ -17,10 +29,7 @@ trait RefreshDatabaseWithoutPrompts
             return;
         }
 
-        // Use the parent implementation which properly sets up SQLite
-        $this->artisan("migrate:fresh", [
-            "--force" => true,
-        ]);
+        $this->baseRefreshTestDatabase();
     }
 
     /**

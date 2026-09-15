@@ -136,6 +136,82 @@ class SyncTest extends TestCase
         ]);
     }
 
+    public function test_failed_sync_uploads_on_its_own_once_internet_restored(): void
+    {
+        $this->seed(\Database\Seeders\RoleAndPermissionSeeder::class);
+        config()->set('services.sync.endpoint', 'https://national.example.test/sync');
+
+        // Internet down, then back: first push fails, second succeeds.
+        \Illuminate\Support\Facades\Http::fakeSequence()
+            ->pushStatus(500)
+            ->pushStatus(200);
+
+        SyncQueue::factory()->create(['status' => 'pending']);
+
+        $first = SyncService::processPending(50);
+        $this->assertSame(0, $first['synced']);
+        $this->assertSame(1, $first['failed']);
+        $this->assertDatabaseHas('sync_queue', ['status' => 'failed', 'retry_count' => 1]);
+
+        // Backoff has not expired yet: nothing is due.
+        $this->assertSame(0, SyncQueue::dueForSync()->count());
+
+        // Internet restored + backoff expired: uploads with no manual retry.
+        $this->travel(5)->minutes();
+        $second = SyncService::processPending(50);
+        $this->assertSame(1, $second['synced']);
+        $this->assertDatabaseMissing('sync_queue', ['status' => 'failed']);
+    }
+
+    public function test_rejected_payload_parks_for_manual_review(): void
+    {
+        $this->seed(\Database\Seeders\RoleAndPermissionSeeder::class);
+        config()->set('services.sync.endpoint', 'https://national.example.test/sync');
+        \Illuminate\Support\Facades\Http::fake(['*' => \Illuminate\Support\Facades\Http::response(null, 422)]);
+
+        SyncQueue::factory()->create(['status' => 'pending']);
+
+        $results = SyncService::processPending(50);
+        $this->assertSame(1, $results['rejected']);
+        $this->assertDatabaseHas('sync_queue', ['status' => 'failed', 'retry_count' => 5]);
+
+        // Never picked up again automatically.
+        $this->travel(1)->day();
+        $this->assertSame(0, SyncQueue::dueForSync()->count());
+    }
+
+    public function test_lab_order_is_enqueued_for_sync(): void
+    {
+        $user = $this->adminUser();
+        $user->assignRole('clinical_officer');
+        $patient = Patient::factory()->create();
+        $encounter = Encounter::factory()->create(['patient_id' => $patient->id]);
+
+        $this->actingAs($user)->post(route('lab.orders.store'), [
+            'patient_id' => $patient->id,
+            'encounter_id' => $encounter->id,
+            'test_type' => 'Malaria RDT',
+            'test_name' => 'Malaria Rapid Diagnostic Test',
+        ])->assertRedirect();
+
+        $this->assertDatabaseHas('sync_queue', [
+            'record_type' => 'lab_orders',
+            'action' => 'create',
+            'status' => 'pending',
+        ]);
+    }
+
+    public function test_offline_banner_shows_waiting_records(): void
+    {
+        $user = $this->adminUser();
+        config()->set('services.sync.endpoint', 'https://national.example.test/sync');
+        SyncQueue::factory()->count(2)->create(['status' => 'pending']);
+
+        $this->actingAs($user)->get('/dashboard')
+            ->assertStatus(200)
+            ->assertSee('waiting to sync', false);
+    }
+
     public function test_sync_status_page_shows_counts(): void
     {
         $user = $this->adminUser();

@@ -34,6 +34,7 @@ class CreatePatientPageTest extends TestCase
             'last_name' => 'Phiri',
             'date_of_birth' => '2021-05-10',
             'gender' => 'F',
+            'district' => 'Lilongwe',
             'is_child' => '1',
             'guardian_id' => $guardian->id,
         ]);
@@ -60,6 +61,7 @@ class CreatePatientPageTest extends TestCase
             'last_name' => 'Banda',
             'date_of_birth' => '2020-01-15',
             'gender' => 'M',
+            'district' => 'Lilongwe',
             'is_child' => '1',
             'guardian_id' => '',
             'guardian_first_name' => 'Lindiwe',

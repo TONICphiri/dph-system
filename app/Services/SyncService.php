@@ -111,27 +111,40 @@ class SyncService
     }
 
     /**
-     * Process pending sync queue records (called by the background job)
+     * Process records due for upload (called every minute by the scheduler).
+     * Failed pushes back off and are picked up again automatically, so all
+     * queued data uploads on its own once the internet is restored.
      */
     public static function processPending(int $limit = 50): array
     {
-        $results = ['synced' => 0, 'failed' => 0];
+        $results = ['synced' => 0, 'failed' => 0, 'rejected' => 0];
 
-        $pending = SyncQueue::where('status', 'pending')
+        $due = SyncQueue::dueForSync()
             ->orderBy('created_at')
             ->limit($limit)
             ->get();
 
-        foreach ($pending as $item) {
+        foreach ($due as $item) {
             try {
-                if (self::pushToNationalDatabase($item)) {
+                $outcome = self::pushToNationalDatabase($item);
+
+                if ($outcome === true) {
                     $item->markAsSynced();
                     $results['synced']++;
                 } else {
-                    throw new \Exception('Server rejected sync payload');
+                    // Server understood but refused the payload (e.g. 4xx):
+                    // retrying won't help — park for manual review.
+                    $item->forceFill([
+                        'status' => 'failed',
+                        'error_message' => 'Server rejected sync payload (HTTP '.$outcome.')',
+                        'retry_count' => 5,
+                        'next_retry_at' => null,
+                    ])->saveQuietly();
+                    $results['rejected']++;
                 }
             } catch (\Exception $e) {
-                $item->markAsFailed($e->getMessage());
+                // No internet / timeout / 5xx: back off and retry later.
+                $item->markAsFailed(substr($e->getMessage(), 0, 500));
                 $results['failed']++;
             }
         }
@@ -141,9 +154,14 @@ class SyncService
 
     /**
      * Push a sync payload to the national database endpoint.
+     *
+     * @return bool|int true on success, HTTP status code on rejection
+     *
+     * @throws \Exception on connection failure / timeout / server error
+     *
      * Falls back to offline simulation when no endpoint is configured.
      */
-    protected static function pushToNationalDatabase(SyncQueue $item): bool
+    protected static function pushToNationalDatabase(SyncQueue $item): bool|int
     {
         $endpoint = config('services.sync.endpoint');
 
@@ -153,15 +171,27 @@ class SyncService
             return true;
         }
 
-        $response = Http::timeout(10)
-            ->post($endpoint, [
-                'record_type' => $item->record_type,
-                'record_id' => $item->record_id,
-                'action' => $item->action,
-                'payload' => $item->payload,
-            ]);
+        try {
+            $response = Http::timeout(10)
+                ->post($endpoint, [
+                    'record_type' => $item->record_type,
+                    'record_id' => $item->record_id,
+                    'action' => $item->action,
+                    'payload' => $item->payload,
+                ]);
+        } catch (\Illuminate\Http\Client\ConnectionException $e) {
+            throw new \Exception('No internet connection to national database.');
+        }
 
-        return $response->successful();
+        if ($response->successful()) {
+            return true;
+        }
+
+        if ($response->serverError()) {
+            throw new \Exception('National database error (HTTP '.$response->status().').');
+        }
+
+        return $response->status();
     }
 
     /**

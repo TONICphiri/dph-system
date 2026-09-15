@@ -12,11 +12,32 @@ use Spatie\Permission\Models\Role;
 
 class UserController extends Controller
 {
+    /**
+     * Roles a Facility Admin may assign. National-level roles are
+     * excluded so local admins can only manage healthcare workers
+     * (doctors, nurses, receptionists, etc.) within their facility.
+     */
+    public const FACILITY_ASSIGNABLE_ROLES = [
+        'registration_clerk',
+        'triage_nurse',
+        'clinical_officer',
+        'doctor',
+        'pharmacist',
+        'ward_nurse',
+        'lab_technician',
+    ];
+
     public function index()
     {
         $this->authorize('manage_facility_users');
 
-        $users = User::with('facility', 'roles')->orderBy('name')->paginate(15);
+        $me = $this->user();
+        $query = User::with('facility', 'roles')->orderBy('name');
+
+        // Facility Admin sees only staff at their own location.
+        $me->scopeToFacility($query);
+
+        $users = $query->paginate(15);
         $roles = Role::orderBy('name')->pluck('name');
 
         return view('admin.users.index', compact('users', 'roles'));
@@ -26,8 +47,15 @@ class UserController extends Controller
     {
         $this->authorize('manage_facility_users');
 
-        $facilities = Facility::orderBy('name')->get();
-        $roles = Role::orderBy('name')->get();
+        $me = $this->user();
+
+        $facilities = $me->isNationalAdmin()
+            ? Facility::orderBy('name')->get()
+            : Facility::where('id', $me->facility_id)->get();
+
+        $roles = $me->isNationalAdmin()
+            ? Role::orderBy('name')->get()
+            : Role::whereIn('name', self::FACILITY_ASSIGNABLE_ROLES)->orderBy('name')->get();
 
         return view('admin.users.create', compact('facilities', 'roles'));
     }
@@ -35,6 +63,8 @@ class UserController extends Controller
     public function store(Request $request)
     {
         $this->authorize('manage_facility_users');
+
+        $me = $this->user();
 
         $validated = $request->validate([
             'name' => 'required|string|max:255',
@@ -44,6 +74,16 @@ class UserController extends Controller
             'role' => 'required|string|exists:roles,name',
             'status' => 'required|string|in:active,inactive',
         ]);
+
+        // Facility Admins may only create staff inside their own facility…
+        if (!$me->isNationalAdmin() && (int) $validated['facility_id'] !== (int) $me->facility_id) {
+            abort(403, 'You can only create users within your own facility.');
+        }
+
+        // …and may never grant national-level roles.
+        if (!$me->isNationalAdmin() && !in_array($validated['role'], self::FACILITY_ASSIGNABLE_ROLES, true)) {
+            abort(403, 'You cannot assign that role.');
+        }
 
         try {
             DB::beginTransaction();
@@ -81,9 +121,17 @@ class UserController extends Controller
     public function edit(User $user)
     {
         $this->authorize('manage_facility_users');
+        $this->ensureSameFacility($user);
 
-        $facilities = Facility::orderBy('name')->get();
-        $roles = Role::orderBy('name')->get();
+        $me = $this->user();
+
+        $facilities = $me->isNationalAdmin()
+            ? Facility::orderBy('name')->get()
+            : Facility::where('id', $me->facility_id)->get();
+
+        $roles = $me->isNationalAdmin()
+            ? Role::orderBy('name')->get()
+            : Role::whereIn('name', self::FACILITY_ASSIGNABLE_ROLES)->orderBy('name')->get();
 
         return view('admin.users.edit', compact('user', 'facilities', 'roles'));
     }
@@ -91,6 +139,9 @@ class UserController extends Controller
     public function update(Request $request, User $user)
     {
         $this->authorize('manage_facility_users');
+        $this->ensureSameFacility($user);
+
+        $me = $this->user();
 
         $validated = $request->validate([
             'name' => 'required|string|max:255',
@@ -100,6 +151,14 @@ class UserController extends Controller
             'status' => 'required|string|in:active,inactive',
             'password' => ['nullable', 'string', 'min:8', 'confirmed'],
         ]);
+
+        if (!$me->isNationalAdmin() && (int) $validated['facility_id'] !== (int) $me->facility_id) {
+            abort(403, 'You can only keep users within your own facility.');
+        }
+
+        if (!$me->isNationalAdmin() && !in_array($validated['role'], self::FACILITY_ASSIGNABLE_ROLES, true)) {
+            abort(403, 'You cannot assign that role.');
+        }
 
         try {
             DB::beginTransaction();
@@ -139,6 +198,7 @@ class UserController extends Controller
     public function destroy(User $user)
     {
         $this->authorize('manage_facility_users');
+        $this->ensureSameFacility($user);
 
         AuditLog::create([
             'action' => 'delete',
@@ -162,6 +222,7 @@ class UserController extends Controller
     public function toggleStatus(User $user)
     {
         $this->authorize('manage_facility_users');
+        $this->ensureSameFacility($user);
 
         $user->update([
             'status' => $user->status === 'active' ? 'inactive' : 'active',
@@ -178,5 +239,18 @@ class UserController extends Controller
         $message = $user->status === 'active' ? 'User activated successfully.' : 'User deactivated successfully.';
 
         return redirect()->route('users.index')->with('success', $message);
+    }
+
+    /**
+     * Block facility-scoped admins from touching users outside
+     * their own facility. National Admins pass through.
+     */
+    protected function ensureSameFacility(User $user): void
+    {
+        $me = $this->user();
+
+        if (!$me->isNationalAdmin() && (int) $user->facility_id !== (int) $me->facility_id) {
+            abort(403, 'You can only manage users within your own facility.');
+        }
     }
 }

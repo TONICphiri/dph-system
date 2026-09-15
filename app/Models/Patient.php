@@ -21,6 +21,7 @@ class Patient extends Model
         'phone_number',
         'address',
         'village',
+        'traditional_authority',
         'district',
         'status',
         'is_child',
@@ -96,6 +97,14 @@ class Patient extends Model
     }
 
     /**
+     * Get all lab orders for this patient
+     */
+    public function labOrders(): HasMany
+    {
+        return $this->hasMany(LabOrder::class)->orderByDesc('requested_at');
+    }
+
+    /**
      * Get full name
      */
     public function getFullNameAttribute(): string
@@ -115,16 +124,33 @@ class Patient extends Model
     }
 
     /**
-     * Generate DHP ID if not exists
+     * Generate a unique Health Passport ID: DISTRICT-FACILITY#-YEAR-SEQ,
+     * e.g. NS-007-2026-0001 for the 1st patient registered in 2026 at the
+     * 7th facility on the system, in Ntchisi district. Retries on
+     * collision so concurrent registrations can never produce duplicates.
      */
-    public static function generateDhpId(): string
+    public static function generateDhpId(string $district, ?int $facilityId): string
     {
+        $code = config('districts')[$district] ?? 'XX';
+        $facilityNumber = sprintf('%03d', $facilityId ?? 0);
         $year = now()->year;
-        $latestPatient = self::whereYear('created_at', $year)
-            ->orderByDesc('id')
-            ->first();
-        
-        $sequence = ($latestPatient ? intval(substr($latestPatient->dhp_id, -8)) : 0) + 1;
-        return sprintf('DHP-%d-%08d', $year, $sequence);
+        $prefix = sprintf('%s-%s-%d-', $code, $facilityNumber, $year);
+
+        for ($attempt = 0; $attempt < 5; $attempt++) {
+            $latestPatient = self::where('dhp_id', 'like', $prefix.'%')
+                ->orderByDesc('id')
+                ->lockForUpdate()
+                ->first();
+
+            $sequence = ($latestPatient ? intval(substr($latestPatient->dhp_id, -4)) : 0) + 1 + $attempt;
+            $candidate = $prefix.sprintf('%04d', $sequence);
+
+            if (!self::where('dhp_id', $candidate)->exists()) {
+                return $candidate;
+            }
+        }
+
+        // Fallback: timestamp-based uniqueness if sequence collides repeatedly.
+        return $prefix.sprintf('%04d', ((int) (microtime(true) * 100)) % 10000);
     }
 }

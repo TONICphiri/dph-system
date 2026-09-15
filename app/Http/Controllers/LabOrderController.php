@@ -8,6 +8,7 @@ use App\Models\LabOrder;
 use App\Models\Patient;
 use App\Models\Encounter;
 use App\Models\AuditLog;
+use App\Services\SyncService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
@@ -47,7 +48,7 @@ class LabOrderController extends Controller
      */
     public function create(Patient $patient)
     {
-        $this->authorize('create_patient');
+        $this->authorize('consult_patient');
 
         $latestEncounter = $patient->encounters()->latest()->first();
 
@@ -92,6 +93,8 @@ class LabOrderController extends Controller
                 'user_id' => auth()->id(),
                 'description' => 'Lab order created: ' . $labOrder->test_name . ' for patient ' . $patient->full_name . ' (DHP ID: ' . $patient->dhp_id . ')',
             ]);
+
+            SyncService::enqueue('lab_orders', $labOrder, 'create', $patient->registered_by_facility_id);
 
             DB::commit();
 
@@ -146,6 +149,8 @@ class LabOrderController extends Controller
                 'description' => 'Lab results recorded for ' . $labOrder->test_name . ' for patient ' . $labOrder->patient->full_name . ' (DHP ID: ' . $labOrder->patient->dhp_id . ') - Result: ' . $validated['result_value'],
             ]);
 
+            SyncService::enqueue('lab_orders', $labOrder, 'update', $labOrder->patient->registered_by_facility_id);
+
             DB::commit();
 
             return redirect()->route('lab.orders.show', $labOrder)
@@ -163,7 +168,18 @@ class LabOrderController extends Controller
      */
     public function patientOrders(Patient $patient)
     {
-        $this->authorize('view_reports');
+        $me = auth()->user();
+
+        // Own-file rule: patient-role accounts open only their linked file (with 2FA).
+        if ($me && $me->hasRole('patient')) {
+            abort_unless($me->ownsPatient($patient), 403, 'You may only view your own file.');
+
+            if ($redirect = $this->patientFileTwoFactorRedirect($patient)) {
+                return $redirect;
+            }
+        } else {
+            $this->authorize('view_reports');
+        }
 
         $labOrders = LabOrder::where('patient_id', $patient->id)
             ->with(['encounter', 'requestedBy'])

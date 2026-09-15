@@ -1,82 +1,67 @@
-{{-- Individual Lab Order Details --}}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lab Order Details — Digital Health Passport</title>
+<style>
+body{margin:0;font-family:Arial,Helvetica,sans-serif;background:#f2f7f7;color:#222}
+.top{background:#0E7490;color:#fff;padding:10px 16px;font-size:14px}
+.top a{color:#fff;margin-right:14px}
+.wrap{max-width:640px;margin:16px auto;padding:0 12px}
+.box{background:#fff;border:1px solid #ccc;padding:16px;margin-bottom:16px}
+h1{font-size:22px;margin:0 0 12px}
+h1::before{content:"";display:inline-block;width:12px;height:12px;background:#0E7490;clip-path:polygon(0 0,0 100%,100% 100%);margin-right:8px}
+.field{margin-bottom:12px}
+.field .k{font-size:12px;color:#555;margin:0}
+.field .v{font-size:16px;margin:2px 0 0}
+.field .v.big{font-size:22px}
+hr{border:0;border-top:1px solid #ccc;margin:14px 0}
+.badge{display:inline-block;padding:2px 8px;font-size:13px;font-weight:bold;border:1px solid #999;background:#eee}
+.badge-requested{background:#fff8e1;border-color:#D97706;color:#92400e}
+.badge-pending{background:#fff7ed;border-color:#D97706;color:#9a3412}
+.badge-results{background:#ecfdf5;border-color:#16A34A;color:#065f46}
+.badge-cancelled{background:#f3f4f6;border-color:#999;color:#555}
+a{color:#0E7490}
+</style>
+</head>
+<body>
+<div class="top"><a href="{{ route('dashboard') }}">Dashboard</a><a href="{{ route('lab.orders.index') }}">All lab orders</a><a href="{{ route('patients.show', $labOrder->patient) }}">Back to patient</a></div>
+<div class="wrap">
 @can('view_reports')
-<div class="bg-sky-50 border border-sky-200 rounded-lg p-6 max-w-2xl mx-auto">
-    <h2 class="text-xl font-bold text-sky-800 mb-4">Lab Order Details</h2>
-    
-    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-        <div>
-            <p class="text-sm text-sky-500 mb-2">Patient</p>
-            <p class="font-medium text-sky-800">{{ $labOrder->patient->full_name }}</p>
-            <p class="text-xs text-sky-500">{{ $labOrder->patient->dhp_id }}</p>
-        </div>
-        <div>
-            <p class="text-sm text-sky-500 mb-2">DHP ID</p>
-            <p class="font-medium text-sky-800">{{ $labOrder->patient->dhp_id }}</p>
-        </div>
-    </div>
-    
-    <div class="grid grid-cols-2 gap-4 mb-6">
-        <div>
-            <p class="text-sm text-sky-500 mb-2">Test Name</p>
-            <p class="font-medium text-sky-800 text-2xl">{{ $labOrder->test_name }}</p>
-        </div>
-        <div>
-            <p class="text-sm text-sky-500 mb-2">Test Type</p>
-            <p class="font-medium text-sky-800">{{ ucfirst($labOrder->test_type) }}</p>
-        </div>
-    </div>
-    
-    <div>
-        <p class="text-sm text-sky-500 mb-2">Status</p>
-        <span class="px-3 py-1 rounded text-lg @switch($labOrder->status)
-            @case('requested') bg-yellow-100 text-yellow-800
-            @case('pending') bg-orange-100 text-orange-800
-            @case('results') bg-green-100 text-green-800
-            @case('cancelled') bg-gray-100 text-gray-700
-        @default bg-gray-100 text-gray-700">
-            {{ ucfirst($labOrder->status) }}
-        </span>
-    </div>
-    
+<div class="box">
+    <h1>Lab Order Details</h1>
+
+    <div class="field"><p class="k">Patient</p><p class="v"><strong>{{ $labOrder->patient->full_name }}</strong></p><p class="k">{{ $labOrder->patient->dhp_id }}</p></div>
+    <div class="field"><p class="k">Test Name</p><p class="v big"><strong>{{ $labOrder->test_name }}</strong></p></div>
+    <div class="field"><p class="k">Test Type</p><p class="v">{{ ucfirst($labOrder->test_type) }}</p></div>
+    <div class="field"><p class="k">Status</p><p class="v"><span class="badge badge-{{ $labOrder->status }}">{{ ucfirst($labOrder->status) }}</span></p></div>
+
     @if ($labOrder->status === 'results')
-    <div>
-        <p class="text-sm text-sky-500 mb-2">Result Value</p>
-        <p class="font-medium text-green-700 text-2xl">{{ $labOrder->result_value }}</p>
-        @if ($labOrder->result_units)
-        <p class="text-xs text-sky-500">{{ $labOrder->result_units }}</p>
-        @endif
-    </div>
+    <div class="field"><p class="k">Result Value</p><p class="v big"><strong>{{ $labOrder->result_value }}</strong>@if ($labOrder->result_units) <span style="font-size:13px;color:#555">{{ $labOrder->result_units }}</span>@endif</p></div>
     @endif
-    
+
     @if ($labOrder->result_description)
-    <div>
-        <p class="text-sm text-sky-500 mb-2">Result Description</p>
-        <p class="text-sky-800">{{ $labOrder->result_description }}</p>
-    </div>
+    <div class="field"><p class="k">Result Description</p><p class="v" style="font-size:14px">{{ $labOrder->result_description }}</p></div>
     @endif
-    
-    <div class="mt-6 pt-4 border-t border-sky-200">
-        <p class="text-sm text-sky-500 mb-2">Requested By</p>
-        <p class="font-medium text-sky-800">{{ $labOrder->requestedBy ? $labOrder->requestedBy->full_name : 'Unknown' }}</p>
-        <p class="text-xs text-sky-500">{{ $labOrder->requested_at->format('M d, Y H:i') }}</p>
-    </div>
-    
+
+    <hr>
+    <div class="field"><p class="k">Requested By</p><p class="v">{{ $labOrder->requestedBy ? $labOrder->requestedBy->full_name : 'Unknown' }}</p><p class="k">{{ $labOrder->requested_at->format('M d, Y H:i') }}</p></div>
+
     @if ($labOrder->completed_at)
-    <div>
-        <p class="text-sm text-sky-500 mb-2">Completed At</p>
-        <p class="font-medium text-sky-800">{{ $labOrder->completed_at->format('M d, Y H:i') }}</p>
-    </div>
+    <div class="field"><p class="k">Completed At</p><p class="v">{{ $labOrder->completed_at->format('M d, Y H:i') }}</p></div>
     @endif
-    
-    <div class="mt-6 pt-4 border-t border-sky-200">
-        <p class="text-sm text-sky-500 mb-2">Description</p>
+
+    <hr>
+    <div class="field"><p class="k">Description</p>
         @if ($labOrder->description)
-        <p class="text-sky-700">{{ $labOrder->description }}</p>
+        <p class="v" style="font-size:14px">{{ $labOrder->description }}</p>
         @else
-        <p class="text-sky-500 italic">No description provided</p>
+        <p class="v" style="font-size:14px;color:#555"><i>No description provided</i></p>
         @endif
     </div>
-    
-    @endif
 </div>
-{{-- End Individual Lab Order Details --}}
+@endcan
+</div>
+</body>
+</html>

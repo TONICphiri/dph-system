@@ -79,6 +79,7 @@ class PilotValidationTest extends TestCase
             'sex' => 'M',
             'age' => 35,
             'phone_number' => '0712345678',
+            'district' => 'Lilongwe',
             'is_child' => false,
         ];
         

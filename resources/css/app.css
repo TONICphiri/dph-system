@@ -1,3 +1,238 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/*
+ * DHP Clinical Design System
+ * Standard health-system colors: deep navy (#083344) + clinical teal (#0E7C86)
+ * on a cool clinical background (#F2F7F7). All interactive elements meet
+ * WCAG AA contrast and 44px minimum touch targets for ward smartphones.
+ */
+
+@layer base {
+    /* Normal rectangles everywhere: every container corner is 90 degrees.
+     * This single rule squares all cards, buttons, inputs, badges, tables,
+     * modals and navigation — no rounded corners anywhere in the system. */
+    *, ::before, ::after {
+        border-radius: 0 !important;
+    }
+
+    html {
+        scroll-behavior: smooth;
+    }
+
+    body {
+        @apply bg-[#F2F7F7] text-slate-800 antialiased;
+    }
+
+    /* Visible keyboard focus everywhere (HCI: accessibility + error prevention) */
+    :focus-visible {
+        @apply outline-none ring-2 ring-dhp-500 ring-offset-2 ring-offset-white;
+    }
+
+    /* Skip link for screen readers / keyboard clinicians */
+    .skip-link {
+        @apply sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-[100] focus:rounded-none focus:bg-dhp-900 focus:px-4 focus:py-2 focus:text-white;
+    }
+
+    h1, h2, h3 {
+        @apply tracking-tight text-dhp-900;
+    }
+}
+
+@layer components {
+    /* ---------- Layout ---------- */
+    .dhp-page {
+        @apply py-6 sm:py-8;
+    }
+    .dhp-container {
+        @apply mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8;
+    }
+    .dhp-card {
+        @apply rounded-none border border-[#DCE8E8] bg-white shadow-card;
+    }
+    .dhp-card-pad {
+        @apply p-5 sm:p-6;
+    }
+    .dhp-section-title {
+        @apply flex items-center gap-2 text-lg font-bold text-dhp-900;
+    }
+    /* Right-angled triangle motif: every section title in the app carries
+     * a flat solid right triangle (right angle at bottom-left). No gradients. */
+    .dhp-section-title::before {
+        content: '';
+        @apply h-[13px] w-[13px] flex-none bg-dhp-600;
+        clip-path: polygon(0 0, 0 100%, 100% 100%);
+    }
+    .dhp-section-sub {
+        @apply mt-1 text-sm text-slate-500;
+    }
+    .dhp-divider {
+        @apply my-5 border-t border-[#E2EDED];
+    }
+
+    /* ---------- Typography helpers ---------- */
+    .dhp-eyebrow {
+        @apply text-xs font-bold uppercase tracking-widest text-dhp-600;
+    }
+    .dhp-help {
+        @apply mt-1 text-xs text-slate-500;
+    }
+
+    /* ---------- Buttons (min 44px touch target) ---------- */
+    .btn {
+        @apply inline-flex min-h-[44px] items-center justify-center gap-2 rounded-none px-4 py-2 text-sm font-semibold transition focus:outline-none disabled:cursor-not-allowed disabled:opacity-50;
+    }
+    .btn-primary {
+        @apply btn bg-dhp-600 text-white shadow-sm hover:bg-dhp-700 active:bg-dhp-800;
+    }
+    .btn-secondary {
+        @apply btn border border-[#CBDCDC] bg-white text-dhp-900 hover:bg-dhp-50;
+    }
+    .btn-success {
+        @apply btn bg-emerald-700 text-white hover:bg-emerald-800;
+    }
+    .btn-warning {
+        @apply btn bg-amber-600 text-white hover:bg-amber-700;
+    }
+    .btn-danger {
+        @apply btn bg-rose-700 text-white hover:bg-rose-800;
+    }
+    .btn-ghost {
+        @apply btn text-dhp-700 hover:bg-dhp-50;
+    }
+
+    /* ---------- Forms ---------- */
+    .dhp-label {
+        @apply mb-1.5 block text-sm font-semibold text-dhp-900;
+    }
+    .dhp-input {
+        @apply block w-full rounded-none border-[#CBDCDC] bg-white px-3.5 py-2.5 text-[15px] text-slate-900 shadow-sm placeholder:text-slate-400 focus:border-dhp-500 focus:ring-dhp-500;
+    }
+    .dhp-select {
+        @apply dhp-input pr-10;
+    }
+    .dhp-check {
+        @apply h-5 w-5 rounded border-[#CBDCDC] text-dhp-600 focus:ring-dhp-500;
+    }
+    .dhp-field-error {
+        @apply mt-1.5 text-sm font-medium text-rose-700;
+    }
+    .dhp-field-valid {
+        @apply mt-1.5 text-sm font-medium text-emerald-700;
+    }
+
+    /* ---------- Alerts / toasts (HCI: visibility of system status) ---------- */
+    .dhp-alert {
+        @apply flex items-start gap-3 rounded-none border p-4 text-sm shadow-sm;
+    }
+    .dhp-alert-success {
+        @apply dhp-alert border-emerald-200 bg-emerald-50 text-emerald-900;
+    }
+    .dhp-alert-error {
+        @apply dhp-alert border-rose-200 bg-rose-50 text-rose-900;
+    }
+    .dhp-alert-warning {
+        @apply dhp-alert border-amber-200 bg-amber-50 text-amber-900;
+    }
+    .dhp-alert-info {
+        @apply dhp-alert border-dhp-200 bg-dhp-50 text-dhp-900;
+    }
+
+    /* ---------- Badges ---------- */
+    .dhp-badge {
+        @apply inline-flex min-h-[28px] items-center gap-1 rounded-none px-2.5 py-0.5 text-xs font-bold;
+    }
+    .badge-emergency { @apply dhp-badge bg-rose-100 text-rose-800 ring-1 ring-rose-200; }
+    .badge-high { @apply dhp-badge bg-orange-100 text-orange-800 ring-1 ring-orange-200; }
+    .badge-medium { @apply dhp-badge bg-amber-100 text-amber-800 ring-1 ring-amber-200; }
+    .badge-low { @apply dhp-badge bg-emerald-100 text-emerald-800 ring-1 ring-emerald-200; }
+    .badge-active { @apply dhp-badge bg-emerald-100 text-emerald-800 ring-1 ring-emerald-200; }
+    .badge-pending { @apply dhp-badge bg-amber-100 text-amber-800 ring-1 ring-amber-200; }
+    .badge-dispensed { @apply dhp-badge bg-dhp-100 text-dhp-800 ring-1 ring-dhp-200; }
+    .badge-neutral { @apply dhp-badge bg-slate-100 text-slate-700 ring-1 ring-slate-200; }
+
+    /* ---------- Tables (HCI: recognition + scannability) ---------- */
+    .dhp-table-wrap {
+        @apply overflow-x-auto rounded-none border border-[#DCE8E8] bg-white shadow-card;
+    }
+    .dhp-table {
+        @apply w-full min-w-[640px] text-left text-sm;
+    }
+    .dhp-table thead th {
+        @apply bg-dhp-900 px-4 py-3 text-xs font-bold uppercase tracking-wider text-white;
+    }
+    .dhp-table tbody td {
+        @apply border-t border-[#E7F0F0] px-4 py-3 align-top;
+    }
+    .dhp-table tbody tr:hover {
+        @apply bg-dhp-50/60;
+    }
+    .dhp-mono {
+        @apply font-mono text-[13px] font-semibold text-dhp-700;
+    }
+
+    /* ---------- Workflow stepper (HCI: match paper passport journey) ---------- */
+    .dhp-steps {
+        @apply grid gap-3 sm:grid-cols-2 lg:grid-cols-5;
+    }
+    .dhp-step {
+        @apply relative flex min-h-[44px] flex-col overflow-hidden rounded-none border border-[#DCE8E8] bg-white p-4 shadow-card transition hover:-translate-y-0.5 hover:border-dhp-300 hover:shadow-pop;
+    }
+    /* Right-angled triangle motif: flat solid corner triangle (right angle
+     * at top-right) on every workflow step card. */
+    .dhp-step::after {
+        content: '';
+        @apply absolute right-0 top-0 h-[22px] w-[22px] bg-dhp-100;
+        clip-path: polygon(100% 0, 0 0, 100% 100%);
+    }
+    .dhp-step-num {
+        @apply text-xs font-bold uppercase tracking-widest text-dhp-600;
+    }
+    .dhp-step-title {
+        @apply mt-1 font-bold text-dhp-900;
+    }
+    .dhp-step-desc {
+        @apply mt-1 text-sm leading-snug text-slate-500;
+    }
+
+    /* ---------- Stat cards ---------- */
+    .dhp-stat {
+        @apply dhp-card dhp-card-pad relative overflow-hidden;
+    }
+    .dhp-stat::before {
+        content: '';
+        @apply absolute inset-x-0 top-0 h-1 bg-dhp-600;
+    }
+    .dhp-stat-label {
+        @apply text-[13px] font-semibold text-slate-500;
+    }
+    .dhp-stat-value {
+        @apply mt-1 text-3xl font-extrabold tabular-nums text-dhp-900;
+    }
+
+    /* ---------- Empty state ---------- */
+    .dhp-empty {
+        @apply flex flex-col items-center justify-center gap-2 rounded-none border border-dashed border-[#BFD5D5] bg-dhp-50/50 px-6 py-10 text-center;
+    }
+
+    /* ---------- QR scanner ---------- */
+    .dhp-qr-video {
+        @apply w-full max-w-md rounded-none border-2 border-dhp-300 bg-black shadow-card;
+    }
+}
+
+@layer utilities {
+    .touch-target {
+        @apply min-h-[44px] min-w-[44px];
+    }
+}
+
+@media print {
+    nav, .no-print {
+        display: none !important;
+    }
+    body {
+        background: #fff;
+    }
+}

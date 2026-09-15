@@ -1,0 +1,18 @@
+{
+  "name": "Digital Health Passport",
+  "short_name": "DHP",
+  "description": "Facility health records that keep working offline and sync when the internet returns.",
+  "start_url": "/dashboard",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#F2F7F7",
+  "theme_color": "#0E7490",
+  "icons": [
+    {
+      "src": "/images/hero-qr.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}

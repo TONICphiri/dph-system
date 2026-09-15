@@ -2,10 +2,10 @@
 
 @php
 $classes = ($active ?? false)
-            ? 'inline-flex items-center px-1 pt-1 border-b-2 border-teal-500 text-sm font-semibold leading-5 text-sky-900 focus:outline-none focus:border-teal-700 transition duration-150 ease-in-out'
-            : 'inline-flex items-center px-1 pt-1 border-b-2 border-transparent text-sm font-medium leading-5 text-slate-600 hover:text-sky-900 hover:border-teal-300 focus:outline-none focus:text-sky-900 focus:border-teal-300 transition duration-150 ease-in-out';
+            ? 'inline-flex min-h-[44px] items-center rounded-xl bg-dhp-600 px-3.5 text-sm font-bold text-white shadow-sm transition'
+            : 'inline-flex min-h-[44px] items-center rounded-xl px-3.5 text-sm font-semibold text-slate-600 transition hover:bg-dhp-50 hover:text-dhp-900';
 @endphp
 
-<a {{ $attributes->merge(['class' => $classes]) }}>
+<a {{ $attributes->merge(['class' => $classes, 'aria-current' => ($active ?? false) ? 'page' : null]) }}>
     {{ $slot }}
 </a>

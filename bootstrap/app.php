@@ -5,6 +5,7 @@ use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
 use Illuminate\Validation\ValidationException;
 use App\Services\ErrorReferenceService;
+use App\Http\Middleware\SecurityHeaders;
 use Symfony\Component\HttpKernel\Exception\HttpExceptionInterface;
 
 return Application::configure(basePath: dirname(__DIR__))
@@ -14,7 +15,15 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware) {
-        //
+        // Applies security headers (CSP, HSTS, X-Frame-Options, etc.) to every response.
+        $middleware->append(SecurityHeaders::class);
+
+        // FR-A5: forced first-login password set (system-description2.md §5.4).
+        $middleware->alias([
+            'must.change_password' => \App\Http\Middleware\MustChangePassword::class,
+            // Patients must pass 2FA before any medical-detail page.
+            'twofactor' => \App\Http\Middleware\RequireTwoFactor::class,
+        ]);
     })
     ->withExceptions(function (Exceptions $exceptions) {
         $exceptions->render(function (\Throwable $exception, $request) {

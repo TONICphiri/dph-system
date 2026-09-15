@@ -2,8 +2,8 @@
 
 namespace App\Console\Commands;
 
-use App\Jobs\ProcessSyncQueue;
 use App\Models\SyncQueue;
+use App\Services\SyncService;
 use Illuminate\Console\Command;
 
 class ProcessSyncCommand extends Command
@@ -24,19 +24,22 @@ class ProcessSyncCommand extends Command
 
     /**
      * Execute the console command.
+     *
+     * Runs synchronously (no queue worker needed) so it works on plain
+     * XAMPP installs: every scheduler tick uploads whatever is due.
      */
     public function handle(): int
     {
-        $pending = SyncQueue::where('status', 'pending')->count();
+        $due = SyncQueue::dueForSync()->count();
 
-        if ($pending === 0) {
-            $this->info('No pending sync records.');
+        if ($due === 0) {
+            $this->info('No records due for sync.');
             return self::SUCCESS;
         }
 
-        $this->info("Dispatching sync job for {$pending} pending record(s)...");
+        $results = SyncService::processPending(200);
 
-        ProcessSyncQueue::dispatch();
+        $this->info("Synced: {$results['synced']}, failed: {$results['failed']}, rejected: {$results['rejected']}.");
 
         return self::SUCCESS;
     }

@@ -114,4 +114,15 @@ return [
 
     'password_timeout' => env('AUTH_PASSWORD_TIMEOUT', 10800),
 
+    /*
+    |--------------------------------------------------------------------------
+    | User Catalogue — NIN protection (system-description2.md §7.2)
+    |--------------------------------------------------------------------------
+    | Dedicated pepper for HMAC-SHA256(nin_hash). Raw NINs are never stored.
+    */
+    'nin_pepper' => env('NIN_PEPPER', env('APP_KEY')),
+
+    // Catalogue account lifecycle (§5.2): pending → active → suspended/deactivated.
+    'catalogue_statuses' => ['pending', 'active', 'suspended', 'deactivated'],
+
 ];

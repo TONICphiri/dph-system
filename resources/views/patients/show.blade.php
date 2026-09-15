@@ -147,15 +147,16 @@
                                     <p class="font-semibold text-sm">{{ $admission->facility->name ?? "Unknown Facility" }}</p>
                                     <p class="text-xs text-gray-500">{{ $admission->admitted_at->format("M d, Y") }}</p>
                                     <p class="text-sm">Ward: {{ $admission->ward_name }} - Bed: {{ $admission->bed_number }}</p>
-                                    <span class="text-xs px-2 py-1 rounded" 
+                                    <span class="text-xs px-2 py-1 rounded"
                                           :class="''{{ $admission->status === "active" ? "bg-red-100 text-red-800" : "bg-gray-100 text-gray-800" }}''">
                                         {{ ucfirst($admission->status) }}
                                     </span>
                                 </div>
                             @endforeach
                         </div>
-</div>
-            </div>
+                    </div>
+                </div>
+            @endif
         </div>
     </div>
 

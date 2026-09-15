@@ -27,25 +27,27 @@ class EndToEndSmokeTest extends TestCase
         $this->seedUsers();
 
         $emails = [
-            'admin@dhp.mw',
-            'clerk@lilongwe.dhp.mw',
-            'triage@lilongwe.dhp.mw',
-            'doctor@lilongwe.dhp.mw',
-            'pharmacy@lilongwe.dhp.mw',
-            'clerk@ndirande.dhp.mw',
-            'triage@ndirande.dhp.mw',
-            'doctor@ndirande.dhp.mw',
-            'pharmacy@ndirande.dhp.mw',
+            // National admins land on the national administration home.
+            'admin@dhp.mw' => '/admin/dashboard',
+            'clerk@lilongwe.dhp.mw' => '/dashboard',
+            'triage@lilongwe.dhp.mw' => '/dashboard',
+            'doctor@lilongwe.dhp.mw' => '/dashboard',
+            'pharmacy@lilongwe.dhp.mw' => '/dashboard',
+            'admin@ndirande.dhp.mw' => '/dashboard',
+            'clerk@ndirande.dhp.mw' => '/dashboard',
+            'triage@ndirande.dhp.mw' => '/dashboard',
+            'doctor@ndirande.dhp.mw' => '/dashboard',
+            'pharmacy@ndirande.dhp.mw' => '/dashboard',
         ];
 
-        foreach ($emails as $email) {
+        foreach ($emails as $email => $home) {
             $user = User::where('email', $email)->first();
             $this->assertNotNull($user, "Seeded user {$email} exists");
 
             $this->post('/login', [
                 'email' => $email,
                 'password' => 'password',
-            ])->assertRedirect('/dashboard');
+            ])->assertRedirect($home);
 
             $this->assertAuthenticatedAs($user);
             $this->post('/logout')->assertRedirect('/');

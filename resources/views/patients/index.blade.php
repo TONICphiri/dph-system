@@ -1,244 +1,138 @@
 ﻿<x-app-layout>
     <x-slot name="header">
-        <h2 class="font-semibold text-xl text-gray-800 dark:text-gray-200 leading-tight">
-            {{ __("Patient Registry") }}
-        </h2>
+        <div class="flex flex-col gap-1">
+            <p class="text-xs font-bold uppercase tracking-widest text-dhp-200">Reception · Patient registry</p>
+            <h2 class="text-2xl font-extrabold leading-tight">Find or register a patient</h2>
+            <p class="text-sm text-dhp-100">Search nationally by name, National ID or DHP ID — or scan the passport QR code.</p>
+        </div>
     </x-slot>
 
-    <div class="py-12">
-        <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
-            @if ($message = Session::get('success'))
-                <div class="mb-4 px-4 py-3 rounded bg-green-100 border border-green-400 text-green-700">
-                    <strong>{{ $message }}</strong>
-                </div>
+    <div class="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+        <form method="GET" action="{{ route('patients.index') }}" class="flex w-full max-w-xl gap-2" role="search" aria-label="Search patients">
+            <label for="patient-search" class="sr-only">Search by name, National ID, or DHP ID</label>
+            <input type="text" id="patient-search" name="search" placeholder="Search name, National ID, DHP ID…" value="{{ request('search') }}" maxlength="60" class="dhp-input flex-1" />
+            <button type="submit" class="btn-primary">Search</button>
+            @if(request('search'))
+                <a href="{{ route('patients.index') }}" class="btn-secondary">Clear</a>
             @endif
-
-            <div class="bg-white dark:bg-gray-800 overflow-hidden shadow-sm sm:rounded-lg mb-6">
-                <div class="p-6 text-gray-900 dark:text-gray-100">
-                    <div class="flex justify-between items-center mb-6">
-                        <h3 class="text-lg font-semibold">Patient Search & Registry</h3>
-                        @can("create_patient")
-                            <a href="{{ route("patients.create") }}" class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">
-                                + Register New Patient
-                            </a>
-                        @endcan
-                    </div>
-
-<form method="GET" action="{{ route("patients.index") }}" class="mb-6">
-                        <div class="flex gap-4">
-                            <input type="text" name="search" placeholder="Search by name, National ID, or DHP ID" 
-                                   value="{{ request("search") }}" class="flex-1 px-4 py-2 border rounded" />
-                            <button type="submit" class="px-4 py-2 bg-gray-600 text-white rounded hover:bg-gray-700">
-                                Search
-                            </button>
-                        </div>
-                    </form>
-
-                    <div class="mb-6 p-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-700 rounded-lg">
-                        <h3 class="font-semibold text-green-800 dark:text-green-200 mb-2">QR / DHP ID Lookup</h3>
-                        <p class="text-sm text-green-700 dark:text-green-300 mb-3">Scan a QR code, or paste a Digital Health Passport ID to open the patient record instantly.</p>
-                        <div class="flex flex-col gap-2 sm:flex-row">
-                            <input type="text" id="lookup-dhp-id" placeholder="e.g. DHP-2026-00000001"
-                                   class="flex-1 px-4 py-2 border rounded-md shadow-sm" />
-                            <button type="button" id="lookup-dhp-btn" class="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700">
-                                Open Record
-                            </button>
-                            <button type="button" id="scan-qr-btn" class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">
-                                Scan QR Code
-                            </button>
-                            <button type="button" id="stop-scan-btn" class="hidden px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700">
-                                Stop Scan
-                            </button>
-                        </div>
-                        <div id="qr-scanner" class="hidden mt-4">
-                            <video id="qr-video" class="w-full max-w-md rounded-lg border border-green-300 bg-black" autoplay muted playsinline></video>
-                            <p id="qr-scanner-status" class="mt-2 text-sm text-green-700 dark:text-green-300">Point the camera at the patient's DHP QR code.</p>
-                        </div>
-                        <div id="lookup-dhp-result" class="mt-3"></div>
-                    </div>
-
-                    @if ($patients->count())
-                        <div class="overflow-x-auto">
-                            <table class="w-full text-sm text-left">
-                                <thead class="bg-gray-100 dark:bg-gray-700">
-                                    <tr>
-                                        <th class="px-4 py-2">DHP ID</th>
-                                        <th class="px-4 py-2">Name</th>
-                                        <th class="px-4 py-2">National ID</th>
-                                        <th class="px-4 py-2">Age</th>
-                                        <th class="px-4 py-2">Status</th>
-                                        <th class="px-4 py-2">Registered</th>
-                                        <th class="px-4 py-2">Actions</th>
-                                    </tr>
-                                </thead>
-                                <tbody class="divide-y">
-                                    @foreach ($patients as $patient)
-                                        <tr class="hover:bg-gray-50 dark:hover:bg-gray-700">
-                                            <td class="px-4 py-2 font-mono text-blue-600">{{ $patient->dhp_id }}</td>
-                                            <td class="px-4 py-2">{{ $patient->full_name }}</td>
-                                            <td class="px-4 py-2">{{ $patient->national_id }}</td>
-                                            <td class="px-4 py-2">{{ $patient->age ?? "N/A" }}</td>
-                                            <td class="px-4 py-2">
-                                                <span class="px-2 py-1 text-xs rounded" 
-                                                      :class="''{{ $patient->status === "active" ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800" }}''">
-                                                    {{ ucfirst($patient->status) }}
-                                                </span>
-                                            </td>
-                                            <td class="px-4 py-2 text-xs">{{ $patient->registered_at->format("M d, Y") }}</td>
-                                            <td class="px-4 py-2">
-                                                <a href="{{ route("patients.show", $patient) }}" class="text-blue-600 hover:underline">View</a>
-                                                @can("edit_patient")
-                                                    | <a href="{{ route("patients.edit", $patient) }}" class="text-blue-600 hover:underline">Edit</a>
-                                                @endcan
-                                            </td>
-                                        </tr>
-                                    @endforeach
-                                </tbody>
-                            </table>
-                        </div>
-
-                        {{ $patients->links() }}
-                    @else
-                        <p class="text-gray-500 text-center py-8">No patients found</p>
-                    @endif
-                </div>
-            </div>
-</div>
+        </form>
+        @can('create_patient')
+            <a href="{{ route('patients.create') }}" class="btn-success">
+                <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" /></svg>
+                Register new patient
+            </a>
+        @endcan
     </div>
 
+    <section aria-label="QR lookup" class="dhp-card dhp-card-pad mb-6 border-emerald-200 bg-white">
+        <h3 class="font-bold text-emerald-900">QR / DHP ID Lookup</h3>
+        <p class="mt-1 text-sm text-slate-600">Scan the passport QR with the camera, or paste a DHP ID (e.g. DHP-2026-00000001) to open the record instantly.</p>
+        <div class="mt-3 flex flex-col gap-2 sm:flex-row">
+            <label for="lookup-dhp-id" class="sr-only">Digital Health Passport ID</label>
+            <input type="text" id="lookup-dhp-id" placeholder="e.g. DHP-2026-00000001" autocomplete="off" maxlength="64" class="dhp-input flex-1" />
+            <button type="button" id="lookup-dhp-btn" class="btn-success">Open record</button>
+            <button type="button" id="scan-qr-btn" class="btn-primary">Scan QR Code</button>
+            <button type="button" id="stop-scan-btn" class="btn-danger hidden">Stop scan</button>
+        </div>
+        <div id="qr-scanner" class="hidden mt-4">
+            <video id="qr-video" class="dhp-qr-video" autoplay muted playsinline aria-label="QR camera preview"></video>
+            <p id="qr-scanner-status" class="mt-2 text-sm text-emerald-800" role="status">Point the camera at the patient's DHP QR code.</p>
+        </div>
+        <div id="lookup-dhp-result" class="mt-3" aria-live="polite"></div>
+    </section>
+
+    @if ($patients->count())
+        <div class="dhp-table-wrap">
+            <table class="dhp-table">
+                <thead><tr><th>DHP ID</th><th>Patient</th><th>National ID</th><th>Age</th><th>Status</th><th>Registered</th><th><span class="sr-only">Actions</span></th></tr></thead>
+                <tbody>
+                    @foreach ($patients as $patient)
+                        <tr>
+                            <td class="dhp-mono">{{ $patient->dhp_id }}</td>
+                            <td class="font-semibold text-dhp-900">{{ $patient->full_name }}</td>
+                            <td>{{ $patient->national_id ?? '—' }}</td>
+                            <td class="tabular-nums">{{ $patient->age ?? 'N/A' }}</td>
+                            <td><span class="dhp-badge {{ $patient->status === 'active' ? 'badge-active' : 'badge-pending' }}">{{ ucfirst($patient->status) }}</span></td>
+                            <td class="whitespace-nowrap text-xs text-slate-500">{{ $patient->registered_at?->format('d M Y') }}</td>
+                            <td class="whitespace-nowrap">
+                                <a href="{{ route('patients.show', $patient) }}" class="btn-secondary !min-h-[40px] !px-3 !py-1.5 !text-xs">Open</a>
+                                @can('edit_patient')
+                                    <a href="{{ route('patients.edit', $patient) }}" class="ml-1 font-bold text-dhp-700 hover:underline">Edit</a>
+                                @endcan
+                            </td>
+                        </tr>
+                    @endforeach
+                </tbody>
+            </table>
+        </div>
+        <div class="mt-4">{{ $patients->links() }}</div>
+    @else
+        <div class="dhp-empty">
+            <p class="font-bold text-dhp-900">No patients found</p>
+            <p class="max-w-md text-sm text-slate-500">Try a different spelling or ID. If this is a first visit, register the patient to issue a lifelong Digital Health Passport.</p>
+            @can('create_patient')
+                <a href="{{ route('patients.create', ['search' => request('search')]) }}" class="btn-primary mt-3">Register this patient</a>
+            @endcan
+        </div>
+    @endif
+
     <script>
-        const dhpInput = document.getElementById("lookup-dhp-id");
-        const dhpBtn = document.getElementById("lookup-dhp-btn");
-        const scanQrBtn = document.getElementById("scan-qr-btn");
-        const stopScanBtn = document.getElementById("stop-scan-btn");
-        const qrScanner = document.getElementById("qr-scanner");
-        const qrVideo = document.getElementById("qr-video");
-        const qrScannerStatus = document.getElementById("qr-scanner-status");
-        const dhpResult = document.getElementById("lookup-dhp-result");
-        let qrStream = null;
-        let qrScanInterval = null;
+        (function () {
+            var dhpInput = document.getElementById('lookup-dhp-id');
+            var dhpBtn = document.getElementById('lookup-dhp-btn');
+            var scanQrBtn = document.getElementById('scan-qr-btn');
+            var stopScanBtn = document.getElementById('stop-scan-btn');
+            var qrScanner = document.getElementById('qr-scanner');
+            var qrVideo = document.getElementById('qr-video');
+            var qrScannerStatus = document.getElementById('qr-scanner-status');
+            var dhpResult = document.getElementById('lookup-dhp-result');
+            var qrStream = null, qrScanInterval = null;
 
-        function parseDhpId(value) {
-            try {
-                const parsed = JSON.parse(value);
-                if (parsed && parsed.dhp_id) {
-                    return parsed.dhp_id;
-                }
-            } catch (e) {}
-
-            return value;
-        }
-
-        function stopQrScanner() {
-            if (qrScanInterval) {
-                clearInterval(qrScanInterval);
-                qrScanInterval = null;
+            function parseDhpId(value) {
+                try { var parsed = JSON.parse(value); if (parsed && parsed.dhp_id) return parsed.dhp_id; } catch (e) {}
+                return value;
             }
-
-            if (qrStream) {
-                qrStream.getTracks().forEach(function(track) { track.stop(); });
-                qrStream = null;
+            function stopQrScanner() {
+                if (qrScanInterval) { clearInterval(qrScanInterval); qrScanInterval = null; }
+                if (qrStream) { qrStream.getTracks().forEach(function (t) { t.stop(); }); qrStream = null; }
+                qrVideo.srcObject = null;
+                qrScanner.classList.add('hidden'); stopScanBtn.classList.add('hidden'); scanQrBtn.classList.remove('hidden');
             }
-
-            qrVideo.srcObject = null;
-            qrScanner.classList.add("hidden");
-            stopScanBtn.classList.add("hidden");
-            scanQrBtn.classList.remove("hidden");
-        }
-
-        function lookupDhpId(scannedValue) {
-            const value = parseDhpId((scannedValue || dhpInput.value).trim());
-            if (!value) {
-                dhpResult.innerHTML = '<p class="text-sm text-red-600">Please enter or scan a DHP ID.</p>';
-                return;
+            function lookupDhpId(scannedValue) {
+                var value = parseDhpId((scannedValue || dhpInput.value).trim());
+                if (!value) { dhpResult.innerHTML = '<div class="dhp-alert-error">Please enter or scan a DHP ID.</div>'; return; }
+                dhpInput.value = value;
+                dhpResult.innerHTML = '<p class="text-sm text-slate-500" role="status">Searching for ' + value.replace(/</g, '&lt;') + '…</p>';
+                fetch('{{ route('patients.search.dhp-id') }}?dhp_id=' + encodeURIComponent(value), { headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' } })
+                    .then(function (r) { if (r.status === 404) { return r.json().then(function (d) { throw new Error(d.message || 'Patient not found'); }); } if (!r.ok) throw new Error('Search failed. Try again.'); return r.json(); })
+                    .then(function (data) {
+                        if (data.found) {
+                            var p = data.patient;
+                            dhpResult.innerHTML = '<div class="dhp-alert-success"><div><strong>Record found:</strong> ' + String(p.full_name).replace(/</g, '&lt;') +
+                                ' (Age: ' + (p.age ?? 'N/A') + ')<br><a href="/patients/' + p.id + '" class="font-bold underline">Open patient record →</a></div></div>';
+                        } else { dhpResult.innerHTML = '<div class="dhp-alert-warning">No patient found with this DHP ID.</div>'; }
+                    })
+                    .catch(function (err) { dhpResult.innerHTML = '<div class="dhp-alert-error">' + String(err.message).replace(/</g, '&lt;') + '</div>'; });
             }
-
-            dhpInput.value = value;
-
-            dhpResult.innerHTML = '<p class="text-sm text-gray-600">Searching...</p>';
-
-            fetch("{{ route("patients.search.dhp-id") }}?dhp_id=" + encodeURIComponent(value), {
-                headers: { "Accept": "application/json", "X-Requested-With": "XMLHttpRequest" }
-            })
-            .then(function(response) {
-                if (response.status === 404) {
-                    return response.json().then(function(data) {
-                        throw new Error(data.message || "Patient not found");
-                    });
-                }
-                return response.json();
-            })
-            .then(function(data) {
-                if (data.found) {
-                    const p = data.patient;
-                    dhpResult.innerHTML =
-                        '<div class="p-3 bg-green-100 border border-green-400 rounded-lg">' +
-                        '<p class="text-sm text-green-800"><strong>Record found:</strong> ' + p.full_name +
-                        ' (Age: ' + p.age + ')</p>' +
-                        '<a href="/patients/' + p.id + '" class="text-sm text-green-700 underline font-semibold">Open patient record →</a>' +
-                        '</div>';
-                } else {
-                    dhpResult.innerHTML =
-                        '<p class="text-sm text-red-600">No patient found with this DHP ID.</p>';
-                }
-            })
-            .catch(function(err) {
-                dhpResult.innerHTML = '<p class="text-sm text-red-600">' + err.message + '</p>';
-            });
-        }
-
-        dhpBtn.addEventListener("click", lookupDhpId);
-        scanQrBtn.addEventListener("click", function() {
-            if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-                dhpResult.innerHTML = '<p class="text-sm text-red-600">This browser cannot access the camera. Use manual DHP ID lookup instead.</p>';
-                return;
-            }
-
-            if (!window.BarcodeDetector) {
-                dhpResult.innerHTML = '<p class="text-sm text-red-600">This browser does not support built-in QR scanning. Use Chrome/Edge or enter the DHP ID manually.</p>';
-                return;
-            }
-
-            const detector = new BarcodeDetector({ formats: ["qr_code"] });
-
-            navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } })
-                .then(function(stream) {
-                    qrStream = stream;
-                    qrVideo.srcObject = stream;
-                    qrScanner.classList.remove("hidden");
-                    scanQrBtn.classList.add("hidden");
-                    stopScanBtn.classList.remove("hidden");
-                    qrScannerStatus.textContent = "Point the camera at the patient's DHP QR code.";
-
-                    qrScanInterval = setInterval(function() {
-                        if (qrVideo.readyState < 2) {
-                            return;
-                        }
-
-                        detector.detect(qrVideo)
-                            .then(function(codes) {
-                                if (codes.length && codes[0].rawValue) {
-                                    const scannedDhpId = parseDhpId(codes[0].rawValue.trim());
-                                    qrScannerStatus.textContent = "QR code found. Opening record...";
-                                    stopQrScanner();
-                                    lookupDhpId(scannedDhpId);
-                                }
-                            })
-                            .catch(function() {
-                                qrScannerStatus.textContent = "Scanning failed. Try again or enter the DHP ID manually.";
-                            });
+            dhpBtn.addEventListener('click', function () { lookupDhpId(); });
+            scanQrBtn.addEventListener('click', function () {
+                if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) { dhpResult.innerHTML = '<div class="dhp-alert-error">This device cannot access the camera. Enter the DHP ID manually.</div>'; return; }
+                if (!window.BarcodeDetector) { dhpResult.innerHTML = '<div class="dhp-alert-warning">Built-in QR scanning needs Chrome or Edge. Enter the DHP ID manually.</div>'; return; }
+                var detector = new BarcodeDetector({ formats: ['qr_code'] });
+                navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } }).then(function (stream) {
+                    qrStream = stream; qrVideo.srcObject = stream;
+                    qrScanner.classList.remove('hidden'); scanQrBtn.classList.add('hidden'); stopScanBtn.classList.remove('hidden');
+                    qrScannerStatus.textContent = 'Point the camera at the patient\u2019s DHP QR code.';
+                    qrScanInterval = setInterval(function () {
+                        if (qrVideo.readyState < 2) return;
+                        detector.detect(qrVideo).then(function (codes) {
+                            if (codes.length && codes[0].rawValue) { stopQrScanner(); lookupDhpId(codes[0].rawValue.trim()); }
+                        }).catch(function () { qrScannerStatus.textContent = 'Scanning failed. Try again or enter the DHP ID manually.'; });
                     }, 500);
-                })
-                .catch(function() {
-                    dhpResult.innerHTML = '<p class="text-sm text-red-600">Camera permission was denied or no camera is available.</p>';
-                });
-        });
-        stopScanBtn.addEventListener("click", stopQrScanner);
-        dhpInput.addEventListener("keypress", function(e) {
-            if (e.key === "Enter") {
-                e.preventDefault();
-                lookupDhpId();
-            }
-        });
+                }).catch(function () { dhpResult.innerHTML = '<div class="dhp-alert-error">Camera permission was denied or no camera is available.</div>'; });
+            });
+            stopScanBtn.addEventListener('click', stopQrScanner);
+            dhpInput.addEventListener('keypress', function (e) { if (e.key === 'Enter') { e.preventDefault(); lookupDhpId(); } });
+        })();
     </script>
 </x-app-layout>

@@ -18,7 +18,14 @@ class Facility extends Model
         'region',
         'address',
         'phone_number',
+        'secondary_phone',
         'email',
+        'website',
+        'working_hours',
+        'map_url',
+        'logo_path',
+        'services',
+        'departments',
         'status',
         'synced_at',
     ];
@@ -27,6 +34,8 @@ class Facility extends Model
     {
         return [
             'synced_at' => 'datetime',
+            'services' => 'array',
+            'departments' => 'array',
         ];
     }
 

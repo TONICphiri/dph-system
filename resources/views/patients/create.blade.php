@@ -27,9 +27,10 @@
 
 <div>
                             <x-input-label for="national_id" :value="__("National ID (required unless child)")" />
-                            <x-text-input id="national_id" name="national_id" type="text" 
+                            <x-text-input id="national_id" name="national_id" type="text"
                                          placeholder="e.g., A123456789" autofocus
                                          :value="old(\"national_id\")" class="mt-1 block w-full" />
+                            <p class="mt-1 text-xs text-gray-500">Enter all details below exactly as they appear on the National ID.</p>
                             <x-input-error :messages="$errors->get(\"national_id")" class="mt-2" />
                         </div>
 
@@ -83,16 +84,28 @@
 
                         <div class="grid grid-cols-2 gap-4">
                             <div>
-                                <x-input-label for="village" :value="__("Village")" />
-                                <x-text-input id="village" name="village" type="text" 
+                                <x-input-label for="village" :value="__("Home Village")" />
+                                <x-text-input id="village" name="village" type="text"
                                              :value="old(\"village\")" class="mt-1 block w-full" />
                             </div>
 
                             <div>
-                                <x-input-label for="district" :value="__("District")" />
-                                <x-text-input id="district" name="district" type="text" 
-                                             :value="old(\"district\")" class="mt-1 block w-full" />
+                                <x-input-label for="traditional_authority" :value="__("Traditional Authority")" />
+                                <x-text-input id="traditional_authority" name="traditional_authority" type="text"
+                                             :value="old(\"traditional_authority\")" class="mt-1 block w-full" />
                             </div>
+                        </div>
+
+                        <div>
+                            <x-input-label for="district" :value="__("District")" />
+                            <select id="district" name="district" required class="mt-1 block w-full border-gray-300 rounded-md shadow-sm">
+                                <option value="">-- Select District --</option>
+                                @foreach (config("districts") as $name => $code)
+                                    <option value="{{ $name }}" {{ old("district") === $name ? "selected" : "" }}>{{ $name }}</option>
+                                @endforeach
+                            </select>
+                            <p class="mt-1 text-xs text-gray-500">Used to generate the patient's Health Passport ID.</p>
+                            <x-input-error :messages="$errors->get(\"district")" class="mt-2" />
                         </div>
 
                         <div class="flex items-center">

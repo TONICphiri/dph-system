@@ -13,6 +13,7 @@ use App\Models\Prescription;
 use App\Models\Admission;
 use App\Models\Inventory;
 use App\Models\SyncQueue;
+use App\Models\Vital;
 use App\Services\QrCodeService;
 use App\Services\SyncService;
 use Illuminate\Http\Request;
@@ -26,16 +27,24 @@ class PatientController extends Controller
     public function index(Request $request)
     {
         $this->authorize('view_patients');
-        
+
+        $request->validate([
+            'search' => 'nullable|string|max:60',
+            'facility_id' => 'nullable|integer|exists:facilities,id',
+            'status' => 'nullable|in:active,inactive,deceased',
+        ]);
+
         $query = Patient::query();
-        
-        // Search by name or national ID
+
+        // Search by name or national ID — grouped so ORs never leak outside filters.
         if ($request->filled('search')) {
-            $search = $request->input('search');
-            $query->where('first_name', 'like', "%{$search}%")
+            $search = trim($request->input('search'));
+            $query->where(function ($q) use ($search) {
+                $q->where('first_name', 'like', "%{$search}%")
                   ->orWhere('last_name', 'like', "%{$search}%")
                   ->orWhere('national_id', 'like', "%{$search}%")
                   ->orWhere('dhp_id', 'like', "%{$search}%");
+            });
         }
 
         // Filter by facility
@@ -48,8 +57,8 @@ class PatientController extends Controller
             $query->where('status', $request->input('status'));
         }
 
-        // Paginate results
-        $patients = $query->orderByDesc('registered_at')->paginate(15);
+        // Paginate results (preserve filters across pages)
+        $patients = $query->orderByDesc('registered_at')->paginate(15)->withQueryString();
         
         return view('patients.index', compact('patients'));
     }
@@ -71,6 +80,11 @@ class PatientController extends Controller
     public function store(StorePatientRequest $request)
     {
         $this->authorize('create_patient');
+
+        $facilityId = $this->user()->facility_id;
+        if (!$facilityId && !$this->user()->isNationalAdmin()) {
+            return redirect()->back()->with('error', 'Your account is not linked to a facility. Contact an administrator.');
+        }
 
         // Check if patient already exists by National ID
         if ($request->filled('national_id')) {
@@ -98,8 +112,8 @@ class PatientController extends Controller
                 $guardianId = $guardian->id;
             }
 
-            // Generate DHP ID
-            $dhpId = Patient::generateDhpId();
+            // Generate Health Passport ID: DISTRICT-FACILITY#-YEAR-SEQ
+            $dhpId = Patient::generateDhpId($request->district, $facilityId);
 
             // Create patient
             $patient = Patient::create([
@@ -112,11 +126,12 @@ class PatientController extends Controller
                 'phone_number' => $request->phone_number,
                 'address' => $request->address,
                 'village' => $request->village,
+                'traditional_authority' => $request->traditional_authority,
                 'district' => $request->district,
                 'is_child' => $request->boolean('is_child', false),
                 'guardian_id' => $guardianId,
                 'registered_at' => now(),
-                'registered_by_facility_id' => $this->user()->facility_id,
+                'registered_by_facility_id' => $facilityId,
                 'registered_by_user_id' => $this->user()->id,
                 'status' => 'active',
             ]);
@@ -128,7 +143,8 @@ class PatientController extends Controller
                 'subject_type' => Patient::class,
                 'subject_id' => $patient->id,
                 'user_id' => auth()->id(),
-                'description' => 'Patient registered: ' . $patient->full_name . ' (DHP ID: ' . $patient->dhp_id . ') at ' . $this->user()->facility->name,
+                'ip_address' => $request->ip(),
+                'description' => 'Patient registered: ' . $patient->full_name . ' (DHP ID: ' . $patient->dhp_id . ') at ' . ($this->user()->facility->name ?? 'National Registry'),
             ]);
 
             SyncService::enqueue('patients', $patient, 'create');
@@ -151,13 +167,19 @@ class PatientController extends Controller
      */
     public function show(Patient $patient)
     {
-        $this->authorize('view_patient');
-        
-        $encounters = $patient->encounters()->with('vitals', 'prescriptions')->get();
-        $admissions = $patient->admissions()->get();
+        // Own-file rule: patient-role accounts open only their linked file.
+        $this->authorize('view', $patient);
+
+        if ($redirect = $this->patientFileTwoFactorRedirect($patient)) {
+            return $redirect;
+        }
+
+        $encounters = $patient->encounters()->with(['vitals', 'prescriptions', 'facility'])->orderByDesc('encounter_date')->get();
+        $admissions = $patient->admissions()->with('facility')->orderByDesc('admitted_at')->get();
         $guardian = $patient->guardian;
+        $labOrders = \App\Models\LabOrder::where('patient_id', $patient->id)->latest('requested_at')->take(10)->get();
         
-        return view('patients.show', compact('patient', 'encounters', 'admissions', 'guardian'));
+        return view('patients.show', compact('patient', 'encounters', 'admissions', 'guardian', 'labOrders'));
     }
 
     /**
@@ -208,6 +230,8 @@ class PatientController extends Controller
      */
     public function searchByNationalId(Request $request)
     {
+        $this->authorize('view_patients');
+
         $request->validate([
             'national_id' => 'required|string|max:20',
         ]);
@@ -247,8 +271,10 @@ class PatientController extends Controller
      */
     public function searchByDhpId(Request $request)
     {
+        $this->authorize('view_patients');
+
         $request->validate([
-            'dhp_id' => 'required|string',
+            'dhp_id' => 'required|string|max:64',
         ]);
 
         $qrData = QrCodeService::parseQrCodeData($request->dhp_id);
@@ -301,16 +327,22 @@ class PatientController extends Controller
         $patient = Patient::findOrFail($request->patient_id);
         
         $validated = $request->validate([
-            'weight' => 'nullable|numeric|min:0',
+            'weight' => 'nullable|numeric|min:0|max:400',
             'temperature' => 'nullable|numeric|min:30|max:45',
             'systolic_bp' => 'nullable|numeric|min:50|max:250',
             'diastolic_bp' => 'nullable|numeric|min:30|max:200',
-            'heart_rate' => 'nullable|numeric|min:30|max:200',
-            'respiratory_rate' => 'nullable|numeric|min:10|max:50',
+            'heart_rate' => 'nullable|numeric|min:30|max:250',
+            'respiratory_rate' => 'nullable|numeric|min:5|max:80',
             'oxygen_saturation' => 'nullable|numeric|min:50|max:100',
             'priority_level' => 'nullable|string|in:Emergency,High,Medium,Low',
-            'notes' => 'nullable|string',
+            'notes' => 'nullable|string|max:2000',
         ]);
+
+        if (isset($validated['systolic_bp'], $validated['diastolic_bp'])
+            && $validated['systolic_bp'] !== null && $validated['diastolic_bp'] !== null
+            && $validated['systolic_bp'] < $validated['diastolic_bp']) {
+            return redirect()->back()->with('error', 'Systolic pressure cannot be lower than diastolic pressure.')->withInput();
+        }
         
         try {
             DB::beginTransaction();
@@ -404,18 +436,18 @@ class PatientController extends Controller
         $patient = Patient::findOrFail($request->patient_id);
         
         $validated = $request->validate([
-            'chief_complaint' => 'required|string',
-            'examination_findings' => 'nullable|string',
-            'diagnosis' => 'nullable|string',
-            'treatment_plan' => 'nullable|string',
+            'chief_complaint' => 'required|string|max:2000',
+            'examination_findings' => 'nullable|string|max:5000',
+            'diagnosis' => 'nullable|string|max:2000',
+            'treatment_plan' => 'nullable|string|max:5000',
             'requires_admission' => 'nullable|boolean',
-            'prescriptions' => 'nullable|array',
+            'prescriptions' => 'nullable|array|max:20',
             'prescriptions.*.medication_name' => 'required_with:prescriptions|string|max:255',
             'prescriptions.*.dose' => 'required_with:prescriptions|string|max:255',
             'prescriptions.*.frequency' => 'required_with:prescriptions|string|max:255',
-            'prescriptions.*.quantity' => 'nullable|integer|min:1',
+            'prescriptions.*.quantity' => 'nullable|integer|min:1|max:10000',
             'prescriptions.*.duration' => 'nullable|string|max:255',
-            'prescriptions.*.instructions' => 'nullable|string',
+            'prescriptions.*.instructions' => 'nullable|string|max:2000',
         ]);
         
         try {
@@ -474,7 +506,7 @@ class PatientController extends Controller
                 'subject_type' => Encounter::class,
                 'subject_id' => $encounter->id,
                 'user_id' => auth()->id(),
-                'description' => 'Consultation recorded for patient ' . $patient->full_name . ' (DHP ID: ' . $patient->dhp_id . ') - diagnosis: ' . ($validated['diagnosis'] ?? 'none') . ', admission: ' . ($validated['requires_admission'] ? 'yes' : 'no'),
+                'description' => 'Consultation recorded for patient ' . $patient->full_name . ' (DHP ID: ' . $patient->dhp_id . ') - diagnosis: ' . ($validated['diagnosis'] ?? 'none') . ', admission: ' . (($validated['requires_admission'] ?? false) ? 'yes' : 'no'),
             ]);
 
             SyncService::enqueue('encounters', $encounter, 'update');
@@ -525,29 +557,50 @@ class PatientController extends Controller
         
         try {
             DB::beginTransaction();
-            
-            $prescription = Prescription::find($validated['prescription_id']);
+
+            $prescription = Prescription::where('id', $validated['prescription_id'])
+                ->lockForUpdate()
+                ->firstOrFail();
+
+            // Ownership check: prescription must belong to this patient.
+            if ((int) $prescription->patient_id !== (int) $patient->id) {
+                throw new \Exception('This prescription does not belong to the selected patient.');
+            }
 
             if ($prescription->status !== 'pending') {
                 throw new \Exception('Only pending prescriptions can be dispensed');
             }
 
-            $quantityDispensed = $validated['quantity_dispensed'] ?? $prescription->quantity;
-            
-            // Update prescription dispensed status
+            $quantityDispensed = (int) ($validated['quantity_dispensed'] ?? $prescription->quantity ?? 1);
+            if ($quantityDispensed < 1) {
+                throw new \Exception('Dispensed quantity must be at least 1.');
+            }
+
+            // Facility-scoped stock check with row lock to prevent overselling.
+            $inventoryItem = Inventory::where('medication_name', $prescription->medication_name)
+                ->when($this->user()->isFacilityScoped(), fn ($q) => $q->where('facility_id', $this->user()->facility_id))
+                ->lockForUpdate()
+                ->first();
+
+            if ($inventoryItem) {
+                if ($inventoryItem->isExpired()) {
+                    throw new \Exception("Cannot dispense '{$prescription->medication_name}': stock is expired.");
+                }
+                if ($inventoryItem->current_stock < $quantityDispensed) {
+                    throw new \Exception("Insufficient stock for '{$prescription->medication_name}'. Available: {$inventoryItem->current_stock}.");
+                }
+                $inventoryItem->decrement('current_stock', $quantityDispensed);
+                $inventoryItem->refresh();
+                $inventoryItem->updateStatus();
+            }
+
+            // Mark prescription as dispensed only after stock is confirmed.
             $prescription->update([
                 'status' => 'dispensed',
                 'dispensed_at' => now(),
                 'dispensed_by_user_id' => $this->user()->id,
                 'quantity' => $quantityDispensed,
             ]);
-            
-            // Update inventory
-            $inventoryItem = Inventory::where('medication_name', $prescription->medication_name)->first();
-            if ($inventoryItem) {
-                $inventoryItem->decrement('current_stock', $quantityDispensed);
-                $inventoryItem->updateStatus();
-            }
             
             // Create dispensing record or log
             \Log::info('Medication dispensed', [
@@ -564,6 +617,7 @@ class PatientController extends Controller
                 'subject_type' => Prescription::class,
                 'subject_id' => $prescription->id,
                 'user_id' => auth()->id(),
+                'ip_address' => $request->ip(),
                 'description' => 'Medication dispensed: ' . $prescription->medication_name . ' for patient ' . $patient->full_name . ' (DHP ID: ' . $patient->dhp_id . ') - quantity: ' . $quantityDispensed,
             ]);
 
@@ -577,8 +631,17 @@ class PatientController extends Controller
                 'error' => $e->getMessage(),
                 'patient_id' => $patient->id,
             ]);
+
+            $businessRules = ['Only pending prescriptions', 'does not belong', 'Insufficient stock', 'expired', 'at least 1'];
+            $message = 'Failed to dispense medication. Please try again.';
+            foreach ($businessRules as $rule) {
+                if (str_contains($e->getMessage(), $rule)) {
+                    $message = $e->getMessage();
+                    break;
+                }
+            }
             
-            return redirect()->back()->with('error', 'Failed to dispense medication. Please try again.');
+            return redirect()->back()->with('error', $message);
         }
     }
 
@@ -611,10 +674,20 @@ class PatientController extends Controller
         }
         
         $validated = $request->validate([
-            'bed_number' => 'required|string',
-            'ward' => 'required|string',
-            'admission_type' => 'required|string',
+            'bed_number' => 'required|string|max:20',
+            'ward' => 'required|string|max:100',
+            'admission_type' => 'required|in:emergency,elective,urgent,transfer',
+            'admission_reason' => 'nullable|string|max:2000',
         ]);
+
+        // Bed occupancy guard: one active patient per bed per facility.
+        $bedOccupied = Admission::where('status', 'active')
+            ->where('bed_number', $validated['bed_number'])
+            ->when($this->user()->isFacilityScoped(), fn ($q) => $q->where('facility_id', $this->user()->facility_id))
+            ->exists();
+        if ($bedOccupied) {
+            return redirect()->back()->with('error', "Bed {$validated['bed_number']} is already occupied by another active admission.")->withInput();
+        }
         
         try {
             DB::beginTransaction();
@@ -633,9 +706,10 @@ class PatientController extends Controller
                 'encounter_id' => $encounter->id,
                 'facility_id' => $this->user()->facility_id,
                 'admitted_by_user_id' => $this->user()->id,
-                'bed_number' => $validated['bed_number'],
-                'ward_name' => $validated['ward'],
+                'bed_number' => trim($validated['bed_number']),
+                'ward_name' => trim($validated['ward']),
                 'admission_type' => $validated['admission_type'],
+                'admission_reason' => $validated['admission_reason'] ?? null,
                 'admitted_at' => now(),
                 'status' => 'active',
             ]);
@@ -647,6 +721,7 @@ class PatientController extends Controller
                 'subject_type' => Admission::class,
                 'subject_id' => $admission->id,
                 'user_id' => auth()->id(),
+                'ip_address' => $request->ip(),
                 'description' => 'Patient admitted: ' . $patient->full_name . ' (DHP ID: ' . $patient->dhp_id . ') to ward ' . $validated['ward'] . ' Bed ' . $validated['bed_number'],
             ]);
 
@@ -682,19 +757,25 @@ class PatientController extends Controller
             'oxygen_saturation' => 'nullable|numeric|min:50|max:100',
             'blood_pressure_systolic' => 'nullable|numeric|min:50|max:250',
             'blood_pressure_diastolic' => 'nullable|numeric|min:30|max:200',
-            'weight' => 'nullable|numeric|min:0',
-            'notes' => 'nullable|string',
+            'weight' => 'nullable|numeric|min:0|max:400',
+            'notes' => 'nullable|string|max:2000',
         ]);
+
+        if (empty(array_filter($validated, fn ($v) => $v !== null && $v !== ''))) {
+            return redirect()->back()->with('error', 'Enter at least one vital sign or note.')->withInput();
+        }
         
         try {
             DB::beginTransaction();
-            
-            // Get latest admission
-            $latestAdmission = $patient->admissions()->latest()->first();
+
+            $activeAdmission = $patient->admissions()->where('status', 'active')->latest()->first();
+            if (!$activeAdmission) {
+                throw new \Exception('Ward rounds require an active admission for this patient.');
+            }
             
             // Get or create latest encounter
             $encounter = $patient->encounters()->latest()->first();
-            if (!$encounter) {
+            if (!$encounter || in_array($encounter->status, ['completed'])) {
                 $encounter = $patient->encounters()->create([
                     'encounter_type' => 'ward_round',
                     'facility_id' => $this->user()->facility_id,
@@ -704,35 +785,31 @@ class PatientController extends Controller
                 ]);
             }
             
-            // Update or create vital signs
-            $vital = $encounter->vitals()->latest()->first();
-            if (!$vital) {
-                $vital = $encounter->vitals()->create([
-                    'patient_id' => $patient->id,
-                    'recorded_by_user_id' => $this->user()->id,
-                    'recorded_at' => now(),
-                ]);
-            }
+            // Always append a new vital row — never overwrite history.
+            $vital = $encounter->vitals()->create([
+                'patient_id' => $patient->id,
+                'temperature' => $validated['temperature'] ?? null,
+                'heart_rate' => $validated['heart_rate'] ?? null,
+                'respiratory_rate' => $validated['respiratory_rate'] ?? null,
+                'oxygen_saturation' => $validated['oxygen_saturation'] ?? null,
+                'systolic_bp' => $validated['blood_pressure_systolic'] ?? null,
+                'diastolic_bp' => $validated['blood_pressure_diastolic'] ?? null,
+                'weight' => $validated['weight'] ?? null,
+                'notes' => $validated['notes'] ?? null,
+                'priority_level' => 'Low',
+                'recorded_by_user_id' => $this->user()->id,
+                'recorded_at' => now(),
+            ]);
+            $vital->update(['priority_level' => $vital->autoPriorityLevel()]);
             
-            // Update vital signs
-            if (!empty($validated['temperature'])) $vital->temperature = $validated['temperature'];
-            if (!empty($validated['heart_rate'])) $vital->heart_rate = $validated['heart_rate'];
-            if (!empty($validated['respiratory_rate'])) $vital->respiratory_rate = $validated['respiratory_rate'];
-            if (!empty($validated['oxygen_saturation'])) $vital->oxygen_saturation = $validated['oxygen_saturation'];
-            if (!empty($validated['blood_pressure_systolic'])) $vital->systolic_bp = $validated['blood_pressure_systolic'];
-            if (!empty($validated['blood_pressure_diastolic'])) $vital->diastolic_bp = $validated['blood_pressure_diastolic'];
-            if (!empty($validated['weight'])) $vital->weight = $validated['weight'];
-            if (!empty($validated['notes'])) $vital->notes = $validated['notes'];
-            
-            $vital->save();
-            
-DB::commit();
+            DB::commit();
 
             AuditLog::create([
                 'action' => 'update',
                 'subject_type' => Vital::class,
                 'subject_id' => $vital->id,
                 'user_id' => auth()->id(),
+                'ip_address' => $request->ip(),
                 'description' => 'Ward round vitals recorded for patient ' . $patient->full_name . ' (DHP ID: ' . $patient->dhp_id . ') - temp: ' . $vital->temperature . ' HR: ' . $vital->heart_rate,
             ]);
 
@@ -789,21 +866,29 @@ DB::commit();
         $validated = $request->validate([
             'medication_name' => 'required|string|max:255',
             'dose' => 'nullable|string|max:255',
-            'route' => 'nullable|string|max:255',
+            'route' => 'nullable|string|max:50',
             'prescription_id' => 'nullable|exists:prescriptions,id',
-            'administered_at' => 'nullable|date',
-            'notes' => 'nullable|string',
+            'administered_at' => 'nullable|date|before_or_equal:now',
+            'notes' => 'nullable|string|max:2000',
         ]);
 
         try {
             DB::beginTransaction();
+
+            if (!empty($validated['prescription_id'])) {
+                $linked = Prescription::where('id', $validated['prescription_id'])
+                    ->where('patient_id', $patient->id)->exists();
+                if (!$linked) {
+                    throw new \Exception('Linked prescription does not belong to this patient.');
+                }
+            }
 
             $latestAdmission = $patient->admissions()->where('status', 'active')->latest()->first();
             if (!$latestAdmission) {
                 throw new \Exception('Patient has no active admission');
             }
 
-            $latestAdmission->medicationAdministrations()->create([
+            $administration = $latestAdmission->medicationAdministrations()->create([
                 'prescription_id' => $validated['prescription_id'] ?? null,
                 'patient_id' => $patient->id,
                 'administered_by_user_id' => $this->user()->id,
@@ -817,10 +902,13 @@ DB::commit();
             AuditLog::create([
                 'action' => 'create',
                 'subject_type' => 'MedicationAdministration',
-                'subject_id' => null,
+                'subject_id' => $administration->id,
                 'user_id' => auth()->id(),
+                'ip_address' => $request->ip(),
                 'description' => "Medication '{$validated['medication_name']}' administered for patient {$patient->full_name} (DHP ID: {$patient->dhp_id})",
             ]);
+
+            SyncService::enqueue('medication_administrations', $administration, 'create', $latestAdmission->facility_id);
 
             DB::commit();
 
@@ -847,7 +935,7 @@ DB::commit();
         $patient = Patient::findOrFail($request->patient_id);
 
         $validated = $request->validate([
-            'note' => 'required|string',
+            'note' => 'required|string|max:5000',
         ]);
 
         try {
@@ -858,7 +946,7 @@ DB::commit();
                 throw new \Exception('Patient has no active admission');
             }
 
-            $latestAdmission->progressNotes()->create([
+            $progressNote = $latestAdmission->progressNotes()->create([
                 'patient_id' => $patient->id,
                 'recorded_by_user_id' => $this->user()->id,
                 'note' => $validated['note'],
@@ -868,10 +956,13 @@ DB::commit();
             AuditLog::create([
                 'action' => 'create',
                 'subject_type' => 'ProgressNote',
-                'subject_id' => null,
+                'subject_id' => $progressNote->id,
                 'user_id' => auth()->id(),
+                'ip_address' => $request->ip(),
                 'description' => "Progress note recorded for patient {$patient->full_name} (DHP ID: {$patient->dhp_id})",
             ]);
+
+            SyncService::enqueue('progress_notes', $progressNote, 'create', $latestAdmission->facility_id);
 
             DB::commit();
 
@@ -889,6 +980,38 @@ DB::commit();
     }
 
     /**
+     * Discharge patient — show confirmation form (GET).
+     */
+    public function showDischargeForm(Patient $patient)
+    {
+        $this->authorize('discharge_patient');
+
+        $activeAdmission = $patient->admissions()->where('status', 'active')->latest()->first();
+        if (!$activeAdmission) {
+            return redirect()->route('patients.show', $patient)
+                ->with('error', 'No active admission to discharge for this patient.');
+        }
+
+        return view('patients.discharge', compact('patient', 'activeAdmission'));
+    }
+
+    /**
+     * Ward round — show vitals form (GET).
+     */
+    public function showWardRoundForm(Patient $patient)
+    {
+        $this->authorize('update_patient');
+
+        $activeAdmission = $patient->admissions()->where('status', 'active')->latest()->first();
+        if (!$activeAdmission) {
+            return redirect()->route('ward', $patient)
+                ->with('error', 'Ward rounds require an active admission for this patient.');
+        }
+
+        return view('patients.ward_round', compact('patient', 'activeAdmission'));
+    }
+
+    /**
      * Discharge patient
      */
     public function dischargePatient(Request $request, Patient $patient)
@@ -896,24 +1019,32 @@ DB::commit();
         $this->authorize('discharge_patient');
         
         $validated = $request->validate([
-            'final_diagnosis' => 'required|string',
-            'follow_up_instructions' => 'nullable|string',
-            'discharge_date' => 'nullable|date',
+            'final_diagnosis' => 'required|string|max:2000',
+            'discharge_status' => 'nullable|in:Improved,Not Improved,Referred,Left Against Medical Advice,Deceased',
+            'follow_up_instructions' => 'nullable|string|max:2000',
+            // "now" (not "today"): a discharge recorded this afternoon must
+            // not fail validation for being later than midnight.
+            'discharge_date' => 'nullable|date|before_or_equal:now|after:2000-01-01',
         ]);
         
         try {
             DB::beginTransaction();
-            
-            // Get latest admission
-            $latestAdmission = $patient->admissions()->latest()->first();
-            
-            if ($latestAdmission) {
-                $latestAdmission->update([
-                    'discharged_at' => $validated['discharge_date'] ?? now(),
-                    'status' => 'discharged',
-                    'discharge_summary' => $validated['final_diagnosis'],
-                ]);
+
+            // Only an active admission can be discharged.
+            $latestAdmission = $patient->admissions()->where('status', 'active')->latest()->first();
+            if (!$latestAdmission) {
+                return redirect()->route('patients.show', $patient)
+                    ->with('error', 'No active admission to discharge for this patient.');
             }
+            
+            $latestAdmission->update([
+                'discharged_at' => $validated['discharge_date'] ?? now(),
+                'status' => 'discharged',
+                'discharge_summary' => $validated['final_diagnosis'],
+                'discharge_status' => $validated['discharge_status'] ?? 'Improved',
+                'follow_up_instructions' => $validated['follow_up_instructions'] ?? null,
+                'discharged_by_user_id' => $this->user()->id,
+            ]);
             
             // Get latest encounter and mark as completed
             $latestEncounter = $patient->encounters()->latest()->first();
@@ -933,6 +1064,7 @@ DB::commit();
                 'subject_type' => $admissionId ? Admission::class : Encounter::class,
                 'subject_id' => $admissionId,
                 'user_id' => auth()->id(),
+                'ip_address' => $request->ip(),
                 'description' => 'Patient discharged: ' . $patient->full_name . ' (DHP ID: ' . $patient->dhp_id . ') - diagnosis: ' . $validated['final_diagnosis'],
             ]);
 
@@ -979,9 +1111,9 @@ DB::commit();
         $this->authorize('upload_sync');
         
         $validated = $request->validate([
-            'record_type' => 'required|string',
-            'record_id' => 'required|integer',
-            'data' => 'required|json',
+            'record_type' => 'required|string|in:patients,encounters,vitals,prescriptions,admissions,inventory,lab_orders,progress_notes,medication_administrations',
+            'record_id' => 'required|integer|min:1',
+            'data' => 'required|json|max:65535',
         ]);
         
         try {
@@ -1042,7 +1174,11 @@ DB::commit();
      */
     public function showQrCode(Patient $patient)
     {
-        $this->authorize('view_patient');
+        $this->authorize('view', $patient);
+
+        if ($redirect = $this->patientFileTwoFactorRedirect($patient)) {
+            return $redirect;
+        }
 
         try {
             $qrCode = QrCodeService::generateQrCodeSvg($patient->dhp_id);
@@ -1058,7 +1194,11 @@ DB::commit();
      */
     public function getQrCode(Patient $patient)
     {
-        $this->authorize('view_patient');
+        $this->authorize('view', $patient);
+
+        if ($redirect = $this->patientFileTwoFactorRedirect($patient)) {
+            return $redirect;
+        }
 
         try {
             $qrCode = QrCodeService::generateQrCodeSvg($patient->dhp_id);

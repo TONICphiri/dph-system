@@ -20,6 +20,20 @@ class RoleAndPermissionSeeder extends Seeder
 
         // Define all permissions
         $permissions = [
+            // Catalogue / enrollment (system-description2.md §4.2)
+            'enroll_patient',
+            'approve_enrollment',
+            'verify_identity',
+            'verify_credential',
+            'manage_credentials',
+            'manage_appointments',
+            'manage_consent',
+            'resolve_duplicates',
+            'manage_reference_data',
+            'manage_roles',
+            'broadcast_announcement',
+            'manage_security_policy',
+            'backup_restore',
             // Patient permissions
             'create_patient',
             'view_patients',
@@ -65,6 +79,10 @@ class RoleAndPermissionSeeder extends Seeder
             'manage_facility',
             'manage_facility_users',
 
+            // System settings
+            'manage_global_settings',
+            'manage_own_facility_settings',
+
             // Reports
             'view_reports',
             'generate_reports',
@@ -86,7 +104,70 @@ class RoleAndPermissionSeeder extends Seeder
 
         // Define roles and their permissions
         $roles = [
-            'admin' => $permissions, // Admin has all permissions
+            // ---- system-description2.md §4.1/§4.2 canonical roles ----
+            'super_admin' => $permissions,
+            'system_admin' => array_values(array_diff($permissions, ['manage_security_policy', 'backup_restore'])),
+            'practitioner' => [
+                'enroll_patient',
+                'verify_identity',
+                'view_patients',
+                'view_patient',
+                'view_encounters',
+                'view_encounter',
+                'create_consultation',
+                'view_consultations',
+                'prescribe_medication',
+                'admit_patient',
+                'discharge_patient',
+                'view_prescriptions',
+                'record_vitals',
+                'view_vitals',
+                'consult_patient',
+                'update_patient',
+                'manage_appointments',
+                'manage_consent',
+                'view_lab_orders',
+                'create_lab_orders',
+                'record_lab_results',
+            ],
+            'patient' => [
+                'manage_credentials',
+                'manage_appointments',
+                'manage_consent',
+                'view_patient',
+            ],
+            'verifier' => [
+                'verify_credential',
+            ],
+            // facility_admin canonical mapping (approvals + staff + stats + identity desk)
+            'admin' => $permissions, // Legacy admin: global access (national level)
+            'national_admin' => $permissions, // National Admin: system-wide, no facility constraint
+
+            // Facility Admin: strictly scoped to their assigned location.
+            // Controllers append WHERE facility_id = current_user->facility_id
+            // for every query this role touches.
+            'facility_admin' => [
+                'enroll_patient',
+                'approve_enrollment',
+                'verify_identity',
+                'verify_credential',
+                'create_patient',
+                'view_patients',
+                'view_patient',
+                'edit_patient',
+                'create_encounter',
+                'view_encounters',
+                'view_encounter',
+                'record_vitals',
+                'view_vitals',
+                'triage_patient',
+                'manage_inventory',
+                'view_reports',
+                'generate_reports',
+                'view_audit_logs',
+                'manage_facility_users',
+                'manage_own_facility_settings',
+            ],
 
             'registration_clerk' => [
                 'create_patient',

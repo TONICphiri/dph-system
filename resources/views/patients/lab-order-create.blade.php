@@ -1,73 +1,86 @@
-{{-- Lab Order Create Form --}}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Create Lab Order — Digital Health Passport</title>
+<style>
+body{margin:0;font-family:Arial,Helvetica,sans-serif;background:#f2f7f7;color:#222}
+.top{background:#0E7490;color:#fff;padding:10px 16px;font-size:14px}
+.top a{color:#fff;margin-right:14px}
+.wrap{max-width:640px;margin:16px auto;padding:0 12px}
+.box{background:#fff;border:1px solid #ccc;padding:16px;margin-bottom:16px}
+h1{font-size:22px;margin:0 0 4px}
+h1::before{content:"";display:inline-block;width:12px;height:12px;background:#0E7490;clip-path:polygon(0 0,0 100%,100% 100%);margin-right:8px}
+.sub{color:#555;font-size:14px;margin:0 0 12px}
+label{display:block;font-size:13px;font-weight:bold;margin:10px 0 4px}
+input,select,textarea{width:100%;padding:8px;border:1px solid #999;font-size:14px;box-sizing:border-box}
+button{background:#0E7490;color:#fff;border:0;padding:10px 16px;font-size:14px;cursor:pointer}
+.btn-gray{background:#eee;color:#222;border:1px solid #999;padding:10px 16px;font-size:14px;text-decoration:none;display:inline-block}
+.row{margin-top:14px}
+.err{background:#fdecea;border:1px solid #c00;color:#900;padding:8px;margin-bottom:10px;font-size:14px}
+a{color:#0E7490}
+</style>
+</head>
+<body>
+<div class="top"><a href="{{ route('dashboard') }}">Dashboard</a><a href="{{ route('patients.show', $patient) }}">Back to patient</a></div>
+<div class="wrap">
 @can('create_patient')
-{{-- Patient Selection is passed from the route --}}
-{{-- Hidden patient ID --}}
-<input type="hidden" id="patientId" value="{{ $patient->id }}">
+<div class="box">
+    <h1>Create Lab Order</h1>
+    <p class="sub">Patient: <strong>{{ $patient->full_name }}</strong> ({{ $patient->dhp_id }})</p>
 
-<div class="max-w-2xl mx-auto">
-    <div class="bg-sky-50 border border-sky-200 rounded-lg p-6 mb-4">
-        <h2 class="text-xl font-bold text-sky-800 mb-4">Create Lab Order</h2>
-        
-        @if ($errors->any())
-            <div class="bg-red-100 border-l-4 border-red-500 text-red-700 p-3 rounded mb-4">
-                <ul>
-                    @foreach ($errors->all() as $error)
-                        <li>{{ $error }}</li>
-                    @endforeach
-                </ul>
-            </div>
-        @endif
+    @if ($errors->any())
+        <div class="err">
+            <ul style="margin:0;padding-left:18px">
+                @foreach ($errors->all() as $error)
+                    <li>{{ $error }}</li>
+                @endforeach
+            </ul>
+        </div>
+    @endif
 
-        <form action="{{ route('lab.orders.store') }}" method="POST" class="space-y-4">
-            @csrf
-            
-            <div>
-                <label for="test_type" class="block text-sm font-medium text-sky-700 mb-1">Test Type</label>
-                <select name="test_type" id="test_type" class="mt-1 block w-full rounded border border-sky-300 py-2 px-3 text-sky-800 focus:outline-none focus:ring-2 focus:ring-sky-300">
-                    <option value="">Select test type</option>
-                    <option value="Malaria RDT">Malaria RDT</option>
-                    <option value="Blood Glucose">Blood Glucose</option>
-                    <option value="Complete Blood Count (CBC)">CBC</option>
-                    <option value="Urinalysis">Urinalysis</option>
-                    <option value="Chest X-ray">Chest X-ray</option>
-                    <option value="HIV Test">HIV Test</option>
-                    <option value="Hepatitis B">Hepatitis B</option>
-                    <option value="Stool Exam">Stool Exam</option>
-                    <option value="Other">Other</option>
-                </select>
-            </div>
-            
-            <div>
-                <label for="test_name" class="block text-sm font-medium text-sky-700 mb-1">Test Name</label>
-                <input type="text" name="test_name" id="test_name" placeholder="e.g., Malaria Rapid Diagnostic Test" class="mt-1 block w-full rounded border border-sky-300 py-2 px-3 text-sky-800 focus:outline-none focus:ring-2 focus:ring-sky-300" required>
-            </div>
-            
-            <div>
-                <label for="description" class="block text-sm font-medium text-sky-700 mb-1">Description (Optional)</label>
-                <textarea name="description" id="description" rows="3" class="mt-1 block w-full rounded border border-sky-300 py-2 px-3 text-sky-800 focus:outline-none focus:ring-2 focus:ring-sky-300"></textarea>
-            </div>
-            
-            <div>
-                <label for="encounter_id" class="block text-sm font-medium text-sky-700 mb-1">Associated Encounter</label>
-                <select name="encounter_id" id="encounter_id" class="mt-1 block w-full rounded border border-sky-300 py-2 px-3 text-sky-800 focus:outline-none focus:ring-2 focus:ring-sky-300">
-                    <option value="">None (use latest encounter)</option>
-                    @foreach ($patient->encounters as $encounter)
-                        <option value="{{ $encounter->id }}" {{ $encounter->id == $latestEncounter->id ? 'selected' : '' }}>
-                            {{ $encounter->encounter_type }} - {{ $encounter->encounter_date->format('M d, Y') }}
-                        </option>
-                    @endforeach
-                </select>
-            </div>
-            
-            <div class="flex gap-3">
-                <button type="submit" class="bg-sky-600 text-white font-medium py-2 px-4 rounded hover:bg-sky-700 focus:outline-none focus:ring-2 focus:ring-sky-300 focus:ring-offset-2 transition">
-                    Create Lab Order
-                </button>
-                <a href="{{ route('patients.show', $patient) }}" class="bg-gray-100 text-gray-800 font-medium py-2 px-4 rounded hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-300">
-                    Cancel
-                </a>
-            </div>
-        </form>
-    </div>
+    <form action="{{ route('lab.orders.store') }}" method="POST">
+        @csrf
+        <input type="hidden" name="patient_id" value="{{ $patient->id }}">
+
+        <label for="test_type">Test Type</label>
+        <select name="test_type" id="test_type">
+            <option value="">Select test type</option>
+            <option value="Malaria RDT">Malaria RDT</option>
+            <option value="Blood Glucose">Blood Glucose</option>
+            <option value="Complete Blood Count (CBC)">CBC</option>
+            <option value="Urinalysis">Urinalysis</option>
+            <option value="Chest X-ray">Chest X-ray</option>
+            <option value="HIV Test">HIV Test</option>
+            <option value="Hepatitis B">Hepatitis B</option>
+            <option value="Stool Exam">Stool Exam</option>
+            <option value="Other">Other</option>
+        </select>
+
+        <label for="test_name">Test Name</label>
+        <input type="text" name="test_name" id="test_name" placeholder="e.g., Malaria Rapid Diagnostic Test" required>
+
+        <label for="description">Description (Optional)</label>
+        <textarea name="description" id="description" rows="3"></textarea>
+
+        <label for="encounter_id">Associated Encounter</label>
+        <select name="encounter_id" id="encounter_id">
+            <option value="">None (use latest encounter)</option>
+            @foreach ($patient->encounters as $encounter)
+                <option value="{{ $encounter->id }}" {{ $latestEncounter && $encounter->id == $latestEncounter->id ? 'selected' : '' }}>
+                    {{ $encounter->encounter_type }} - {{ $encounter->encounter_date->format('M d, Y') }}
+                </option>
+            @endforeach
+        </select>
+
+        <div class="row">
+            <button type="submit">Create Lab Order</button>
+            <a class="btn-gray" href="{{ route('patients.show', $patient) }}">Cancel</a>
+        </div>
+    </form>
 </div>
-{{-- End Lab Order Create Form --}}
+@endcan
+</div>
+</body>
+</html>

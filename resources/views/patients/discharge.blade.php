@@ -1,66 +1,53 @@
 <x-app-layout>
     <x-slot name="header">
-        <h2 class="font-semibold text-xl text-gray-800 dark:text-gray-200 leading-tight">
-            {{ __('Discharge - ') . $patient->full_name }}
-        </h2>
+        <div class="flex flex-col gap-1">
+            <p class="text-xs font-bold uppercase tracking-widest text-dhp-200">Inpatient · Discharge</p>
+            <h2 class="text-2xl font-extrabold leading-tight">Discharge {{ $patient->full_name }}</h2>
+            <p class="text-sm text-dhp-100">{{ $activeAdmission->ward_name ?? 'Ward' }}, Bed {{ $activeAdmission->bed_number ?? '—' }} · Admitted {{ $activeAdmission->admitted_at->format('d M Y') }}</p>
+        </div>
     </x-slot>
 
-    <div class="py-12">
-        <div class="max-w-2xl mx-auto sm:px-6 lg:px-8">
-            @if ($message = Session::get('error'))
-                <div class="mb-4 px-4 py-3 rounded bg-red-100 border border-red-400 text-red-700">
-                    <strong>{{ $message }}</strong>
-                </div>
-            @endif
+    <div class="mx-auto max-w-2xl">
+        <div class="dhp-card dhp-card-pad">
+            <h3 class="dhp-section-title">Discharge summary</h3>
+            <p class="dhp-section-sub">This closes the active admission and frees the bed. All fields become part of the lifelong record.</p>
 
-            <div class="bg-white dark:bg-gray-800 overflow-hidden shadow-sm sm:rounded-lg">
-                <div class="p-6 text-gray-900 dark:text-gray-100">
-                    <p class="text-gray-500 mb-4">Discharge patient from inpatient care</p>
-                    
-                    @if($errors->any())
-                        <div class="alert alert-danger">
-                            <ul>
-                                @foreach($errors->all() as $error)
-                                    <li>{{ $error }}</li>
-                                @endforeach
-                            </ul>
-                        </div>
-                    @endif
-                    
-                    <form action="{{ route('discharge', ['patient' => $patient->id]) }}" method="POST" class="space-y-4">
-                        @method('POST')
-                        @csrf
-                        
-                        <input type="hidden" name="patient_id" value="{{ $patient->id }}">
-                        
-                        <div class="form-group">
-                            <label class="form-label">Final Diagnosis</label>
-                            <textarea name="final_diagnosis" class="form-control" rows="3"
-                                placeholder="e.g., Pneumonia - resolved with antibiotics">{{ old('final_diagnosis') }}</textarea>
-                        </div>
-                        
-                        <div class="form-group">
-                            <label class="form-label">Follow-up Instructions</label>
-                            <textarea name="follow_up_instructions" class="form-control" rows="3"
-                                placeholder="e.g., Return in 2 weeks for check-up">{{ old('follow_up_instructions') }}</textarea>
-                        </div>
-                        
-                        <div class="form-group">
-                            <label class="form-label">Discharge Date</label>
-                            <input type="date" name="discharge_date" class="form-control">
-                        </div>
-                        
-                        <div class="d-grid gap-2">
-                            <button type="submit" class="btn btn-success">
-                                <i class="bi bi-door-open me-2"></i> Discharge Patient
-                            </button>
-                            <a href="{{ route('ward', $patient) }}" class="btn btn-outline-secondary">
-                                <i class="bi bi-arrow-left me-2"></i> Back to Ward
-                            </a>
-                        </div>
-                    </form>
+            <form action="{{ route('discharge.store', $patient) }}" method="POST" class="mt-5 space-y-5" novalidate>
+                @csrf
+                <div>
+                    <label for="final_diagnosis" class="dhp-label">Final diagnosis <span class="text-rose-600" aria-hidden="true">*</span></label>
+                    <textarea id="final_diagnosis" name="final_diagnosis" rows="3" required maxlength="2000" placeholder="e.g. Pneumonia — resolved with antibiotics" class="dhp-input">{{ old('final_diagnosis') }}</textarea>
+                    @error('final_diagnosis')<p class="dhp-field-error">{{ $message }}</p>@enderror
                 </div>
-            </div>
+
+                <div class="grid gap-4 sm:grid-cols-2">
+                    <div>
+                        <label for="discharge_status" class="dhp-label">Outcome</label>
+                        <select id="discharge_status" name="discharge_status" class="dhp-select">
+                            @foreach(['Improved', 'Not Improved', 'Referred', 'Left Against Medical Advice', 'Deceased'] as $s)
+                                <option value="{{ $s }}" @selected(old('discharge_status', 'Improved') === $s)>{{ $s }}</option>
+                            @endforeach
+                        </select>
+                        @error('discharge_status')<p class="dhp-field-error">{{ $message }}</p>@enderror
+                    </div>
+                    <div>
+                        <label for="discharge_date" class="dhp-label">Discharge date</label>
+                        <input type="date" id="discharge_date" name="discharge_date" value="{{ old('discharge_date', now()->format('Y-m-d')) }}" max="{{ now()->format('Y-m-d') }}" class="dhp-input" />
+                        @error('discharge_date')<p class="dhp-field-error">{{ $message }}</p>@enderror
+                    </div>
+                </div>
+
+                <div>
+                    <label for="follow_up_instructions" class="dhp-label">Follow-up instructions</label>
+                    <textarea id="follow_up_instructions" name="follow_up_instructions" rows="3" maxlength="2000" placeholder="e.g. Return in 2 weeks for review; continue medication…" class="dhp-input">{{ old('follow_up_instructions') }}</textarea>
+                    @error('follow_up_instructions')<p class="dhp-field-error">{{ $message }}</p>@enderror
+                </div>
+
+                <div class="flex flex-col gap-2 sm:flex-row">
+                    <button type="submit" class="btn-success flex-1" onclick="return confirm('Discharge {{ addslashes($patient->full_name) }}? The bed will be freed.');">Discharge patient</button>
+                    <a href="{{ route('ward', $patient) }}" class="btn-secondary flex-1">Back to ward</a>
+                </div>
+            </form>
         </div>
     </div>
 </x-app-layout>

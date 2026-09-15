@@ -1,110 +1,81 @@
 <x-app-layout>
     <x-slot name="header">
-        <h2 class="font-semibold text-xl text-gray-800 dark:text-gray-200 leading-tight">
-            {{ __('Pharmacy - ') . $patient->full_name }}
-        </h2>
+        <div class="flex flex-col gap-1">
+            <p class="text-xs font-bold uppercase tracking-widest text-dhp-200">Pharmacy · Dispensing</p>
+            <h2 class="text-2xl font-extrabold leading-tight">{{ $patient->full_name }}</h2>
+            <p class="dhp-mono !text-dhp-100">{{ $patient->dhp_id }}</p>
+        </div>
     </x-slot>
 
-    <div class="py-12">
-        <div class="max-w-5xl mx-auto sm:px-6 lg:px-8">
-            @if ($message = Session::get('success'))
-                <div class="mb-4 px-4 py-3 rounded bg-green-100 border border-green-400 text-green-700">
-                    <strong>{{ $message }}</strong>
+    <div class="mx-auto max-w-5xl">
+        <div class="dhp-card dhp-card-pad mb-6">
+            <h3 class="dhp-section-title">Pending prescriptions</h3>
+            <p class="dhp-section-sub">Stock is checked per facility before dispensing. Expired or insufficient stock blocks dispensing with a clear reason.</p>
+
+            @if($prescriptions->isEmpty())
+                <div class="dhp-empty mt-4">
+                    <p class="font-bold text-dhp-900">No pending prescriptions</p>
+                    <p class="text-sm text-slate-500">New prescriptions from consultation will appear here.</p>
                 </div>
-            @endif
-            @if ($message = Session::get('error'))
-                <div class="mb-4 px-4 py-3 rounded bg-red-100 border border-red-400 text-red-700">
-                    <strong>{{ $message }}</strong>
-                </div>
-            @endif
-
-            <div class="bg-white dark:bg-gray-800 overflow-hidden shadow-sm sm:rounded-lg">
-                <div class="p-6 text-gray-900 dark:text-gray-100">
-                    <p class="text-gray-500 mb-4">Dispense medication and update inventory</p>
-
-                    @if($errors->any())
-                        <div class="alert alert-danger">
-                            <ul>
-                                @foreach($errors->all() as $error)
-                                    <li>{{ $error }}</li>
-                                @endforeach
-                            </ul>
-                        </div>
-                    @endif
-
-                    @if($prescriptions->isEmpty())
-                        <div class="px-4 py-3 rounded bg-blue-100 border border-blue-400 text-blue-700">
-                            No prescriptions found for this patient.
-                        </div>
-                    @else
-                        <div class="overflow-x-auto">
-                            <table class="w-full text-sm text-left">
-                                <thead class="bg-gray-100 dark:bg-gray-700">
-                                    <tr>
-                                        <th class="px-4 py-2">Medication</th>
-                                        <th class="px-4 py-2">Strength</th>
-                                        <th class="px-4 py-2">Quantity</th>
-                                        <th class="px-4 py-2">Status</th>
-                                        <th class="px-4 py-2">Action</th>
-                                    </tr>
-                                </thead>
-                                <tbody class="divide-y">
-                                    @foreach($prescriptions as $prescription)
-                                        <tr class="hover:bg-gray-50 dark:hover:bg-gray-700">
-                                            <td class="px-4 py-2">{{ $prescription->medication_name }}</td>
-                                            <td class="px-4 py-2">{{ $prescription->dose }}</td>
-                                            <td class="px-4 py-2">{{ $prescription->quantity }}</td>
-                                            <td class="px-4 py-2">
-                                                <span class="px-2 py-1 text-xs rounded
-                                                    {{ $prescription->status === 'dispensed' ? 'bg-yellow-100 text-yellow-800' : ($prescription->status === 'pending' ? 'bg-blue-100 text-blue-800' : 'bg-gray-100 text-gray-800') }}">
-                                                    {{ ucfirst($prescription->status) }}
-                                                </span>
-                                            </td>
-                                            <td class="px-4 py-2">
-                                                @if($prescription->status === 'pending')
-                                                    <form action="{{ route('pharmacy.dispense') }}" method="POST" class="d-inline">
-                                                        @csrf
-                                                        <input type="hidden" name="patient_id" value="{{ $patient->id }}">
-                                                        <input type="hidden" name="prescription_id" value="{{ $prescription->id }}">
-                                                        <button type="submit" class="px-3 py-1 bg-blue-600 text-white rounded hover:bg-blue-700 text-sm">
-                                                            Dispense
-                                                        </button>
-                                                    </form>
-                                                @else
-                                                    <span class="px-3 py-1 bg-gray-200 text-gray-700 rounded text-sm">
-                                                        {{ ucfirst($prescription->status) }}
-                                                    </span>
-                                                @endif
-                                            </td>
-                                        </tr>
-                                    @endforeach
-                                </tbody>
-                            </table>
-                        </div>
-
-                        <h5 class="font-semibold mt-8 mb-3">Inventory Stock Levels</h5>
-                        <div class="grid grid-cols-2 md:grid-cols-3 gap-4">
-                            @foreach($inventory as $item)
-                                <div class="border border-gray-200 dark:border-gray-600 rounded p-4">
-                                    <h5 class="font-semibold text-sm">{{ $item->medication_name }}</h5>
-                                    <p class="text-sm mt-1">Stock: <strong>{{ $item->current_stock }}</strong> {{ $item->unit_of_measurement }}</p>
-                                    @if($item->status === 'low_stock')
-                                        <p class="text-xs text-yellow-600">Low stock</p>
-                                    @elseif($item->status === 'out_of_stock')
-                                        <p class="text-xs text-red-600">Out of stock</p>
-                                    @endif
-                                </div>
+            @else
+                <div class="dhp-table-wrap mt-4">
+                    <table class="dhp-table">
+                        <thead><tr><th>Medication</th><th>Dose</th><th>Qty</th><th>Status</th><th><span class="sr-only">Action</span></th></tr></thead>
+                        <tbody>
+                            @foreach($prescriptions as $prescription)
+                                <tr>
+                                    <td class="font-semibold">{{ $prescription->medication_name }}</td>
+                                    <td>{{ $prescription->dose }} · {{ $prescription->frequency }}</td>
+                                    <td class="tabular-nums">{{ $prescription->quantity ?? '—' }}</td>
+                                    <td>
+                                        @if($prescription->status === 'pending')
+                                            <span class="dhp-badge badge-pending">Pending</span>
+                                        @else
+                                            <span class="dhp-badge badge-dispensed">{{ ucfirst($prescription->status) }}</span>
+                                        @endif
+                                    </td>
+                                    <td>
+                                        @if($prescription->status === 'pending')
+                                            <form action="{{ route('pharmacy.dispense') }}" method="POST" class="flex items-center gap-2" onsubmit="return confirm('Dispense {{ addslashes($prescription->medication_name) }} for {{ addslashes($patient->full_name) }}?');">
+                                                @csrf
+                                                <input type="hidden" name="patient_id" value="{{ $patient->id }}">
+                                                <input type="hidden" name="prescription_id" value="{{ $prescription->id }}">
+                                                <label class="sr-only" for="qty-{{ $prescription->id }}">Quantity</label>
+                                                <input type="number" id="qty-{{ $prescription->id }}" name="quantity_dispensed" min="1" max="10000" placeholder="{{ $prescription->quantity ?? 'Qty' }}" class="dhp-input !w-24 !py-1.5" />
+                                                <button type="submit" class="btn-primary !min-h-[40px] !px-3 !py-1.5 !text-xs">Dispense</button>
+                                            </form>
+                                        @else
+                                            <span class="dhp-badge badge-neutral">{{ ucfirst($prescription->status) }}</span>
+                                        @endif
+                                    </td>
+                                </tr>
                             @endforeach
-                        </div>
-                    @endif
-
-                    <div class="mt-6">
-                        <a href="{{ route('patients.show', $patient) }}" class="px-4 py-2 bg-gray-600 text-white rounded hover:bg-gray-700">
-                            Back to Patient
-                        </a>
-                    </div>
+                        </tbody>
+                    </table>
                 </div>
+            @endif
+        </div>
+
+        <div class="dhp-card dhp-card-pad">
+            <h3 class="dhp-section-title">Facility stock levels</h3>
+            <div class="mt-4 grid grid-cols-2 gap-3 md:grid-cols-3">
+                @forelse($inventory as $item)
+                    <div class="rounded-2xl border p-4 {{ $item->status === 'out_of_stock' ? 'border-rose-200 bg-rose-50' : ($item->status === 'low_stock' ? 'border-amber-200 bg-amber-50' : 'border-[#DCE8E8] bg-white') }}">
+                        <p class="text-sm font-bold text-dhp-900">{{ $item->medication_name }}</p>
+                        <p class="mt-1 text-sm tabular-nums">Stock: <strong>{{ $item->current_stock }}</strong> {{ $item->unit_of_measurement }}</p>
+                        @if($item->status === 'low_stock')
+                            <p class="dhp-badge badge-pending mt-2">Low stock</p>
+                        @elseif($item->status === 'out_of_stock')
+                            <p class="dhp-badge badge-emergency mt-2">Out of stock</p>
+                        @elseif($item->status === 'expired')
+                            <p class="dhp-badge badge-emergency mt-2">Expired</p>
+                        @endif
+                    </div>
+                @empty
+                    <p class="col-span-full text-sm text-slate-500">No stock records for this facility yet.</p>
+                @endforelse
             </div>
+            <a href="{{ route('patients.show', $patient) }}" class="btn-secondary mt-5">Back to patient</a>
         </div>
     </div>
 </x-app-layout>

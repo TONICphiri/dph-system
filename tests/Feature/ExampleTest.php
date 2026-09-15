@@ -10,10 +10,12 @@ class ExampleTest extends TestCase
     /**
      * A basic test example.
      */
-    public function test_the_application_redirects_guests_to_login(): void
+    public function test_the_application_serves_a_public_homepage_and_guards_the_dashboard(): void
     {
-        $response = $this->get('/');
+        // Public landing page: no login needed.
+        $this->get('/')->assertStatus(200);
 
-        $response->assertRedirect('/dashboard');
+        // Inside the system: guests are sent to sign in.
+        $this->get('/dashboard')->assertRedirect('/login');
     }
 }

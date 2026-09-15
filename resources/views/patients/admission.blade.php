@@ -1,72 +1,57 @@
 <x-app-layout>
     <x-slot name="header">
-        <h2 class="font-semibold text-xl text-gray-800 dark:text-gray-200 leading-tight">
-            {{ __('Admission - ') . $patient->full_name }}
-        </h2>
+        <div class="flex flex-col gap-1">
+            <p class="text-xs font-bold uppercase tracking-widest text-dhp-200">Inpatient · Admission</p>
+            <h2 class="text-2xl font-extrabold leading-tight">Admit {{ $patient->full_name }}</h2>
+            <p class="text-sm text-dhp-100 dhp-mono !text-dhp-100">{{ $patient->dhp_id }} · {{ $patient->national_id ?? 'No National ID' }}</p>
+        </div>
     </x-slot>
 
-    <div class="py-12">
-        <div class="max-w-2xl mx-auto sm:px-6 lg:px-8">
-            @if ($message = Session::get('error'))
-                <div class="mb-4 px-4 py-3 rounded bg-red-100 border border-red-400 text-red-700">
-                    <strong>{{ $message }}</strong>
-                </div>
-            @endif
+    <div class="mx-auto max-w-2xl">
+        <div class="dhp-card dhp-card-pad">
+            <h3 class="dhp-section-title">Bed assignment</h3>
+            <p class="dhp-section-sub">One active admission per patient. Beds are checked for occupancy before assignment.</p>
 
-            <div class="bg-white dark:bg-gray-800 overflow-hidden shadow-sm sm:rounded-lg">
-                <div class="p-6 text-gray-900 dark:text-gray-100">
-                    <p class="text-gray-500 mb-4">Admit patient to inpatient ward</p>
-                    
-                    @if($errors->any())
-                        <div class="alert alert-danger">
-                            <ul>
-                                @foreach($errors->all() as $error)
-                                    <li>{{ $error }}</li>
-                                @endforeach
-                            </ul>
-                        </div>
-                    @endif
-                    
-                    <form action="{{ route('admission.create') }}" method="POST" class="space-y-4">
-                        @method('POST')
-                        @csrf
-                        
-                        <input type="hidden" name="patient_id" value="{{ $patient->id }}">
-                        
-                        <div class="form-group">
-                            <label class="form-label">Bed Number</label>
-                            <input type="text" name="bed_number" class="form-control"
-                                placeholder="e.g., WARD-A, Bed 105">
-                        </div>
-                        
-                        <div class="form-group">
-                            <label class="form-label">Ward</label>
-                            <input type="text" name="ward" class="form-control"
-                                placeholder="e.g., Pediatrics, General Ward">
-                        </div>
-                        
-                        <div class="form-group">
-                            <label class="form-label">Admission Type</label>
-                            <select name="admission_type" class="form-control">
-                                <option value="">-- Select Admission Type --</option>
-                                <option value="emergency">Emergency</option>
-                                <option value="elective">Elective</option>
-                                <option value="urgent">Urgent</option>
-                                <option value="transfer">Transfer</option>
-                            </select>
-                        </div>
-                        
-                        <div class="d-grid gap-2">
-                            <button type="submit" class="btn btn-warning">
-                                <i class="bi bi-hospital-me me-2"></i> Admit Patient
-                            </button>
-                            <a href="{{ route('patients.show', $patient) }}" class="btn btn-outline-secondary">
-                                <i class="bi bi-arrow-left me-2"></i> Back to Patient
-                            </a>
-                        </div>
-                    </form>
+            <form action="{{ route('admission.create') }}" method="POST" class="mt-5 space-y-5" novalidate>
+                @csrf
+                <input type="hidden" name="patient_id" value="{{ $patient->id }}">
+
+                <div class="grid gap-4 sm:grid-cols-2">
+                    <div>
+                        <label for="ward" class="dhp-label">Ward <span class="text-rose-600" aria-hidden="true">*</span></label>
+                        <input type="text" id="ward" name="ward" value="{{ old('ward') }}" required maxlength="100" placeholder="e.g. General Ward, Pediatrics" class="dhp-input" />
+                        @error('ward')<p class="dhp-field-error">{{ $message }}</p>@enderror
+                    </div>
+                    <div>
+                        <label for="bed_number" class="dhp-label">Bed number <span class="text-rose-600" aria-hidden="true">*</span></label>
+                        <input type="text" id="bed_number" name="bed_number" value="{{ old('bed_number') }}" required maxlength="20" placeholder="e.g. A-105" class="dhp-input" />
+                        @error('bed_number')<p class="dhp-field-error">{{ $message }}</p>@enderror
+                        <p class="dhp-help">Occupied beds are rejected automatically.</p>
+                    </div>
                 </div>
-            </div>
+
+                <div>
+                    <label for="admission_type" class="dhp-label">Admission type <span class="text-rose-600" aria-hidden="true">*</span></label>
+                    <select id="admission_type" name="admission_type" required class="dhp-select">
+                        <option value="">Select admission type…</option>
+                        @foreach(['emergency' => 'Emergency', 'urgent' => 'Urgent', 'elective' => 'Elective', 'transfer' => 'Transfer'] as $value => $label)
+                            <option value="{{ $value }}" @selected(old('admission_type') === $value)>{{ $label }}</option>
+                        @endforeach
+                    </select>
+                    @error('admission_type')<p class="dhp-field-error">{{ $message }}</p>@enderror
+                </div>
+
+                <div>
+                    <label for="admission_reason" class="dhp-label">Reason for admission</label>
+                    <textarea id="admission_reason" name="admission_reason" rows="3" maxlength="2000" placeholder="Presenting condition and reason for inpatient care…" class="dhp-input">{{ old('admission_reason') }}</textarea>
+                    @error('admission_reason')<p class="dhp-field-error">{{ $message }}</p>@enderror
+                </div>
+
+                <div class="flex flex-col gap-2 sm:flex-row">
+                    <button type="submit" class="btn-warning flex-1" onclick="return confirm('Admit {{ addslashes($patient->full_name) }} to inpatient care?');">Admit patient</button>
+                    <a href="{{ route('patients.show', $patient) }}" class="btn-secondary flex-1">Back to patient</a>
+                </div>
+            </form>
         </div>
     </div>
 </x-app-layout>

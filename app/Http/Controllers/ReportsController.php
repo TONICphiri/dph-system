@@ -15,6 +15,18 @@ use Illuminate\Support\Facades\DB;
 class ReportsController extends Controller
 {
     /**
+     * Facility scope for aggregated analytics. National Admins get
+     * nationwide dashboards (null = no constraint); Facility Admins
+     * get facility-specific reports only.
+     */
+    protected function scopedFacilityId(): ?int
+    {
+        $me = $this->user();
+
+        return $me->isNationalAdmin() ? null : (int) $me->facility_id;
+    }
+
+    /**
      * Display the reports dashboard
      */
     public function index(Request $request)
@@ -34,17 +46,20 @@ class ReportsController extends Controller
         $from = $request->date('from') ?? now()->startOfMonth();
         $to = $request->date('to') ?? now()->endOfDay();
 
-        $registeredQuery = Patient::whereBetween('registered_at', [$from, $to]);
-        $allQuery = Patient::query();
+        $facilityId = $this->scopedFacilityId();
+        $forFacility = fn ($q) => $facilityId ? $q->where('registered_by_facility_id', $facilityId) : $q;
+
+        $registeredQuery = $forFacility(Patient::whereBetween('registered_at', [$from, $to]));
+        $allQuery = $forFacility(Patient::query());
 
         $census = [
-            'total' => Patient::count(),
-            'registeredInPeriod' => $registeredQuery->count(),
-            'active' => Patient::where('status', 'active')->count(),
-            'inactive' => Patient::where('status', 'inactive')->count(),
-            'deceased' => Patient::where('status', 'deceased')->count(),
-            'children' => Patient::where('is_child', true)->count(),
-            'adults' => Patient::where('is_child', false)->count(),
+            'total' => (clone $allQuery)->count(),
+            'registeredInPeriod' => (clone $registeredQuery)->count(),
+            'active' => (clone $allQuery)->where('status', 'active')->count(),
+            'inactive' => (clone $allQuery)->where('status', 'inactive')->count(),
+            'deceased' => (clone $allQuery)->where('status', 'deceased')->count(),
+            'children' => (clone $allQuery)->where('is_child', true)->count(),
+            'adults' => (clone $allQuery)->where('is_child', false)->count(),
         ];
 
         $byGender = $allQuery->select('gender', DB::raw('count(*) as total'))
@@ -52,7 +67,7 @@ class ReportsController extends Controller
             ->orderByDesc('total')
             ->get();
 
-        $byDistrict = Patient::select('district', DB::raw('count(*) as total'))
+        $byDistrict = $forFacility(Patient::select('district', DB::raw('count(*) as total')))
             ->whereNotNull('district')
             ->groupBy('district')
             ->orderByDesc('total')
@@ -75,6 +90,10 @@ class ReportsController extends Controller
         $to = $request->date('to') ?? now()->endOfDay();
 
         $visits = Encounter::whereBetween('encounter_date', [$from, $to]);
+
+        if ($facilityId = $this->scopedFacilityId()) {
+            $visits->where('facility_id', $facilityId);
+        }
 
         $totals = [
             'total' => (clone $visits)->count(),
@@ -112,6 +131,10 @@ class ReportsController extends Controller
         $to = $request->date('to') ?? now()->endOfDay();
 
         $admissions = Admission::whereBetween('admitted_at', [$from, $to]);
+
+        if ($facilityId = $this->scopedFacilityId()) {
+            $admissions->where('facility_id', $facilityId);
+        }
 
         $totals = [
             'total' => (clone $admissions)->count(),
@@ -155,6 +178,10 @@ class ReportsController extends Controller
         $dispensed = Prescription::where('status', 'dispensed')
             ->whereBetween('dispensed_at', [$from, $to]);
 
+        if ($facilityId = $this->scopedFacilityId()) {
+            $dispensed->whereHas('encounter', fn ($q) => $q->where('facility_id', $facilityId));
+        }
+
         $totals = [
             'total' => (clone $dispensed)->count(),
             'totalQuantity' => (clone $dispensed)->sum('quantity'),
@@ -181,13 +208,15 @@ class ReportsController extends Controller
     {
         $this->authorize('view_reports');
 
-        $items = Inventory::orderBy('status')->orderBy('medication_name')->get();
+        $me = $this->user();
+        $items = $me->scopeToFacility(Inventory::orderBy('status')->orderBy('medication_name'))->get();
 
+        $stat = fn () => $me->scopeToFacility(Inventory::query());
         $stats = [
-            'available' => Inventory::where('status', 'available')->count(),
-            'lowStock' => Inventory::where('status', 'low_stock')->count(),
-            'outOfStock' => Inventory::where('status', 'out_of_stock')->count(),
-            'expired' => Inventory::where('status', 'expired')->count(),
+            'available' => $stat()->where('status', 'available')->count(),
+            'lowStock' => $stat()->where('status', 'low_stock')->count(),
+            'outOfStock' => $stat()->where('status', 'out_of_stock')->count(),
+            'expired' => $stat()->where('status', 'expired')->count(),
         ];
 
         return view('reports.inventory', compact('items', 'stats'));

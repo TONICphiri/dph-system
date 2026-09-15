@@ -1,12 +1,47 @@
-{{-- Lab Orders Report Listing --}}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lab Orders — Digital Health Passport</title>
+<style>
+body{margin:0;font-family:Arial,Helvetica,sans-serif;background:#f2f7f7;color:#222}
+.top{background:#0E7490;color:#fff;padding:10px 16px;font-size:14px}
+.top a{color:#fff;margin-right:14px}
+.wrap{max-width:960px;margin:16px auto;padding:0 12px}
+.box{background:#fff;border:1px solid #ccc;padding:16px;margin-bottom:16px}
+h1{font-size:22px;margin:0 0 4px}
+h1::before{content:"";display:inline-block;width:12px;height:12px;background:#0E7490;clip-path:polygon(0 0,0 100%,100% 100%);margin-right:8px}
+.sub{color:#555;font-size:14px;margin:0 0 12px}
+label{display:block;font-size:13px;font-weight:bold;margin:10px 0 4px}
+select{padding:8px;border:1px solid #999;font-size:14px;max-width:280px}
+table{width:100%;border-collapse:collapse;margin-top:12px}
+th,td{border:1px solid #ccc;padding:8px;text-align:left;font-size:14px}
+th{background:#0E7490;color:#fff}
+tr:nth-child(even) td{background:#f7f7f7}
+a{color:#0E7490}
+.badge{display:inline-block;padding:2px 8px;font-size:12px;font-weight:bold;border:1px solid #999;background:#eee}
+.badge-requested{background:#fff8e1;border-color:#D97706;color:#92400e}
+.badge-pending{background:#fff7ed;border-color:#D97706;color:#9a3412}
+.badge-results{background:#ecfdf5;border-color:#16A34A;color:#065f46}
+.badge-cancelled{background:#f3f4f6;border-color:#999;color:#555}
+.filters{display:flex;gap:16px;flex-wrap:wrap}
+.pager{margin-top:12px;font-size:14px}
+.pager a{margin-right:12px}
+</style>
+</head>
+<body>
+<div class="top"><a href="{{ route('dashboard') }}">Dashboard</a><a href="{{ route('patients.index') }}">Patients</a><a href="{{ route('reports.index') }}">Reports</a></div>
+<div class="wrap">
 @can('view_reports')
-<div class="bg-sky-50 border border-sky-200 rounded-lg p-6 mb-6">
-    <h2 class="text-xl font-bold text-sky-800 mb-4">Lab Orders</h2>
-    
-    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+<div class="box">
+    <h1>Lab Orders</h1>
+    <p class="sub">All laboratory orders across the facility.</p>
+
+    <div class="filters">
         <div>
-            <label class="block text-sm font-medium text-sky-700 mb-1">Filter by Status</label>
-            <select id="statusFilter" class="mt-1 block rounded border border-sky-300 py-1 px-3 text-sky-800 focus:outline-none focus:ring-2 focus:ring-sky-300">
+            <label for="statusFilter">Filter by Status</label>
+            <select id="statusFilter">
                 <option value="">All Statuses</option>
                 <option value="requested">Requested</option>
                 <option value="pending">Pending</option>
@@ -15,8 +50,8 @@
             </select>
         </div>
         <div>
-            <label class="block text-sm font-medium text-sky-700 mb-1">Filter by Test Type</label>
-            <select id="testTypeFilter" class="mt-1 block rounded border border-sky-300 py-1 px-3 text-sky-800 focus:outline-none focus:ring-2 focus:ring-sky-300">
+            <label for="testTypeFilter">Filter by Test Type</label>
+            <select id="testTypeFilter">
                 <option value="">All Test Types</option>
                 <option value="Malaria RDT">Malaria RDT</option>
                 <option value="Blood Glucose">Blood Glucose</option>
@@ -27,55 +62,51 @@
             </select>
         </div>
     </div>
-    
-    <table class="min-w-full bg-white rounded-lg overflow-hidden">
-        <thead class="bg-sky-900 text-white">
-            <tr>
-                <th class="p-3 text-left">Patient</th>
-                <th class="p-3 text-left">Test</th>
-                <th class="p-3 text-left">Type</th>
-                <th class="p-3 text-left">Status</th>
-                <th class="p-3 text-left">Requested</th>
-                <th class="p-3 text-right">Actions</th>
-            </tr>
+
+    <table id="labTable">
+        <thead>
+            <tr><th>Patient</th><th>Test</th><th>Type</th><th>Status</th><th>Requested</th><th>Actions</th></tr>
         </thead>
         <tbody>
-            @foreach ($labOrders as $labOrder)
-            <tr class="border-b border-sky-100 hover:bg-sky-50">
-                <td class="p-3 font-medium text-sky-800">{{ $labOrder->patient->full_name }}</td>
-                <td class="p-3 font-medium text-sky-800">{{ $labOrder->test_name }}</td>
-                <td class="p-3 text-sky-600 text-sm">{{ ucfirst($labOrder->test_type) }}</td>
-                <td class="p-3">
-                    <span class="px-2 py-1 rounded text-xs @switch($labOrder->status)
-                        @case('requested') bg-yellow-100 text-yellow-800
-                        @case('pending') bg-orange-100 text-orange-800
-                        @case('results') bg-green-100 text-green-800
-                        @case('cancelled') bg-gray-100 text-gray-700
-                    @default bg-gray-100 text-gray-700">
-                        {{ ucfirst($labOrder->status) }}
-                    </span>
-                </td>
-                <td class="p-3 text-sky-600 text-sm">{{ $labOrder->requested_at->format('M d, Y') }}</td>
-                <td class="p-3 text-right">
-                    @can('view_reports')
-                    <a href="{{ route('lab.orders.show', $labOrder) }}" class="text-blue-600 text-sm hover:underline">View</a>
-                    @endcan
-                </td>
+            @forelse ($labOrders as $labOrder)
+            <tr data-status="{{ $labOrder->status }}" data-type="{{ $labOrder->test_name }}">
+                <td>{{ $labOrder->patient->full_name }}</td>
+                <td><strong>{{ $labOrder->test_name }}</strong></td>
+                <td>{{ ucfirst($labOrder->test_type) }}</td>
+                <td><span class="badge badge-{{ $labOrder->status }}">{{ ucfirst($labOrder->status) }}</span></td>
+                <td>{{ $labOrder->requested_at->format('M d, Y') }}</td>
+                <td><a href="{{ route('lab.orders.show', $labOrder) }}">View</a></td>
             </tr>
-            @endforeach
+            @empty
+            <tr><td colspan="6">No lab orders found.</td></tr>
+            @endforelse
         </tbody>
     </table>
+
+    <div class="pager">
+        @if ($labOrders->previousPageUrl())<a href="{{ $labOrders->previousPageUrl() }}">&larr; Previous</a>@endif
+        <span>Page {{ $labOrders->currentPage() }} of {{ $labOrders->lastPage() }}</span>
+        @if ($labOrders->nextPageUrl())<a href="{{ $labOrders->nextPageUrl() }}">Next &rarr;</a>@endif
+    </div>
 </div>
-{{-- End Lab Orders Report Listing --}}
+@endcan
 
 <script>
-document.getElementById('statusFilter').addEventListener('change', function() {
-    // Filter logic would be handled by AJAX or page reload
-    console.log('Status filtered:', this.value);
-});
-
-document.getElementById('testTypeFilter').addEventListener('change', function() {
-    // Filter logic
-    console.log('Test type filtered:', this.value);
-});
+(function () {
+    var statusFilter = document.getElementById('statusFilter');
+    var typeFilter = document.getElementById('testTypeFilter');
+    function applyFilter() {
+        var s = statusFilter.value, t = typeFilter.value;
+        document.querySelectorAll('#labTable tbody tr[data-status]').forEach(function (row) {
+            var okStatus = !s || row.getAttribute('data-status') === s;
+            var okType = !t || t === 'All' || row.getAttribute('data-type') === t;
+            row.style.display = (okStatus && okType) ? '' : 'none';
+        });
+    }
+    statusFilter.addEventListener('change', applyFilter);
+    typeFilter.addEventListener('change', applyFilter);
+})();
 </script>
+</div>
+</body>
+</html>

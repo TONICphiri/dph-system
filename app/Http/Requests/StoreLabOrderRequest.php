@@ -25,10 +25,16 @@ class StoreLabOrderRequest extends FormRequest
     /**
      * Determine if the user is authorized to make this request.
      *
+     * FIX: this previously always returned true, which meant the form request
+     * itself never blocked anyone from creating a lab order. The controller
+     * separately calls $this->authorize('create_lab_orders'), but relying on
+     * every controller method to remember this is fragile — enforce it here too
+     * so the permission is checked before validation even runs.
+     *
      * @return bool
      */
     public function authorize()
     {
-        return true;
+        return $this->user()?->can('create_lab_orders') ?? false;
     }
 }

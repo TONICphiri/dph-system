@@ -28,7 +28,27 @@ class AuthenticatedSessionController extends Controller
 
         $request->session()->regenerate();
 
-        return redirect()->intended(route('dashboard', absolute: false));
+        $user = $request->user();
+
+        // FR-A5: first-login flag forces a personal password set before any other page.
+        if ($user->must_change_password) {
+            return redirect()->route('activate.password');
+        }
+
+        // Role-aware landing (§6.1): each role lands on its own dashboard.
+        // Super/System admins → national admin home; verifiers → verify portal;
+        // patients → passport dashboard; everyone else → facility dashboard.
+        if ($user->isNationalAdmin() || $user->hasAnyRole(['super_admin', 'system_admin', 'admin', 'national_admin'])) {
+            $home = route('admin.dashboard', absolute: false);
+        } elseif ($user->hasRole('verifier')) {
+            $home = route('verify.scan', absolute: false);
+        } elseif ($user->hasRole('patient')) {
+            $home = route('patient.credential', absolute: false);
+        } else {
+            $home = route('dashboard', absolute: false);
+        }
+
+        return redirect()->intended($home);
     }
 
     /**

@@ -147,17 +147,17 @@
                 </div>
             </div>
 
-            <div class="mt-6 flex gap-4">
-                <a href="{{ route("ward.round", $patient) }}" class="px-4 py-2 bg-cyan-600 text-white rounded hover:bg-cyan-700">
-                    Record Ward Round Vitals
+            <div class="mt-6 flex flex-col gap-2 sm:flex-row">
+                <a href="{{ route('ward.round.form', $patient) }}" class="btn-primary flex-1">
+                    Record ward round vitals
                 </a>
-                @can("discharge_patient")
-                    <a href="{{ route("discharge", $patient) }}" class="px-4 py-2 bg-gray-600 text-white rounded hover:bg-gray-700">
-                        Discharge Patient
+                @can('discharge_patient')
+                    <a href="{{ route('discharge', $patient) }}" class="btn-success flex-1">
+                        Discharge patient
                     </a>
                 @endcan
-                <a href="{{ route("patients.show", $patient) }}" class="px-4 py-2 bg-gray-300 text-gray-800 rounded hover:bg-gray-400">
-                    Back to Patient
+                <a href="{{ route('patients.show', $patient) }}" class="btn-secondary flex-1">
+                    Back to patient
                 </a>
             </div>
         </div>

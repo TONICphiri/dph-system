@@ -1,74 +1,53 @@
 <x-app-layout>
     <x-slot name="header">
-        <h2 class="font-semibold text-xl text-gray-800 leading-tight">
-            {{ __('User Management') }}
-        </h2>
+        <div class="flex flex-col gap-1">
+            <p class="text-xs font-bold uppercase tracking-widest text-dhp-200">National administration · Staff</p>
+            <h2 class="text-2xl font-extrabold leading-tight">User management</h2>
+            <p class="text-sm text-dhp-100">Create and manage accounts across all facilities.</p>
+        </div>
     </x-slot>
 
-    <div class="py-12">
-        <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
-            <div class="mb-6 flex justify-between items-center">
-                <h3 class="text-lg font-semibold text-slate-900">Users</h3>
-                <a href="{{ route('users.create') }}" class="inline-flex items-center px-4 py-2 bg-sky-700 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-sky-800 focus:bg-sky-800 active:bg-sky-900 focus:outline-none focus:ring-2 focus:ring-sky-500 focus:ring-offset-2 transition ease-in-out duration-150">
-                    Add User
-                </a>
-            </div>
-
-            @if(session('success'))
-                <div class="mb-4 rounded-md bg-emerald-50 border border-emerald-200 text-emerald-700 px-4 py-3">
-                    {{ session('success') }}
-                </div>
-            @endif
-
-            <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg">
-                <div class="overflow-x-auto">
-                    <table class="min-w-full divide-y divide-slate-200 text-sm text-left text-slate-700">
-                        <thead class="bg-slate-50">
-                            <tr>
-                                <th class="px-4 py-3 font-semibold">Name</th>
-                                <th class="px-4 py-3 font-semibold">Email</th>
-                                <th class="px-4 py-3 font-semibold">Facility</th>
-                                <th class="px-4 py-3 font-semibold">Role</th>
-                                <th class="px-4 py-3 font-semibold">Status</th>
-                                <th class="px-4 py-3 font-semibold">Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody class="divide-y divide-slate-200">
-                            @forelse($users as $user)
-                                <tr>
-                                    <td class="px-4 py-3">{{ $user->name }}</td>
-                                    <td class="px-4 py-3">{{ $user->email }}</td>
-                                    <td class="px-4 py-3">{{ $user->facility?->name ?? '—' }}</td>
-                                    <td class="px-4 py-3">{{ $user->roles->first()?->name ?? 'No role' }}</td>
-                                    <td class="px-4 py-3">
-                                        <span class="inline-flex rounded-full px-2 py-1 text-xs font-semibold {{ $user->status === 'active' ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-200 text-slate-700' }}">
-                                            {{ $user->status ?? 'active' }}
-                                        </span>
-                                    </td>
-                                    <td class="px-4 py-3 flex gap-2">
-                                        <a href="{{ route('users.edit', $user) }}" class="inline-flex items-center px-3 py-1.5 bg-amber-500 border border-transparent rounded-md font-semibold text-xs text-white hover:bg-amber-600">Edit</a>
-                                        <form action="{{ route('users.toggle-status', $user) }}" method="POST">
-                                            @csrf
-                                            <button type="submit" class="inline-flex items-center px-3 py-1.5 {{ $user->status === 'active' ? 'bg-slate-600' : 'bg-emerald-600' }} border border-transparent rounded-md font-semibold text-xs text-white hover:{{ $user->status === 'active' ? 'bg-slate-700' : 'bg-emerald-700' }}">
-                                                {{ $user->status === 'active' ? 'Deactivate' : 'Activate' }}
-                                            </button>
-                                        </form>
-                                        <form action="{{ route('users.destroy', $user) }}" method="POST" onsubmit="return confirm('Delete this user?')">
-                                            @csrf
-                                            @method('DELETE')
-                                            <button type="submit" class="inline-flex items-center px-3 py-1.5 bg-rose-600 border border-transparent rounded-md font-semibold text-xs text-white hover:bg-rose-700">Delete</button>
-                                        </form>
-                                    </td>
-                                </tr>
-                            @empty
-                                <tr>
-                                    <td colspan="6" class="px-4 py-6 text-center text-slate-500">No users found.</td>
-                                </tr>
-                            @endforelse
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
+    <div class="mb-4 flex justify-end">
+        <a href="{{ route('users.create') }}" class="btn-primary">
+            <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" /></svg>
+            Add user
+        </a>
     </div>
+
+    @if($users->count())
+        <div class="dhp-table-wrap">
+            <table class="dhp-table">
+                <thead><tr><th>Name</th><th>Email</th><th>Facility</th><th>Role</th><th>Status</th><th><span class="sr-only">Actions</span></th></tr></thead>
+                <tbody>
+                    @foreach($users as $user)
+                        <tr>
+                            <td class="font-semibold">{{ $user->name }}</td>
+                            <td>{{ $user->email }}</td>
+                            <td>{{ $user->facility?->name ?? '—' }}</td>
+                            <td>{{ $user->roles->first()?->name ?? 'No role' }}</td>
+                            <td><span class="dhp-badge {{ $user->status === 'active' ? 'badge-active' : 'badge-neutral' }}">{{ $user->status ?? 'active' }}</span></td>
+                            <td class="whitespace-nowrap">
+                                <a href="{{ route('users.edit', $user) }}" class="btn-warning !min-h-[40px] !px-3 !py-1.5 !text-xs">Edit</a>
+                                <form action="{{ route('users.toggle-status', $user) }}" method="POST" class="inline">
+                                    @csrf
+                                    <button type="submit" class="btn-secondary !min-h-[40px] !px-3 !py-1.5 !text-xs">{{ $user->status === 'active' ? 'Deactivate' : 'Activate' }}</button>
+                                </form>
+                                <form action="{{ route('users.destroy', $user) }}" method="POST" class="inline" onsubmit="return confirm('Delete user {{ addslashes($user->name) }}? This cannot be undone.')">
+                                    @csrf
+                                    @method('DELETE')
+                                    <button type="submit" class="btn-danger !min-h-[40px] !px-3 !py-1.5 !text-xs">Delete</button>
+                                </form>
+                            </td>
+                        </tr>
+                    @endforeach
+                </tbody>
+            </table>
+        </div>
+        <div class="mt-4">{{ $users->links() }}</div>
+    @else
+        <div class="dhp-empty">
+            <p class="font-bold text-dhp-900">No users found</p>
+            <a href="{{ route('users.create') }}" class="btn-primary mt-3">Add the first user</a>
+        </div>
+    @endif
 </x-app-layout>

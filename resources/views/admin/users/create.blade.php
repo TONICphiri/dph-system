@@ -1,70 +1,68 @@
 <x-app-layout>
     <x-slot name="header">
-        <h2 class="font-semibold text-xl text-gray-800 leading-tight">
-            {{ __('Create User') }}
-        </h2>
+        <div class="flex flex-col gap-1">
+            <p class="text-xs font-bold uppercase tracking-widest text-dhp-200">National administration · Staff</p>
+            <h2 class="text-2xl font-extrabold leading-tight">Create user</h2>
+            <p class="text-sm text-dhp-100">Staff accounts are created by administrators only.</p>
+        </div>
     </x-slot>
 
-    <div class="py-12">
-        <div class="max-w-3xl mx-auto sm:px-6 lg:px-8">
-            <div class="bg-white p-6 rounded-lg shadow-sm">
-                <form method="POST" action="{{ route('users.store') }}" class="space-y-4">
-                    @csrf
-
+    <div class="mx-auto max-w-3xl">
+        <div class="dhp-card dhp-card-pad">
+            <form method="POST" action="{{ route('users.store') }}" class="space-y-5" novalidate>
+                @csrf
+                <div class="grid gap-4 sm:grid-cols-2">
                     <div>
-                        <label class="block text-sm font-medium text-slate-700">Name</label>
-                        <input type="text" name="name" value="{{ old('name') }}" class="mt-1 block w-full rounded-md border-slate-300 shadow-sm focus:border-sky-500 focus:ring-sky-500" required>
+                        <label for="name" class="dhp-label">Full name <span class="text-rose-600" aria-hidden="true">*</span></label>
+                        <input type="text" id="name" name="name" value="{{ old('name') }}" required maxlength="255" autocomplete="name" class="dhp-input" />
+                        @error('name')<p class="dhp-field-error">{{ $message }}</p>@enderror
                     </div>
-
                     <div>
-                        <label class="block text-sm font-medium text-slate-700">Email</label>
-                        <input type="email" name="email" value="{{ old('email') }}" class="mt-1 block w-full rounded-md border-slate-300 shadow-sm focus:border-sky-500 focus:ring-sky-500" required>
+                        <label for="email" class="dhp-label">Email <span class="text-rose-600" aria-hidden="true">*</span></label>
+                        <input type="email" id="email" name="email" value="{{ old('email') }}" required maxlength="255" autocomplete="email" class="dhp-input" />
+                        @error('email')<p class="dhp-field-error">{{ $message }}</p>@enderror
                     </div>
-
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                            <label class="block text-sm font-medium text-slate-700">Password</label>
-                            <input type="password" name="password" class="mt-1 block w-full rounded-md border-slate-300 shadow-sm focus:border-sky-500 focus:ring-sky-500" required>
-                        </div>
-                        <div>
-                            <label class="block text-sm font-medium text-slate-700">Confirm Password</label>
-                            <input type="password" name="password_confirmation" class="mt-1 block w-full rounded-md border-slate-300 shadow-sm focus:border-sky-500 focus:ring-sky-500" required>
-                        </div>
-                    </div>
-
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                            <label class="block text-sm font-medium text-slate-700">Facility</label>
-                            <select name="facility_id" class="mt-1 block w-full rounded-md border-slate-300 shadow-sm focus:border-sky-500 focus:ring-sky-500" required>
-                                @foreach($facilities as $facility)
-                                    <option value="{{ $facility->id }}">{{ $facility->name }}</option>
-                                @endforeach
-                            </select>
-                        </div>
-                        <div>
-                            <label class="block text-sm font-medium text-slate-700">Role</label>
-                            <select name="role" class="mt-1 block w-full rounded-md border-slate-300 shadow-sm focus:border-sky-500 focus:ring-sky-500" required>
-                                @foreach($roles as $role)
-                                    <option value="{{ $role->name }}">{{ $role->name }}</option>
-                                @endforeach
-                            </select>
-                        </div>
-                    </div>
-
                     <div>
-                        <label class="block text-sm font-medium text-slate-700">Status</label>
-                        <select name="status" class="mt-1 block w-full rounded-md border-slate-300 shadow-sm focus:border-sky-500 focus:ring-sky-500" required>
-                            <option value="active" {{ old('status', 'active') === 'active' ? 'selected' : '' }}>Active</option>
-                            <option value="inactive" {{ old('status') === 'inactive' ? 'selected' : '' }}>Inactive</option>
+                        <label for="password" class="dhp-label">Password <span class="text-rose-600" aria-hidden="true">*</span></label>
+                        <input type="password" id="password" name="password" required autocomplete="new-password" class="dhp-input" />
+                        @error('password')<p class="dhp-field-error">{{ $message }}</p>@enderror
+                        <p class="dhp-help">Minimum 8 characters.</p>
+                    </div>
+                    <div>
+                        <label for="password_confirmation" class="dhp-label">Confirm password <span class="text-rose-600" aria-hidden="true">*</span></label>
+                        <input type="password" id="password_confirmation" name="password_confirmation" required autocomplete="new-password" class="dhp-input" />
+                    </div>
+                    <div>
+                        <label for="facility_id" class="dhp-label">Facility <span class="text-rose-600" aria-hidden="true">*</span></label>
+                        <select id="facility_id" name="facility_id" required class="dhp-select">
+                            @foreach($facilities as $facility)
+                                <option value="{{ $facility->id }}" @selected(old('facility_id') == $facility->id)>{{ $facility->name }}</option>
+                            @endforeach
                         </select>
+                        @error('facility_id')<p class="dhp-field-error">{{ $message }}</p>@enderror
                     </div>
-
-                    <div class="flex gap-3">
-                        <button type="submit" class="inline-flex items-center px-4 py-2 bg-sky-700 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-sky-800 focus:bg-sky-800 active:bg-sky-900 focus:outline-none focus:ring-2 focus:ring-sky-500 focus:ring-offset-2 transition ease-in-out duration-150">Save User</button>
-                        <a href="{{ route('users.index') }}" class="inline-flex items-center px-4 py-2 bg-slate-200 border border-transparent rounded-md font-semibold text-xs text-slate-700 uppercase tracking-widest hover:bg-slate-300">Cancel</a>
+                    <div>
+                        <label for="role" class="dhp-label">Role <span class="text-rose-600" aria-hidden="true">*</span></label>
+                        <select id="role" name="role" required class="dhp-select">
+                            @foreach($roles as $role)
+                                <option value="{{ $role->name }}" @selected(old('role') == $role->name)>{{ $role->name }}</option>
+                            @endforeach
+                        </select>
+                        @error('role')<p class="dhp-field-error">{{ $message }}</p>@enderror
                     </div>
-                </form>
-            </div>
+                </div>
+                <div>
+                    <label for="status" class="dhp-label">Status</label>
+                    <select id="status" name="status" class="dhp-select">
+                        <option value="active" @selected(old('status', 'active') === 'active')>Active</option>
+                        <option value="inactive" @selected(old('status') === 'inactive')>Inactive</option>
+                    </select>
+                </div>
+                <div class="flex flex-col gap-2 sm:flex-row">
+                    <button type="submit" class="btn-primary flex-1">Save user</button>
+                    <a href="{{ route('users.index') }}" class="btn-secondary flex-1">Cancel</a>
+                </div>
+            </form>
         </div>
     </div>
 </x-app-layout>

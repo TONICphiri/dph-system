@@ -1,56 +1,36 @@
 <x-app-layout>
     <x-slot name="header">
-        <h2 class="font-semibold text-xl text-gray-800 leading-tight">
-            {{ __('Audit Logs') }}
-        </h2>
+        <div class="flex flex-col gap-1">
+            <p class="text-xs font-bold uppercase tracking-widest text-dhp-200">National administration · Security</p>
+            <h2 class="text-2xl font-extrabold leading-tight">Audit Logs</h2>
+            <p class="text-sm text-dhp-100">Every action, user and timestamp — nationwide.</p>
+        </div>
     </x-slot>
 
-    <div class="py-12">
-        <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
-            <div class="mb-6 flex justify-between items-center">
-                <h3 class="text-lg font-semibold text-gray-900">Audit Activity</h3>
-            </div>
-
-            <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg">
-                <div class="overflow-x-auto">
-                    <table class="min-w-full divide-y divide-slate-200 text-sm text-left text-slate-700">
-                        <thead class="bg-slate-50">
-                            <tr>
-                                <th class="px-4 py-3 font-semibold">Time</th>
-                                <th class="px-4 py-3 font-semibold">User</th>
-                                <th class="px-4 py-3 font-semibold">Action</th>
-                                <th class="px-4 py-3 font-semibold">Subject</th>
-                                <th class="px-4 py-3 font-semibold">Description</th>
-                            </tr>
-                        </thead>
-                        <tbody class="divide-y divide-slate-200">
-                            @forelse($auditLogs as $log)
-                                <tr>
-                                    <td class="px-4 py-3 whitespace-nowrap">{{ $log->created_at->format('d M Y, H:i') }}</td>
-                                    <td class="px-4 py-3">{{ $log->user?->name ?? 'System' }}</td>
-                                    <td class="px-4 py-3">
-                                        <span class="inline-flex rounded-full px-2 py-1 text-xs font-semibold bg-slate-100 text-slate-700">
-                                            {{ $log->action }}
-                                        </span>
-                                    </td>
-                                    <td class="px-4 py-3 font-mono text-xs">{{ class_basename($log->subject_type) }} #{{ $log->subject_id }}</td>
-                                    <td class="px-4 py-3">{{ $log->description ?? 'No description provided.' }}</td>
-                                </tr>
-                            @empty
-                                <tr>
-                                    <td colspan="5" class="px-4 py-6 text-center text-slate-500">No audit logs found.</td>
-                                </tr>
-                            @endforelse
-                        </tbody>
-                    </table>
-                </div>
-
-                @if($auditLogs->hasPages())
-                    <div class="border-t border-slate-200 px-4 py-3">
-                        {{ $auditLogs->links() }}
-                    </div>
-                @endif
-            </div>
+    @if($auditLogs->count())
+        <div class="dhp-table-wrap">
+            <table class="dhp-table">
+                <thead><tr><th>Time</th><th>User</th><th>Action</th><th>Subject</th><th>Description</th></tr></thead>
+                <tbody>
+                    @foreach($auditLogs as $log)
+                        <tr>
+                            <td class="whitespace-nowrap text-xs text-slate-500">{{ $log->created_at->format('d M Y, H:i') }}</td>
+                            <td class="font-semibold">{{ $log->user?->name ?? 'System' }}</td>
+                            <td><span class="dhp-badge badge-neutral">{{ $log->action }}</span></td>
+                            <td class="dhp-mono">{{ class_basename($log->subject_type) }} #{{ $log->subject_id ?? '—' }}</td>
+                            <td class="max-w-md">{{ $log->description ?? 'No description provided.' }}</td>
+                        </tr>
+                    @endforeach
+                </tbody>
+            </table>
         </div>
-    </div>
+        @if($auditLogs->hasPages())
+            <div class="mt-4">{{ $auditLogs->links() }}</div>
+        @endif
+    @else
+        <div class="dhp-empty">
+            <p class="font-bold text-dhp-900">No audit entries yet</p>
+            <p class="text-sm text-slate-500">Clinical activity will appear here automatically.</p>
+        </div>
+    @endif
 </x-app-layout>

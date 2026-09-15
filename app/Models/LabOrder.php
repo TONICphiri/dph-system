@@ -18,6 +18,8 @@ class LabOrder extends Model
         'status',
         'description',
         'requested_by_user_id',
+        'requested_at',
+        'completed_at',
         'result_description',
         'result_value',
         'result_units',
@@ -27,6 +29,8 @@ class LabOrder extends Model
         'patient_id' => 'integer',
         'encounter_id' => 'integer',
         'requested_by_user_id' => 'integer',
+        'requested_at' => 'datetime',
+        'completed_at' => 'datetime',
     ];
 
     /**

@@ -15,19 +15,25 @@ class UpdateLabOrderRequest extends FormRequest
     {
         return [
             'result_value' => 'required|string|max:255',
-            'result_units' => 'nullable|string|max=50',
-            'result_description' => 'nullable|string',
-            'status' => 'required|string|in:requested,pending,results,cancelled',
+            // FIX: was 'max=50' (invalid rule syntax -> throws InvalidArgumentException at runtime)
+            'result_units' => 'nullable|string|max:50',
+            'result_description' => 'nullable|string|max:5000',
+            // Status is set by the controller ('results') — never require it
+            // from the client, or result submissions without it will 422.
+            'status' => 'sometimes|string|in:requested,pending,results,cancelled',
         ];
     }
 
     /**
      * Determine if the user is authorized to make this request.
      *
+     * FIX: was always true. Now actually checks the permission, matching
+     * what the controller enforces.
+     *
      * @return bool
      */
     public function authorize()
     {
-        return true;
+        return $this->user()?->can('record_lab_results') ?? false;
     }
 }
