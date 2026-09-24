@@ -157,7 +157,7 @@ Route::middleware('auth')->group(function () use ($can) {
     Route::post('admissions/{admission}/medication', [Clinical\AdmissionController::class, 'storeMedication'])->middleware($can(P::RecordMedicationAdministration))->name('admissions.medication');
     Route::post('admissions/{admission}/prescriptions', [Clinical\AdmissionController::class, 'storePrescription'])->middleware($can(P::PrescribeMedication))->name('admissions.prescriptions');
     Route::get('admissions/{admission}/discharge', [Clinical\AdmissionController::class, 'dischargeForm'])->middleware($can(P::DischargePatients))->name('admissions.discharge');
-    Route::post('admissions/{admission}/discharge', [Clinical\AdmissionController::class, 'discharge'])->middleware($can(P::DischargePatients));
+    Route::post('admissions/{admission}/discharge', [Clinical\AdmissionController::class, 'discharge'])->middleware($can(P::DischargePatients))->name('admissions.discharge.store');
     Route::get('admissions/{admission}/report', [Clinical\AdmissionController::class, 'report'])->name('admissions.report');
 
     /* Vaccinations and reminders */

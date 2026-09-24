@@ -2,24 +2,27 @@
 
 namespace Database\Seeders;
 
-use App\Models\User;
-use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
 
 class DatabaseSeeder extends Seeder
 {
-    use WithoutModelEvents;
-
     /**
-     * Seed the application's database.
+     * Reference data is always loaded. Demonstration accounts and patients
+     * are only loaded when SEED_DEMO_DATA is true in the environment file,
+     * so a live server can be set up without sample records.
      */
     public function run(): void
     {
-        // User::factory(10)->create();
-
-        User::factory()->create([
-            'name' => 'Test User',
-            'email' => 'test@example.com',
+        $this->call([
+            RolesAndPermissionsSeeder::class,
+            SettingsSeeder::class,
+            DistrictSeeder::class,
+            VaccineSeeder::class,
+            SystemAdministratorSeeder::class,
         ]);
+
+        if (config('health_passport.seed_demo_data')) {
+            $this->call(DemoDataSeeder::class);
+        }
     }
 }

@@ -9,6 +9,7 @@ use Illuminate\Pagination\Paginator;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\View;
 use Illuminate\Support\ServiceProvider;
+use Throwable;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -27,8 +28,16 @@ class AppServiceProvider extends ServiceProvider
 
         // The system name is edited on the Settings page, so every page reads
         // it from the settings table instead of a fixed value.
+        // If the database cannot be reached, for example on an error page, the
+        // application name from the environment file is used instead.
         View::composer('*', function ($view) {
-            $view->with('systemName', app(SettingService::class)->systemName());
+            try {
+                $name = app(SettingService::class)->systemName();
+            } catch (Throwable) {
+                $name = config('app.name');
+            }
+
+            $view->with('systemName', $name);
         });
     }
 }

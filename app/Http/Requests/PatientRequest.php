@@ -20,7 +20,8 @@ class PatientRequest extends FormRequest
         $settings = app(SettingService::class);
 
         return [
-            'national_id' => ['nullable', 'string', 'size:8', 'alpha_num', Rule::unique('patients')->ignore($patient)],
+            'is_child' => ['sometimes', 'boolean'],
+            'national_id' => ['nullable', 'required_if:is_child,0', 'string', 'size:8', 'alpha_num', Rule::unique('patients')->ignore($patient)],
             'first_name' => ['required', 'string', 'max:100'],
             'middle_name' => ['nullable', 'string', 'max:100'],
             'last_name' => ['required', 'string', 'max:100'],
@@ -38,9 +39,9 @@ class PatientRequest extends FormRequest
             'chronic_conditions' => ['nullable', 'string', 'max:1000'],
             'disabilities' => ['nullable', 'string', 'max:1000'],
             'health_notes' => ['nullable', 'string', 'max:2000'],
-            'mother_id' => ['nullable', 'exists:patients,id'],
+            'mother_id' => ['nullable', 'required_if:is_child,1', 'exists:patients,id'],
 
-            'contacts' => ['required', 'array', 'min:1', 'max:3'],
+            'contacts' => ['array', 'max:3'],
             'contacts.0.full_name' => ['required', 'string', 'max:150'],
             'contacts.0.phone' => ['required', 'string', 'max:30'],
             'contacts.*.full_name' => ['nullable', 'string', 'max:150'],
@@ -55,6 +56,8 @@ class PatientRequest extends FormRequest
     public function messages(): array
     {
         return [
+            'national_id.required_if' => 'Enter the National ID. Every adult patient is registered with a National ID.',
+            'mother_id.required_if' => 'Search for the mother and select her. A child must be linked to the mother.',
             'national_id.size' => 'The National ID must be exactly 8 characters.',
             'national_id.unique' => 'A patient with this National ID is already registered. Search for the patient instead.',
             'email.unique' => 'This email address is already used by another patient.',
@@ -75,7 +78,7 @@ class PatientRequest extends FormRequest
      */
     public function patientData(): array
     {
-        return $this->safe()->except(['contacts', 'create_portal_account']);
+        return $this->safe()->except(['contacts', 'create_portal_account', 'is_child']);
     }
 
     /**

@@ -3,7 +3,9 @@
 use App\Exceptions\WorkflowException;
 use App\Http\Middleware\EnsureAccountIsActive;
 use App\Http\Middleware\EnsurePasswordIsChanged;
+use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Auth\AuthenticationException;
+use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
@@ -63,6 +65,9 @@ return Application::configure(basePath: dirname(__DIR__))
         $exceptions->render(function (Throwable $exception, Request $request) {
             if (config('app.debug')
                 || $exception instanceof HttpExceptionInterface
+                || $exception instanceof ModelNotFoundException
+                || $exception instanceof AuthorizationException
+                || $exception instanceof WorkflowException
                 || $exception instanceof ValidationException
                 || $exception instanceof AuthenticationException) {
                 return null;

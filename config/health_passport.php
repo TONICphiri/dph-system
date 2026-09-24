@@ -21,4 +21,15 @@ return [
     // Number of rows shown per page in lists.
     'per_page' => (int) env('LIST_PAGE_SIZE', 15),
 
+    // Load demonstration facilities, staff and patients when seeding.
+    // Set to false on the live server.
+    'seed_demo_data' => (bool) env('SEED_DEMO_DATA', true),
+
+    // The first System Administrator account created by the seeder.
+    'admin' => [
+        'name' => env('ADMIN_NAME', 'System Administrator'),
+        'email' => env('ADMIN_EMAIL', 'admin@healthpassport.mw'),
+        'password' => env('ADMIN_PASSWORD', 'Password@2026'),
+    ],
+
 ];

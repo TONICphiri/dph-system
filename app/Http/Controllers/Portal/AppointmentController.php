@@ -30,7 +30,7 @@ class AppointmentController extends Controller
 
         return view('portal.appointments.index', [
             'appointments' => Appointment::query()
-                ->with(['facility', 'doctor', 'review'])
+                ->with(['patient', 'facility', 'doctor', 'review'])
                 ->whereIn('patient_id', $patient->children()->pluck('id')->push($patient->id))
                 ->latest('appointment_date')
                 ->paginate($this->perPage()),
