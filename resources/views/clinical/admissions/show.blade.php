@@ -39,7 +39,7 @@
         @can('allocateBed', $admission)
             <form method="POST" action="{{ route('admissions.allocate-bed', $admission) }}" class="panel mb-6">
                 @csrf
-                <div class="panel-header"><h2 class="panel-title">Allocate a bed</h2><span class="text-[13px] text-muted">Only wards suitable for a {{ strtolower($patient->sex->label()) }} patient are shown{{ $admission->preferred_ward_type ? '. The doctor prefers '.$admission->preferred_ward_type : '' }}.</span></div>
+                <div class="panel-header"><h2 class="panel-title">Allocate a bed</h2><span class="text-[13px] text-muted">Only wards suitable for the sex and age of this patient are shown{{ $admission->preferred_ward_type ? '. The doctor prefers '.$admission->preferred_ward_type : '' }}.</span></div>
                 @if ($wards->sum(fn ($ward) => $ward->beds->count()) === 0)
                     <x-empty title="No bed is available" icon="bed">All suitable beds are occupied or under maintenance. The patient stays on the waiting list.</x-empty>
                 @else
@@ -158,7 +158,7 @@
                     @csrf
                     <div class="panel-header"><h2 class="panel-title">New prescription</h2><button type="button" class="link text-sm" @click="open = !open" x-text="open ? 'Close' : 'Prescribe'"></button></div>
                     <div x-show="open" x-cloak>
-                        @include('partials.prescription-items', ['compact' => true])
+                        @include('partials.prescription-items')
                         <div class="px-5 pb-2"><x-field.input name="notes" label="Note to the pharmacy" /></div>
                         <div class="border-t border-line px-5 py-3"><button type="submit" class="btn-primary w-full">Send to pharmacy</button></div>
                     </div>

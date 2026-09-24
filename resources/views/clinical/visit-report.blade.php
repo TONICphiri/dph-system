@@ -18,7 +18,7 @@
             <dl class="detail-list lg:grid-cols-4">
                 <div><dt>Patient</dt><dd class="font-medium">{{ $patient->full_name }}</dd></div>
                 <div><dt>Passport number</dt><dd class="mono">{{ $patient->passport_number }}</dd></div>
-                <div><dt>Age and sex</dt><dd>{{ $patient->age }} years, {{ $patient->sex->label() }}</dd></div>
+                <div><dt>Age and sex</dt><dd>{{ $patient->age_label }}, {{ $patient->sex->label() }}</dd></div>
                 <div><dt>District</dt><dd>{{ $patient->district?->name }}</dd></div>
                 <div><dt>Checked in</dt><dd>{{ $visit->checked_in_at->format('j M Y H:i') }}</dd></div>
                 <div><dt>Seen by</dt><dd>{{ $visit->doctor?->name ?? 'Not seen' }}</dd></div>

@@ -55,7 +55,7 @@
                 <div class="panel-header"><h2 class="panel-title">Patient</h2></div>
                 <dl class="panel-body detail-list">
                     <div><dt>Passport number</dt><dd class="mono">{{ $patient->passport_number }}</dd></div>
-                    <div><dt>Age and sex</dt><dd>{{ $patient->age }} years, {{ $patient->sex->label() }}</dd></div>
+                    <div><dt>Age and sex</dt><dd>{{ $patient->age_label }}, {{ $patient->sex->label() }}</dd></div>
                     <div><dt>Blood group</dt><dd>{{ $patient->blood_group ?? 'Not known' }}</dd></div>
                     <div><dt>Allergies</dt><dd class="{{ $patient->allergies ? 'font-medium text-red-700' : '' }}">{{ $patient->allergies ?? 'None recorded' }}</dd></div>
                     <div class="sm:col-span-2"><dt>Long term conditions</dt><dd>{{ $patient->chronic_conditions ?? 'None recorded' }}</dd></div>

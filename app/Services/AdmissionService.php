@@ -21,8 +21,23 @@ use Illuminate\Support\Facades\DB;
  */
 class AdmissionService
 {
-    public function __construct(private readonly AuditLogger $audit)
+    public function __construct(
+        private readonly AuditLogger $audit,
+        private readonly SettingService $settings,
+    ) {
+    }
+
+    /**
+     * Whether the patient is old enough to be kept out of children's wards.
+     */
+    public function isAdult(Admission $admission): bool
     {
+        return ($admission->patient->age ?? 0) >= $this->settings->childSeparationAge();
+    }
+
+    public function childrenWardType(): string
+    {
+        return $this->settings->childrenWardType();
     }
 
     public function admit(Visit $visit, string $reason, ?string $preferredWardType, User $doctor): Admission
@@ -119,6 +134,10 @@ class AdmissionService
 
     private function assertWardAcceptsPatient(Bed $bed, Admission $admission): void
     {
+        if ($bed->ward->ward_type === $this->childrenWardType() && $this->isAdult($admission)) {
+            throw new WorkflowException("{$bed->ward->name} is reserved for children. Choose a ward for adult patients.");
+        }
+
         $restriction = $bed->ward->gender_restriction;
 
         if ($restriction === WardGender::Mixed) {

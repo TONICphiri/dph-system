@@ -32,7 +32,7 @@
                                 <td><x-patient-cell :patient="$patient" /></td>
                                 <td class="mono">{{ $patient->national_id ?? 'Child record' }}</td>
                                 <td>{{ $patient->sex->label() }}</td>
-                                <td class="tabular-nums">{{ $patient->age }}</td>
+                                <td>{{ $patient->age_label }}</td>
                                 <td class="text-muted">{{ $patient->created_at->format('j M Y, H:i') }}</td>
                             </tr>
                         @endforeach

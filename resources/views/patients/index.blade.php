@@ -37,7 +37,7 @@
                                 </td>
                                 <td class="mono">{{ $patient->national_id ?? 'Not issued' }}</td>
                                 <td>{{ $patient->sex->label() }}</td>
-                                <td class="whitespace-nowrap">{{ $patient->date_of_birth->format('j M Y') }} <span class="text-muted">({{ $patient->age }})</span></td>
+                                <td class="whitespace-nowrap">{{ $patient->date_of_birth->format('j M Y') }} <span class="text-muted">({{ $patient->age_label }})</span></td>
                                 <td>{{ $patient->phone }}</td>
                                 <td>{{ $patient->registeredFacility?->name }}</td>
                                 <td><x-status :value="$patient->status" /></td>

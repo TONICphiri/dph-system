@@ -164,9 +164,8 @@ class PatientWorkflowTest extends TestCase
         $this->actingAs($this->user('doctor@healthpassport.mw'))->get(route('admissions.report', $admission))->assertOk();
     }
 
-    public function test_a_male_patient_cannot_be_placed_in_a_female_ward(): void
+    public function test_a_female_patient_cannot_be_placed_in_a_male_ward(): void
     {
-        $patient = Patient::query()->where('first_name', 'Mary')->firstOrFail();
         $admission = Admission::query()->where('status', AdmissionStatus::AwaitingBed)->firstOrFail();
         $maleBed = Bed::query()->whereHas('ward', fn ($query) => $query->where('name', 'Male Medical Ward'))->where('status', BedStatus::Available)->firstOrFail();
 
@@ -176,7 +175,24 @@ class PatientWorkflowTest extends TestCase
             ->assertSessionHas('error');
 
         $this->assertSame(BedStatus::Available, $maleBed->refresh()->status);
-        $this->assertNotNull($patient);
+    }
+
+    public function test_an_adult_cannot_be_placed_in_a_children_ward(): void
+    {
+        $admission = Admission::query()->where('status', AdmissionStatus::AwaitingBed)->firstOrFail();
+        $childrenBed = Bed::query()->whereHas('ward', fn ($query) => $query->where('name', 'Children Ward'))->where('status', BedStatus::Available)->firstOrFail();
+
+        $this->actingAs($this->user('nurse@healthpassport.mw'))
+            ->get(route('admissions.show', $admission))
+            ->assertOk()
+            ->assertDontSee('Children Ward');
+
+        $this->actingAs($this->user('nurse@healthpassport.mw'))
+            ->from(route('admissions.show', $admission))
+            ->post(route('admissions.allocate-bed', $admission), ['bed_id' => $childrenBed->id])
+            ->assertSessionHas('error');
+
+        $this->assertSame(BedStatus::Available, $childrenBed->refresh()->status);
     }
 
     public function test_each_role_sees_only_the_records_it_needs(): void

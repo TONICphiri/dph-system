@@ -64,7 +64,7 @@
                 @endunless
 
                 <div class="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-                    <x-field.input name="national_id" label="National ID" :value="$patient->national_id" maxlength="8" class="uppercase" help="8 letters and numbers, as printed on the National ID card. Not needed for children." />
+                    <x-field.input name="national_id" label="National ID" :value="$patient->national_id" maxlength="8" help="Required for adults. 8 letters and numbers, as printed on the National ID card." />
                     <x-field.input name="first_name" label="First name" :value="$patient->first_name" required />
                     <x-field.input name="middle_name" label="Middle name" :value="$patient->middle_name" />
                     <x-field.input name="last_name" label="Surname" :value="$patient->last_name" required />

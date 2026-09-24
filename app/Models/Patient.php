@@ -70,6 +70,26 @@ class Patient extends Model
     }
 
     /**
+     * Age written for display, in months for babies under one year.
+     */
+    protected function ageLabel(): Attribute
+    {
+        return Attribute::get(function () {
+            if (! $this->date_of_birth) {
+                return 'Age not known';
+            }
+
+            if ($this->age >= 1) {
+                return $this->age.' '.($this->age === 1 ? 'year' : 'years');
+            }
+
+            $months = (int) $this->date_of_birth->diffInMonths(now());
+
+            return $months < 1 ? 'Under 1 month' : $months.' '.($months === 1 ? 'month' : 'months');
+        });
+    }
+
+    /**
      * A patient is a child until they reach the separation age set by the
      * System Administrator (18 by default).
      */

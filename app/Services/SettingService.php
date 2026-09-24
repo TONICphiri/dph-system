@@ -87,4 +87,12 @@ class SettingService
     {
         return (int) $this->get('child_separation_age', '18');
     }
+
+    /**
+     * Ward type reserved for children. Adults are not placed in these wards.
+     */
+    public function childrenWardType(): string
+    {
+        return $this->get('children_ward_type', 'Paediatric');
+    }
 }

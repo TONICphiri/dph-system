@@ -45,7 +45,7 @@
             <dl class="panel-body detail-list !grid-cols-1">
                 <div><dt>Name</dt><dd>{{ $patient->full_name }}</dd></div>
                 <div><dt>Passport number</dt><dd class="mono">{{ $patient->passport_number }}</dd></div>
-                <div><dt>Age and sex</dt><dd>{{ $patient->age }} years, {{ $patient->sex->label() }}</dd></div>
+                <div><dt>Age and sex</dt><dd>{{ $patient->age_label }}, {{ $patient->sex->label() }}</dd></div>
             </dl>
             <p class="border-t border-line px-5 py-3 text-[13px] text-muted">Pharmacy staff see prescriptions and dosage only. Other parts of the medical record are not shown.</p>
         </aside>

@@ -12,7 +12,7 @@
             <dl class="panel-body detail-list !grid-cols-1">
                 <div><dt>Passport number</dt><dd class="mono text-base">{{ $patient->passport_number }}</dd></div>
                 <div><dt>National ID</dt><dd class="mono">{{ $patient->national_id ?? 'Not recorded' }}</dd></div>
-                <div><dt>Date of birth</dt><dd>{{ $patient->date_of_birth->format('j F Y') }} ({{ $patient->age }} years)</dd></div>
+                <div><dt>Date of birth</dt><dd>{{ $patient->date_of_birth->format('j F Y') }} ({{ $patient->age_label }})</dd></div>
                 <div><dt>Blood group</dt><dd>{{ $patient->blood_group ?? 'Not recorded' }}</dd></div>
                 <div><dt>Registered at</dt><dd>{{ $patient->registeredFacility?->name ?? 'Not recorded' }}</dd></div>
             </dl>
@@ -21,7 +21,7 @@
                     <p class="text-[12px] font-medium uppercase tracking-wide text-muted">Children linked to you</p>
                     <ul class="mt-2 space-y-1 text-sm">
                         @foreach ($patient->children as $child)
-                            <li><a href="{{ route('portal.records', ['patient' => $child->id]) }}" class="link">{{ $child->full_name }}</a> <span class="text-muted">({{ $child->age }} years)</span></li>
+                            <li><a href="{{ route('portal.records', ['patient' => $child->id]) }}" class="link">{{ $child->full_name }}</a> <span class="text-muted">({{ $child->age_label }})</span></li>
                         @endforeach
                     </ul>
                 </div>

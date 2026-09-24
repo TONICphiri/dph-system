@@ -12,7 +12,7 @@
             @foreach ($family as $member)
                 <a href="{{ route('portal.records', $member->id === $owner->id ? [] : ['patient' => $member->id]) }}"
                     class="border px-3 py-2 text-sm {{ $member->id === $patient->id ? 'border-brand-700 bg-brand-700 text-white' : 'border-line bg-white hover:border-brand-600' }}">
-                    {{ $member->id === $owner->id ? 'Me' : $member->first_name.', '.$member->age.' years' }}
+                    {{ $member->id === $owner->id ? 'Me' : $member->first_name.', '.$member->age_label }}
                 </a>
             @endforeach
         </nav>

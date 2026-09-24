@@ -17,7 +17,7 @@
             <div class="panel-header"><h2 class="panel-title">Patient</h2></div>
             <dl class="panel-body detail-list !grid-cols-1">
                 <div><dt>Passport number</dt><dd class="mono">{{ $visit->patient->passport_number }}</dd></div>
-                <div><dt>Age and sex</dt><dd>{{ $visit->patient->age }} years, {{ $visit->patient->sex->label() }}</dd></div>
+                <div><dt>Age and sex</dt><dd>{{ $visit->patient->age_label }}, {{ $visit->patient->sex->label() }}</dd></div>
                 <div><dt>Allergies</dt><dd class="{{ $visit->patient->allergies ? 'font-medium text-red-700' : '' }}">{{ $visit->patient->allergies ?? 'None recorded' }}</dd></div>
                 @if ($previous)
                     <div><dt>Previous reading</dt><dd>{{ $previous->recorded_at->format('j M Y') }}: {{ $previous->temperature }} °C, {{ $previous->weight }} kg{{ $previous->bloodPressure() ? ', '.$previous->bloodPressure() : '' }}</dd></div>

@@ -12,7 +12,7 @@
     ])->filter();
 @endphp
 <x-layouts.app :title="$patient->full_name">
-    <x-page-header :title="$patient->full_name" :description="$patient->sex->label().', '.$patient->age.' years. Registered at '.($patient->registeredFacility?->name ?? 'an unknown facility').'.'">
+    <x-page-header :title="$patient->full_name" :description="$patient->sex->label().', '.$patient->age_label.'. Registered at '.($patient->registeredFacility?->name ?? 'an unknown facility').'.'">
         <x-slot:breadcrumb><a href="{{ route('patients.index') }}" class="hover:text-brand-700">Patients</a> <x-icon name="chevron-right" class="h-3.5 w-3.5" /> Record</x-slot:breadcrumb>
         <x-slot:actions>
             @can('printCard', $patient)
@@ -103,7 +103,7 @@
                         <div class="px-5 py-3"><p class="text-[12px] font-medium uppercase tracking-wide text-muted">Mother</p><x-patient-cell :patient="$patient->mother" /></div>
                     @endif
                     @foreach ($patient->children as $child)
-                        <div class="border-t border-line px-5 py-3"><p class="text-[12px] font-medium uppercase tracking-wide text-muted">Child, {{ $child->age }} years</p><x-patient-cell :patient="$child" /></div>
+                        <div class="border-t border-line px-5 py-3"><p class="text-[12px] font-medium uppercase tracking-wide text-muted">Child, {{ $child->age_label }}</p><x-patient-cell :patient="$child" /></div>
                     @endforeach
                     @can(Permission::RegisterPatients->value)
                         @if ($patient->sex === \App\Enums\Sex::Female && ! $patient->isChild())

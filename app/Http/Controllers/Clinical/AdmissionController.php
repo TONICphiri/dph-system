@@ -196,6 +196,7 @@ class AdmissionController extends Controller
             ->where('facility_id', $admission->facility_id)
             ->where('status', FacilityStatus::Active)
             ->whereIn('gender_restriction', [WardGender::Mixed->value, $admission->patient->sex->value])
+            ->when($this->admissions->isAdult($admission), fn ($query) => $query->where('ward_type', '!=', $this->admissions->childrenWardType()))
             ->with(['beds' => fn ($query) => $query->where('status', BedStatus::Available)])
             ->orderByRaw('CASE WHEN ward_type = ? THEN 0 ELSE 1 END', [$admission->preferred_ward_type])
             ->orderBy('name')

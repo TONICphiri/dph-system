@@ -18,6 +18,7 @@ class SettingsSeeder extends Seeder
             ['system_name', 'Digital Health Passport', 'System name', 'general', 'text', 'Shown in the page header, emails and printed reports.'],
             ['passport_number_prefix', 'MW', 'Passport number prefix', 'general', 'text', 'Two or three letters placed before every new passport number.'],
             ['child_separation_age', '18', 'Age at which a child record separates from the mother', 'general', 'number', 'Checked every night. The child keeps all records and gets an independent passport.'],
+            ['children_ward_type', 'Paediatric', 'Ward type reserved for children', 'general', 'text', 'Must match one of the ward types below. Patients at or above the separation age are not placed in these wards.'],
             ['email_notifications_enabled', '0', 'Send notifications by email', 'notifications', 'boolean', 'When switched off, notifications are only shown inside the system.'],
             ['facility_types', "Central Hospital\nDistrict Hospital\nCommunity Hospital\nHealth Centre\nClinic\nDispensary", 'Facility types', 'lists', 'list', 'One item per line.'],
             ['ownership_types', "Government\nChristian Health Association of Malawi\nPrivate\nNon governmental organisation", 'Ownership types', 'lists', 'list', 'One item per line.'],

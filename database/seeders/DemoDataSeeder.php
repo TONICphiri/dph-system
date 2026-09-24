@@ -209,48 +209,49 @@ class DemoDataSeeder extends Seeder
     {
         auth()->setUser($staff['clerk']);
 
+        $blantyre = \App\Models\District::query()->where('name', 'Blantyre')->value('id');
         $contact = fn (string $name, string $relationship, string $phone) => [['full_name' => $name, 'relationship' => $relationship, 'phone' => $phone, 'physical_address' => null]];
 
         // A mother with a portal account and a young child linked to her record.
         $grace = $this->register([
-            'national_id' => 'KT7Y4M21', 'first_name' => 'Grace', 'last_name' => 'Banda', 'date_of_birth' => '1994-03-12', 'sex' => 'female',
+            'district_id' => $blantyre, 'national_id' => 'KT7Y4M21', 'first_name' => 'Grace', 'last_name' => 'Banda', 'date_of_birth' => '1994-03-12', 'sex' => 'female',
             'phone' => '+265 991 204 118', 'email' => 'patient@healthpassport.mw', 'village' => 'Ndirande', 'traditional_authority' => 'Kapeni',
             'physical_address' => 'Ndirande Township, House 42', 'occupation' => 'Teacher', 'blood_group' => 'O+',
             'allergies' => 'Penicillin', 'chronic_conditions' => 'HIV, on antiretroviral therapy',
         ], $contact('Thomas Banda', 'Spouse', '+265 888 310 442'), $staff['clerk'], portal: true);
 
         $daniel = $this->register([
-            'mother_id' => $grace->id, 'first_name' => 'Daniel', 'last_name' => 'Banda', 'date_of_birth' => now()->subMonths(3)->toDateString(), 'sex' => 'male',
+            'district_id' => $blantyre, 'mother_id' => $grace->id, 'first_name' => 'Daniel', 'last_name' => 'Banda', 'date_of_birth' => now()->subMonths(3)->toDateString(), 'sex' => 'male',
             'village' => 'Ndirande', 'physical_address' => 'Ndirande Township, House 42', 'blood_group' => 'O+',
         ], $contact('Grace Banda', 'Mother', '+265 991 204 118'), $staff['clerk']);
 
         $john = $this->register([
-            'national_id' => 'PL2Q8X55', 'first_name' => 'John', 'last_name' => 'Phiri', 'date_of_birth' => '1978-11-02', 'sex' => 'male',
+            'district_id' => $blantyre, 'national_id' => 'PL2Q8X55', 'first_name' => 'John', 'last_name' => 'Phiri', 'date_of_birth' => '1978-11-02', 'sex' => 'male',
             'phone' => '+265 999 552 870', 'village' => 'Chilomoni', 'occupation' => 'Driver', 'blood_group' => 'A+', 'chronic_conditions' => 'Hypertension',
         ], $contact('Esther Phiri', 'Spouse', '+265 881 220 961'), $staff['clerk']);
 
         $mary = $this->register([
-            'national_id' => 'MW4R6T90', 'first_name' => 'Mary', 'last_name' => 'Mwale', 'date_of_birth' => '1989-06-24', 'sex' => 'female',
+            'district_id' => $blantyre, 'national_id' => 'MW4R6T90', 'first_name' => 'Mary', 'last_name' => 'Mwale', 'date_of_birth' => '1989-06-24', 'sex' => 'female',
             'phone' => '+265 995 118 004', 'village' => 'Bangwe', 'occupation' => 'Trader', 'blood_group' => 'B+',
         ], $contact('Paul Mwale', 'Brother', '+265 884 773 120'), $staff['clerk']);
 
         $peter = $this->register([
-            'national_id' => 'ZX9C3V12', 'first_name' => 'Peter', 'last_name' => 'Chirwa', 'date_of_birth' => '1965-01-15', 'sex' => 'male',
+            'district_id' => $blantyre, 'national_id' => 'ZX9C3V12', 'first_name' => 'Peter', 'last_name' => 'Chirwa', 'date_of_birth' => '1965-01-15', 'sex' => 'male',
             'phone' => '+265 997 002 318', 'village' => 'Limbe', 'occupation' => 'Farmer', 'blood_group' => 'AB+', 'chronic_conditions' => 'Type 2 diabetes',
         ], $contact('Anne Chirwa', 'Daughter', '+265 882 640 555'), $staff['clerk']);
 
         $esther = $this->register([
-            'national_id' => 'QN5B7L33', 'first_name' => 'Esther', 'last_name' => 'Nkhoma', 'date_of_birth' => '2001-09-30', 'sex' => 'female',
+            'district_id' => $blantyre, 'national_id' => 'QN5B7L33', 'first_name' => 'Esther', 'last_name' => 'Nkhoma', 'date_of_birth' => '2001-09-30', 'sex' => 'female',
             'phone' => '+265 996 481 227', 'village' => 'Chinyonga', 'occupation' => 'Student', 'blood_group' => 'O-',
         ], $contact('Rose Nkhoma', 'Mother', '+265 885 914 002'), $staff['clerk']);
 
         $james = $this->register([
-            'national_id' => 'HD8S2K47', 'first_name' => 'James', 'last_name' => 'Tembo', 'date_of_birth' => '1958-04-08', 'sex' => 'male',
+            'district_id' => $blantyre, 'national_id' => 'HD8S2K47', 'first_name' => 'James', 'last_name' => 'Tembo', 'date_of_birth' => '1958-04-08', 'sex' => 'male',
             'phone' => '+265 993 660 145', 'village' => 'Machinjiri', 'occupation' => 'Retired', 'blood_group' => 'A-',
         ], $contact('Joyce Tembo', 'Spouse', '+265 887 305 610'), $staff['clerk']);
 
         $ruth = $this->register([
-            'national_id' => 'YT3F9W68', 'first_name' => 'Ruth', 'last_name' => 'Kalua', 'date_of_birth' => '1992-12-19', 'sex' => 'female',
+            'district_id' => $blantyre, 'national_id' => 'YT3F9W68', 'first_name' => 'Ruth', 'last_name' => 'Kalua', 'date_of_birth' => '1992-12-19', 'sex' => 'female',
             'phone' => '+265 998 725 034', 'village' => 'Chilobwe', 'occupation' => 'Nurse aide', 'blood_group' => 'B-',
         ], $contact('Moses Kalua', 'Spouse', '+265 889 117 850'), $staff['clerk']);
 
@@ -293,7 +294,7 @@ class DemoDataSeeder extends Seeder
         });
 
         // Today's work queue at different stages.
-        $this->at(now()->setTime(7, 45), function () use ($mary, $peter, $james, $ruth, $staff) {
+        $this->at(now()->subMinutes(95), function () use ($mary, $peter, $james, $ruth, $staff) {
             auth()->setUser($staff['clerk']);
             $this->visits->checkIn($mary, 'Cough and chest pain', $staff['clerk']);
 
