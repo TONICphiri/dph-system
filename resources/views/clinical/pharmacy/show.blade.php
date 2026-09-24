@@ -4,7 +4,7 @@
         <x-slot:breadcrumb><a href="{{ route('pharmacy.index') }}" class="hover:text-brand-700">Pharmacy</a> <x-icon name="chevron-right" class="h-3.5 w-3.5" /> Prescription</x-slot:breadcrumb>
     </x-page-header>
 
-    <div class="grid gap-6 lg:grid-cols-3">
+    <div class="grid items-start gap-6 lg:grid-cols-3">
         <section class="panel lg:col-span-2">
             <div class="panel-header"><h2 class="panel-title">Medicines</h2><x-status :value="$prescription->status" /></div>
             <div class="overflow-x-auto">

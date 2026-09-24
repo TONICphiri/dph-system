@@ -33,7 +33,7 @@ class LoginController extends Controller
         $request->session()->regenerate();
         $user = $request->user();
         $user->forceFill(['last_login_at' => now()])->save();
-        $audit->record('user.signed-in', "{$user->name} signed in.");
+        $audit->record('user.signed-in', "Signed in to the system.");
 
         return redirect()->intended(route('dashboard'));
     }

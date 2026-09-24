@@ -4,7 +4,7 @@
         <x-slot:actions><a href="{{ route('facility.wards.edit', $ward) }}" class="btn-secondary"><x-icon name="edit" class="h-4 w-4" /> Edit ward</a></x-slot:actions>
     </x-page-header>
 
-    <div class="grid gap-6 lg:grid-cols-3">
+    <div class="grid items-start gap-6 lg:grid-cols-3">
         <section class="panel lg:col-span-2">
             <div class="panel-header"><h2 class="panel-title">Beds</h2><x-status :value="$ward->status" /></div>
             @if ($ward->beds->isEmpty())

@@ -1,6 +1,6 @@
 <x-layouts.app title="Facility profile">
     <x-page-header :title="$facility->name" description="Contact details shown to patients when they book appointments. The name, code and type are managed by the System Administrator." />
-    <div class="grid gap-6 lg:grid-cols-3">
+    <div class="grid items-start gap-6 lg:grid-cols-3">
         <form method="POST" action="{{ route('facility.profile.update') }}" class="panel lg:col-span-2">
             @csrf @method('PUT')
             <div class="panel-header"><h2 class="panel-title">Contact details</h2></div>

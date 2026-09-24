@@ -70,7 +70,7 @@
                     <div class="border-b border-line px-5 py-3 last:border-b-0">
                         <p class="font-medium">{{ $reminder->title }}</p>
                         <p class="text-sm text-muted">{{ $reminder->message }}</p>
-                        <p class="mt-1 text-[13px] {{ $reminder->due_on->isPast() ? 'font-medium text-red-700' : 'text-muted' }}">Due {{ $reminder->due_on->format('j F Y') }}</p>
+                        <p class="mt-1 text-[13px] {{ $reminder->due_on->isPast() ? 'font-medium text-red-700' : 'text-muted' }}">{{ $reminder->due_on->isPast() && ! $reminder->due_on->isToday() ? 'Overdue since' : 'Due' }} {{ $reminder->due_on->format('j F Y') }}</p>
                     </div>
                 @empty
                     <p class="px-5 py-4 text-sm text-muted">No reminders at the moment.</p>

@@ -47,12 +47,12 @@
             </div>
             <ul class="divide-y divide-line">
                 @foreach ($checks as $check)
-                    <li class="flex items-center justify-between gap-3 px-5 py-2.5 text-sm">
-                        <span class="text-muted">{{ $check['label'] }}</span>
-                        <span class="flex items-center gap-2 text-right">
-                            {{ $check['value'] }}
-                            <span class="h-2.5 w-2.5 {{ $check['healthy'] ? 'bg-brand-600' : 'bg-red-700' }}" title="{{ $check['healthy'] ? 'Working' : 'Needs attention' }}"></span>
-                        </span>
+                    <li class="flex items-start justify-between gap-3 px-5 py-2.5 text-sm">
+                        <div class="min-w-0">
+                            <p class="font-medium text-ink">{{ $check['label'] }}</p>
+                            <p class="text-[13px] text-muted">{{ $check['value'] }}</p>
+                        </div>
+                        <x-badge :tone="$check['healthy'] ? 'success' : 'danger'">{{ $check['healthy'] ? 'Working' : 'Needs attention' }}</x-badge>
                     </li>
                 @endforeach
             </ul>

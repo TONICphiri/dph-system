@@ -15,6 +15,10 @@ export default {
         './resources/js/**/*.js',
     ],
 
+    // Badge tones are chosen in PHP (for example from a status enum), so the
+    // class names never appear in full in the views.
+    safelist: ['badge-neutral', 'badge-info', 'badge-success', 'badge-warning', 'badge-danger'],
+
     corePlugins: {
         backgroundImage: false,
         gradientColorStops: false,

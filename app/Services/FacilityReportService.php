@@ -13,7 +13,9 @@ use App\Models\Facility;
 use App\Models\PrescriptionItem;
 use App\Models\Vaccination;
 use App\Models\Visit;
+use Carbon\CarbonPeriod;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -55,9 +57,21 @@ class FacilityReportService
                     ->whereBetween('dispensed_at', [$start, $end]))
                 ->select('medicine_name', DB::raw('SUM(quantity_dispensed) as total'))
                 ->groupBy('medicine_name')->orderByDesc('total')->limit(10)->get(),
-            'daily_visits' => (clone $visits)
+            'daily_visits' => $this->everyDay($start, $end, (clone $visits)
                 ->select(DB::raw('DATE(checked_in_at) as day'), DB::raw('COUNT(*) as total'))
-                ->groupBy('day')->orderBy('day')->pluck('total', 'day'),
+                ->groupBy('day')->pluck('total', 'day')),
         ];
+    }
+
+    /**
+     * Include days without visits so the chart shows the whole period.
+     *
+     * @param  Collection<string, int>  $totals
+     * @return Collection<string, int>
+     */
+    private function everyDay(Carbon $start, Carbon $end, Collection $totals): Collection
+    {
+        return collect(CarbonPeriod::create($start->copy()->startOfDay(), '1 day', $end->copy()->startOfDay()))
+            ->mapWithKeys(fn (Carbon $day) => [$day->toDateString() => (int) ($totals[$day->toDateString()] ?? 0)]);
     }
 }

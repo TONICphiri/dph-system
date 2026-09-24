@@ -1,7 +1,7 @@
 <x-layouts.app title="Doctor schedules">
     <x-page-header title="Doctor schedules" description="The days and hours each doctor sees booked patients. Patients can only book on days when a doctor is scheduled and places remain." />
 
-    <div class="grid gap-6 lg:grid-cols-3">
+    <div class="grid items-start gap-6 lg:grid-cols-3">
         <section class="panel lg:col-span-2">
             <div class="panel-header"><h2 class="panel-title">Weekly schedule</h2></div>
             @if ($schedules->isEmpty())

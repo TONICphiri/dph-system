@@ -17,7 +17,7 @@
         <x-stat label="Beds" :value="$facility->beds_count" icon="bed" />
     </div>
 
-    <div class="mt-6 grid gap-6 lg:grid-cols-3">
+    <div class="mt-6 grid items-start gap-6 lg:grid-cols-3">
         <section class="panel">
             <div class="panel-header"><h2 class="panel-title">Details</h2><x-status :value="$facility->status" /></div>
             <dl class="panel-body detail-list !grid-cols-1">

@@ -51,7 +51,7 @@
                 <div class="border-b border-line px-5 py-3 last:border-b-0">
                     <div class="flex items-center justify-between gap-2">
                         <p class="font-medium">{{ $reminder->title }}</p>
-                        <span class="text-[13px] {{ $reminder->due_on->isPast() ? 'text-red-700' : 'text-muted' }}">{{ $reminder->due_on->format('j M') }}</span>
+                        <span class="text-[13px] {{ $reminder->due_on->isPast() ? 'text-red-700' : 'text-muted' }}">{{ $reminder->due_on->isPast() && ! $reminder->due_on->isToday() ? 'Overdue, ' : '' }}{{ $reminder->due_on->format('j M') }}</span>
                     </div>
                     <p class="text-[13px] text-muted">{{ $reminder->patient_id !== $patient->id ? 'For '.$reminder->patient->first_name.'. ' : '' }}{{ $reminder->message }}</p>
                 </div>

@@ -1,7 +1,7 @@
 <x-layouts.app title="My profile">
     <x-page-header title="My profile" description="Keep your contact details up to date so that colleagues and the system can reach you." />
 
-    <div class="grid gap-6 lg:grid-cols-3">
+    <div class="grid items-start gap-6 lg:grid-cols-3">
         <form method="POST" action="{{ route('profile.update') }}" class="panel lg:col-span-2">
             @csrf
             @method('PUT')

@@ -17,7 +17,7 @@
         </x-slot:actions>
     </x-page-header>
 
-    <div class="grid gap-6 lg:grid-cols-3">
+    <div class="grid items-start gap-6 lg:grid-cols-3">
         @foreach ($columns as $column)
             <section class="panel self-start">
                 <div class="panel-header">

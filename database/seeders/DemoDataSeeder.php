@@ -258,13 +258,31 @@ class DemoDataSeeder extends Seeder
         // Completed outpatient visit two weeks ago: consultation, pharmacy, discharge.
         $this->at(now()->subDays(14)->setTime(9, 15), function () use ($john, $staff) {
             $visit = $this->visitWithVitals($john, 'Headache and dizziness', $staff, ['temperature' => 36.8, 'weight' => 82.0, 'height' => 174.0, 'systolic_pressure' => 162, 'diastolic_pressure' => 98, 'pulse_rate' => 84, 'respiratory_rate' => 16, 'oxygen_saturation' => 98]);
+            Carbon::setTestNow(now()->addMinutes(35));
             auth()->setUser($staff['doctor']);
             $this->consultations->complete($visit, [
                 'history' => 'Headaches for one week. Known hypertension, missed medication for two weeks.',
                 'examination' => 'Alert, no neurological signs. Blood pressure raised.',
                 'diagnosis' => 'Uncontrolled hypertension',
                 'treatment_plan' => 'Restart amlodipine. Reduce salt intake. Review in one month.',
-            ], [$this->item($visit->facility_id, 'Amlodipine', '5 mg', 'Once daily', 30, 30)], ConsultationService::OUTCOME_SEND_HOME, $staff['doctor']);
+            ], [$this->item($visit->facility_id, 'Amlodipine', '1 tablet', 'Once daily', 30, 30)], ConsultationService::OUTCOME_SEND_HOME, $staff['doctor']);
+            Carbon::setTestNow(now()->addMinutes(20));
+            auth()->setUser($staff['pharmacist']);
+            $this->prescriptions->dispense($visit->refresh()->prescriptions()->first(), $staff['pharmacist']);
+        });
+
+        // Postnatal review for the portal patient, matching her completed appointment.
+        $this->at(now()->subDays(20)->setTime(10, 30), function () use ($grace, $staff) {
+            $visit = $this->visitWithVitals($grace, 'Postnatal review', $staff, ['temperature' => 36.6, 'weight' => 63.0, 'systolic_pressure' => 118, 'diastolic_pressure' => 76, 'pulse_rate' => 76, 'respiratory_rate' => 16, 'oxygen_saturation' => 99]);
+            Carbon::setTestNow(now()->addMinutes(35));
+            auth()->setUser($staff['doctor']);
+            $this->consultations->complete($visit, [
+                'history' => 'Ten weeks after delivery. Feeling well, breastfeeding without problems.',
+                'examination' => 'Well, not pale. Blood pressure normal.',
+                'diagnosis' => 'Normal postnatal recovery',
+                'treatment_plan' => 'Continue iron supplements for one month. Family planning counselling given.',
+            ], [$this->item($visit->facility_id, 'Ferrous Sulphate', '1 tablet', 'Once daily', 30, 30)], ConsultationService::OUTCOME_SEND_HOME, $staff['doctor']);
+            Carbon::setTestNow(now()->addMinutes(20));
             auth()->setUser($staff['pharmacist']);
             $this->prescriptions->dispense($visit->refresh()->prescriptions()->first(), $staff['pharmacist']);
         });
@@ -272,6 +290,7 @@ class DemoDataSeeder extends Seeder
         // Completed inpatient stay last month with discharge report.
         $this->at(now()->subDays(30)->setTime(10, 0), function () use ($esther, $staff) {
             $visit = $this->visitWithVitals($esther, 'High fever and vomiting', $staff, ['temperature' => 39.4, 'weight' => 58.0, 'systolic_pressure' => 104, 'diastolic_pressure' => 66, 'pulse_rate' => 112, 'respiratory_rate' => 22, 'oxygen_saturation' => 96]);
+            Carbon::setTestNow(now()->addMinutes(35));
             auth()->setUser($staff['doctor']);
             $this->consultations->complete($visit, [
                 'history' => 'Fever for three days with vomiting. Unable to keep oral medication.',
@@ -302,13 +321,14 @@ class DemoDataSeeder extends Seeder
 
             // Admitted and in a bed, with daily notes.
             $visit = $this->visitWithVitals($james, 'Difficulty in breathing', $staff, ['temperature' => 38.6, 'weight' => 70.0, 'systolic_pressure' => 128, 'diastolic_pressure' => 80, 'pulse_rate' => 104, 'respiratory_rate' => 28, 'oxygen_saturation' => 89]);
+            Carbon::setTestNow(now()->addMinutes(35));
             auth()->setUser($staff['doctor']);
             $this->consultations->complete($visit, [
                 'history' => 'Cough with fever for five days, breathless since yesterday.',
                 'examination' => 'Crackles in the right lower chest. Low oxygen saturation.',
                 'diagnosis' => 'Community acquired pneumonia',
                 'treatment_plan' => 'Admit. Oxygen, intravenous ceftriaxone, review daily.',
-            ], [$this->item($visit->facility_id, 'Ceftriaxone', '1 g', 'Once daily', 5, 5)], ConsultationService::OUTCOME_ADMIT, $staff['doctor'], ['admission_reason' => 'Pneumonia needing oxygen', 'preferred_ward_type' => 'General Medical']);
+            ], [$this->item($visit->facility_id, 'Ceftriaxone', '1 g by injection', 'Once daily', 5, 5)], ConsultationService::OUTCOME_ADMIT, $staff['doctor'], ['admission_reason' => 'Pneumonia needing oxygen', 'preferred_ward_type' => 'General Medical']);
             $admission = $james->admissions()->latest('id')->first();
             auth()->setUser($staff['nurse']);
             $this->admissions->allocateBed($admission, $this->freeBed($visit->facility_id, 'Male Medical Ward'), $staff['nurse']);

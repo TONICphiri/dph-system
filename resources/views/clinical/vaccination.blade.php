@@ -2,7 +2,7 @@
     <x-page-header :title="'Record a vaccination for '.$patient->full_name" description="The dose number and the date of the next dose are worked out from the vaccine schedule. A reminder is set automatically when another dose is due.">
         <x-slot:breadcrumb><a href="{{ route('patients.show', $patient) }}" class="hover:text-brand-700">{{ $patient->full_name }}</a> <x-icon name="chevron-right" class="h-3.5 w-3.5" /> Vaccination</x-slot:breadcrumb>
     </x-page-header>
-    <div class="grid gap-6 lg:grid-cols-3">
+    <div class="grid items-start gap-6 lg:grid-cols-3">
         <form method="POST" action="{{ route('vaccinations.store', $patient) }}" class="panel lg:col-span-2">
             @csrf
             <div class="panel-body grid gap-5 sm:grid-cols-2">

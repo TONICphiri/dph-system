@@ -10,7 +10,7 @@
     </form>
 
     <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <x-stat label="Visits" :value="$report['total_visits']" icon="clipboard" :hint="$report['outpatient_visits'].' outpatient, '.$report['completed_visits'].' completed'" />
+        <x-stat label="Visits" :value="$report['total_visits']" icon="clipboard" :hint="$report['outpatient_visits'].' outpatient, '.($report['total_visits'] - $report['outpatient_visits']).' inpatient'" />
         <x-stat label="Admissions" :value="$report['admissions']" icon="bed" :hint="$report['discharges'].' discharged'" />
         <x-stat label="Vaccinations" :value="$report['vaccinations']" icon="syringe" />
         <x-stat label="Bed occupancy today" :value="$report['occupancy_rate'].'%'" icon="chart" :hint="$report['occupied_beds'].' of '.$report['total_beds'].' beds'" />
@@ -19,14 +19,14 @@
     <section class="panel mt-6">
         <div class="panel-header"><h2 class="panel-title">Visits per day</h2></div>
         @php $max = max(1, $report['daily_visits']->max() ?? 1); @endphp
-        @if ($report['daily_visits']->isEmpty())
+        @if ($report['daily_visits']->sum() === 0)
             <x-empty title="No visits in this period" icon="chart" />
         @else
             <div class="flex h-48 items-end gap-1 overflow-x-auto px-5 pb-2 pt-4" role="img" aria-label="Visits per day">
                 @foreach ($report['daily_visits'] as $day => $total)
-                    <div class="flex min-w-[18px] flex-1 flex-col items-center justify-end gap-1" title="{{ \Illuminate\Support\Carbon::parse($day)->format('j M') }}: {{ $total }} visits">
-                        <span class="text-[11px] tabular-nums text-muted">{{ $total }}</span>
-                        <div class="w-full bg-brand-600" style="height: {{ max(4, round($total / $max * 140)) }}px"></div>
+                    <div class="flex min-w-[18px] flex-1 flex-col items-center justify-end gap-1" title="{{ \Illuminate\Support\Carbon::parse($day)->format('j M') }}: {{ $total }} {{ \Illuminate\Support\Str::plural('visit', $total) }}">
+                        <span class="text-[11px] tabular-nums text-muted">{{ $total > 0 ? $total : '' }}</span>
+                        <div class="w-full {{ $total > 0 ? 'bg-brand-600' : 'bg-line' }}" style="height: {{ $total > 0 ? max(4, round($total / $max * 140)) : 1 }}px"></div>
                     </div>
                 @endforeach
             </div>
@@ -40,11 +40,11 @@
     <div class="mt-6 grid gap-6 lg:grid-cols-2">
         <section class="panel">
             <div class="panel-header"><h2 class="panel-title">Most common diagnoses</h2></div>
-            @include('partials.ranked-list', ['rows' => $report['top_diagnoses'], 'labelKey' => 'diagnosis', 'unit' => 'visits'])
+            @include('partials.ranked-list', ['rows' => $report['top_diagnoses'], 'labelKey' => 'diagnosis', 'unit' => 'visit'])
         </section>
         <section class="panel">
             <div class="panel-header"><h2 class="panel-title">Most dispensed medicines</h2></div>
-            @include('partials.ranked-list', ['rows' => $report['top_medicines'], 'labelKey' => 'medicine_name', 'unit' => 'units'])
+            @include('partials.ranked-list', ['rows' => $report['top_medicines'], 'labelKey' => 'medicine_name', 'unit' => 'unit'])
         </section>
     </div>
 </x-layouts.app>

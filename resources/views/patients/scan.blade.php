@@ -2,7 +2,7 @@
     @push('head') @vite('resources/js/scanner.js') @endpush
     <x-page-header title="Scan a health passport card" description="Point the camera at the QR code on the patient's card, or type the passport number or National ID." />
 
-    <div class="grid gap-6 lg:grid-cols-2">
+    <div class="grid items-start gap-6 lg:grid-cols-2">
         <section class="panel">
             <div class="panel-header"><h2 class="panel-title">Camera</h2></div>
             <div class="panel-body">
