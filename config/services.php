@@ -35,8 +35,4 @@ return [
         ],
     ],
 
-    'sync' => [
-        'endpoint' => env('SYNC_ENDPOINT'),
-    ],
-
 ];

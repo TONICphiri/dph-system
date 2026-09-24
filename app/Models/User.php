@@ -2,177 +2,127 @@
 
 namespace App\Models;
 
-// use Illuminate\Contracts\Auth\MustVerifyEmail;
-use Database\Factories\UserFactory;
+use App\Enums\RoleName;
+use App\Enums\UserStatus;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Spatie\Permission\Traits\HasRoles;
 
 class User extends Authenticatable
 {
-    /** @use HasFactory<UserFactory> */
-    use HasFactory, Notifiable, HasRoles;
+    use HasFactory, HasRoles, Notifiable;
 
-    /**
-     * The attributes that are mass assignable.
-     *
-     * @var list<string>
-     */
     protected $fillable = [
         'name',
-        'full_name',
         'email',
-        'password',
-        'facility_id',
-        'status',
-        'nin_hash',
-        'nin_last4',
-        'dob',
-        'gender',
         'phone',
-        'id_document_ref',
-        'enrolled_by',
-        'approved_by',
+        'job_title',
+        'professional_registration_number',
+        'facility_id',
         'patient_id',
+        'status',
         'must_change_password',
-        'two_factor_secret',
-        'two_factor_confirmed_at',
-        'two_factor_recovery_codes',
-        'failed_login_attempts',
-        'locked_until',
+        'password',
     ];
 
-    /**
-     * The attributes that should be hidden for serialization.
-     *
-     * @var list<string>
-     */
     protected $hidden = [
         'password',
         'remember_token',
-        'nin_hash',
-        'two_factor_secret',
-        'two_factor_recovery_codes',
     ];
 
-    /**
-     * Get the attributes that should be cast.
-     *
-     * @return array<string, string>
-     */
     protected function casts(): array
     {
         return [
-            'email_verified_at' => 'datetime',
-            'password' => 'hashed',
-            'dob' => 'date',
+            'status' => UserStatus::class,
             'must_change_password' => 'boolean',
-            'locked_until' => 'datetime',
-            'two_factor_confirmed_at' => 'datetime',
+            'last_login_at' => 'datetime',
+            'password' => 'hashed',
         ];
     }
 
-    /**
-     * Catalogue display name: prefer full_name, fall back to legacy name.
-     */
-    public function getDisplayNameAttribute(): string
-    {
-        return $this->full_name ?: $this->name ?: 'Unknown';
-    }
-
-    /**
-     * Masked NIN for all UI/lists/logs per NFR-7 (e.g. NIN-****-4821).
-     */
-    public function getMaskedNinAttribute(): string
-    {
-        return $this->nin_last4 ? 'NIN-****-'.$this->nin_last4 : 'NIN-****-----';
-    }
-
-    public function enrolledBy(): BelongsTo
-    {
-        return $this->belongsTo(self::class, 'enrolled_by');
-    }
-
-    public function approvedBy(): BelongsTo
-    {
-        return $this->belongsTo(self::class, 'approved_by');
-    }
-
-    /**
-     * The clinical file belonging to this account (patient role only).
-     * Set explicitly by facility staff — never guessed by name matching.
-     */
-    public function patient(): BelongsTo
-    {
-        return $this->belongsTo(Patient::class);
-    }
-
-    public function ownsPatient(Patient $patient): bool
-    {
-        return $this->patient_id !== null && (int) $this->patient_id === (int) $patient->getKey();
-    }
-
-    public function hasTwoFactor(): bool
-    {
-        return ! empty($this->two_factor_secret) && $this->two_factor_confirmed_at !== null;
-    }
-
-    public function isPending(): bool
-    {
-        return $this->status === 'pending';
-    }
-
-    public function isLocked(): bool
-    {
-        return $this->locked_until && $this->locked_until->isFuture();
-    }
-
-    /**
-     * Get the facility where this user works
-     */
     public function facility(): BelongsTo
     {
         return $this->belongsTo(Facility::class);
     }
 
-    /**
-     * National Admin operates system-wide: MySQL queries carry no
-     * facility_id constraint, granting global read/write access.
-     * Spec roles super_admin/system_admin (§4.1) plus legacy admin are national.
-     */
-    public function isNationalAdmin(): bool
+    public function patient(): BelongsTo
     {
-        return $this->hasAnyRole(['admin', 'national_admin', 'super_admin', 'system_admin']);
+        return $this->belongsTo(Patient::class);
+    }
+
+    public function schedules(): HasMany
+    {
+        return $this->hasMany(DoctorSchedule::class, 'doctor_id');
+    }
+
+    public function reviews(): HasMany
+    {
+        return $this->hasMany(AppointmentReview::class, 'doctor_id');
     }
 
     /**
-     * Facility Admin is strictly scoped to their assigned location.
+     * The user's role as an enum. Every account holds exactly one role.
      */
-    public function isFacilityAdmin(): bool
+    public function role(): ?RoleName
     {
-        return $this->hasRole('facility_admin');
+        $name = $this->getRoleNames()->first();
+
+        return $name ? RoleName::tryFrom($name) : null;
+    }
+
+    public function roleLabel(): string
+    {
+        return $this->role()?->label() ?? 'No role';
+    }
+
+    public function isRole(RoleName $role): bool
+    {
+        return $this->role() === $role;
+    }
+
+    public function isActive(): bool
+    {
+        return $this->status === UserStatus::Active;
     }
 
     /**
-     * True when this user may only see data from their own facility.
+     * True when this user works at the given facility.
      */
-    public function isFacilityScoped(): bool
+    public function worksAt(?int $facilityId): bool
     {
-        return !$this->isNationalAdmin();
+        return $facilityId !== null && $this->facility_id === $facilityId;
     }
 
     /**
-     * Constrain a query to the user's facility unless they are a
-     * National Admin. National Admins see every row (no constraint).
+     * True when this portal user is the patient or the patient's mother.
      */
-    public function scopeToFacility($query, string $column = 'facility_id')
+    public function ownsPatientRecord(Patient $patient): bool
     {
-        if ($this->isNationalAdmin()) {
-            return $query;
+        if (! $this->patient_id) {
+            return false;
         }
 
-        return $query->where($column, $this->facility_id);
+        return $patient->id === $this->patient_id || $patient->mother_id === $this->patient_id;
+    }
+
+    public function initials(): string
+    {
+        $parts = preg_split('/\s+/', trim($this->name)) ?: [];
+
+        return strtoupper(collect($parts)->take(2)->map(fn ($part) => mb_substr($part, 0, 1))->implode(''));
+    }
+
+    public function scopeActive(Builder $query): Builder
+    {
+        return $query->where('status', UserStatus::Active);
+    }
+
+    public function scopeWithRole(Builder $query, RoleName $role): Builder
+    {
+        return $query->role($role->value);
     }
 }

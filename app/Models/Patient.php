@@ -2,155 +2,170 @@
 
 namespace App\Models;
 
+use App\Enums\PatientStatus;
+use App\Enums\Sex;
+use App\Services\SettingService;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class Patient extends Model
 {
     use HasFactory;
 
     protected $fillable = [
+        'passport_number',
+        'qr_token',
         'national_id',
-        'dhp_id',
         'first_name',
+        'middle_name',
         'last_name',
         'date_of_birth',
-        'gender',
-        'phone_number',
-        'address',
-        'village',
+        'sex',
+        'phone',
+        'email',
+        'district_id',
         'traditional_authority',
-        'district',
+        'village',
+        'physical_address',
+        'occupation',
+        'blood_group',
+        'allergies',
+        'chronic_conditions',
+        'disabilities',
+        'health_notes',
+        'mother_id',
+        'separated_from_mother_at',
+        'registered_facility_id',
+        'registered_by',
         'status',
-        'is_child',
-        'guardian_id',
-        'registered_at',
-        'registered_by_facility_id',
-        'registered_by_user_id',
     ];
+
+    protected $hidden = ['qr_token'];
 
     protected function casts(): array
     {
         return [
             'date_of_birth' => 'date',
-            'registered_at' => 'datetime',
-            'is_child' => 'boolean',
+            'separated_from_mother_at' => 'datetime',
+            'sex' => Sex::class,
+            'status' => PatientStatus::class,
         ];
     }
 
-    /**
-     * Get the facility where patient was registered
-     */
-    public function registeredByFacility(): BelongsTo
+    protected function fullName(): Attribute
     {
-        return $this->belongsTo(Facility::class, 'registered_by_facility_id');
+        return Attribute::get(fn () => collect([$this->first_name, $this->middle_name, $this->last_name])
+            ->filter()
+            ->implode(' '));
+    }
+
+    protected function age(): Attribute
+    {
+        return Attribute::get(fn () => $this->date_of_birth?->age);
     }
 
     /**
-     * Get the user who registered the patient
+     * A patient is a child until they reach the separation age set by the
+     * System Administrator (18 by default).
      */
-    public function registeredByUser(): BelongsTo
+    public function isChild(): bool
     {
-        return $this->belongsTo(User::class, 'registered_by_user_id');
+        return $this->age !== null && $this->age < app(SettingService::class)->childSeparationAge();
     }
 
-    /**
-     * Get the guardian if this is a child patient
-     */
-    public function guardian(): BelongsTo
+    public function district(): BelongsTo
     {
-        return $this->belongsTo(Guardian::class);
+        return $this->belongsTo(District::class);
     }
 
-    /**
-     * Get all encounters for this patient
-     */
-    public function encounters(): HasMany
+    public function mother(): BelongsTo
     {
-        return $this->hasMany(Encounter::class)->orderByDesc('encounter_date');
+        return $this->belongsTo(self::class, 'mother_id');
     }
 
-    /**
-     * Get all vitals for this patient
-     */
+    public function children(): HasMany
+    {
+        return $this->hasMany(self::class, 'mother_id');
+    }
+
+    public function registeredFacility(): BelongsTo
+    {
+        return $this->belongsTo(Facility::class, 'registered_facility_id');
+    }
+
+    public function registeredBy(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'registered_by');
+    }
+
+    public function portalAccount(): HasOne
+    {
+        return $this->hasOne(User::class);
+    }
+
+    public function emergencyContacts(): HasMany
+    {
+        return $this->hasMany(EmergencyContact::class)->orderByDesc('is_primary');
+    }
+
+    public function visits(): HasMany
+    {
+        return $this->hasMany(Visit::class)->latest('checked_in_at');
+    }
+
     public function vitals(): HasMany
     {
-        return $this->hasMany(Vital::class)->orderByDesc('recorded_at');
+        return $this->hasMany(Vital::class)->latest('recorded_at');
     }
 
-    /**
-     * Get all prescriptions for this patient
-     */
     public function prescriptions(): HasMany
     {
-        return $this->hasMany(Prescription::class)->orderByDesc('prescribed_at');
+        return $this->hasMany(Prescription::class)->latest();
     }
 
-    /**
-     * Get all admissions for this patient
-     */
     public function admissions(): HasMany
     {
-        return $this->hasMany(Admission::class)->orderByDesc('admitted_at');
+        return $this->hasMany(Admission::class)->latest('admitted_at');
+    }
+
+    public function vaccinations(): HasMany
+    {
+        return $this->hasMany(Vaccination::class)->latest('administered_on');
+    }
+
+    public function reminders(): HasMany
+    {
+        return $this->hasMany(Reminder::class)->orderBy('due_on');
+    }
+
+    public function appointments(): HasMany
+    {
+        return $this->hasMany(Appointment::class)->latest('appointment_date');
     }
 
     /**
-     * Get all lab orders for this patient
+     * Search by passport number, National ID, phone number or name.
      */
-    public function labOrders(): HasMany
+    public function scopeSearch(Builder $query, ?string $term): Builder
     {
-        return $this->hasMany(LabOrder::class)->orderByDesc('requested_at');
-    }
+        $term = trim((string) $term);
 
-    /**
-     * Get full name
-     */
-    public function getFullNameAttribute(): string
-    {
-        return "{$this->first_name} {$this->last_name}";
-    }
-
-    /**
-     * Get age in years
-     */
-    public function getAgeAttribute(): ?int
-    {
-        if (!$this->date_of_birth) {
-            return null;
-        }
-        return $this->date_of_birth->diffInYears(now());
-    }
-
-    /**
-     * Generate a unique Health Passport ID: DISTRICT-FACILITY#-YEAR-SEQ,
-     * e.g. NS-007-2026-0001 for the 1st patient registered in 2026 at the
-     * 7th facility on the system, in Ntchisi district. Retries on
-     * collision so concurrent registrations can never produce duplicates.
-     */
-    public static function generateDhpId(string $district, ?int $facilityId): string
-    {
-        $code = config('districts')[$district] ?? 'XX';
-        $facilityNumber = sprintf('%03d', $facilityId ?? 0);
-        $year = now()->year;
-        $prefix = sprintf('%s-%s-%d-', $code, $facilityNumber, $year);
-
-        for ($attempt = 0; $attempt < 5; $attempt++) {
-            $latestPatient = self::where('dhp_id', 'like', $prefix.'%')
-                ->orderByDesc('id')
-                ->lockForUpdate()
-                ->first();
-
-            $sequence = ($latestPatient ? intval(substr($latestPatient->dhp_id, -4)) : 0) + 1 + $attempt;
-            $candidate = $prefix.sprintf('%04d', $sequence);
-
-            if (!self::where('dhp_id', $candidate)->exists()) {
-                return $candidate;
-            }
+        if ($term === '') {
+            return $query;
         }
 
-        // Fallback: timestamp-based uniqueness if sequence collides repeatedly.
-        return $prefix.sprintf('%04d', ((int) (microtime(true) * 100)) % 10000);
+        return $query->where(function (Builder $inner) use ($term) {
+            $inner->where('passport_number', $term)
+                ->orWhere('national_id', strtoupper($term))
+                ->orWhere('phone', 'like', "%{$term}%")
+                ->orWhere('first_name', 'like', "%{$term}%")
+                ->orWhere('last_name', 'like', "%{$term}%")
+                ->orWhereRaw("CONCAT(first_name, ' ', last_name) LIKE ?", ["%{$term}%"]);
+        });
     }
 }

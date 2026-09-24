@@ -1,39 +1,68 @@
 import defaultTheme from 'tailwindcss/defaultTheme';
 import forms from '@tailwindcss/forms';
 
+/**
+ * Design rules enforced here, so they cannot be broken by accident in a view:
+ *  1. Every corner is square. All border radius values resolve to 0.
+ *  2. No gradients. The background image and gradient utilities are disabled.
+ */
 /** @type {import('tailwindcss').Config} */
 export default {
     content: [
         './vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php',
         './storage/framework/views/*.php',
         './resources/views/**/*.blade.php',
+        './resources/js/**/*.js',
     ],
 
+    corePlugins: {
+        backgroundImage: false,
+        gradientColorStops: false,
+    },
+
     theme: {
+        borderRadius: {
+            none: '0',
+            sm: '0',
+            DEFAULT: '0',
+            md: '0',
+            lg: '0',
+            xl: '0',
+            '2xl': '0',
+            '3xl': '0',
+            full: '0',
+        },
         extend: {
             fontFamily: {
-                sans: ['Figtree', ...defaultTheme.fontFamily.sans],
+                sans: ['"IBM Plex Sans"', ...defaultTheme.fontFamily.sans],
+                mono: ['"IBM Plex Mono"', ...defaultTheme.fontFamily.mono],
             },
             colors: {
-                // Design system per system-description2.md §6.2 — flat solid colors only, no gradients.
-                // Primary teal/blue #0E7490, success #16A34A, warning #D97706, danger #DC2626.
-                dhp: {
-                    50: '#ECFEFF',
-                    100: '#CFFAFE',
-                    200: '#A5F3FC',
-                    300: '#67E8F9',
-                    400: '#22D3EE',
-                    500: '#0E7490',
-                    600: '#0E7490',
-                    700: '#0C6474',
-                    800: '#155E75',
-                    900: '#083344',
-                    950: '#04202B',
+                brand: {
+                    50: '#F1F7F3',
+                    100: '#E0EEE5',
+                    200: '#BFDCC9',
+                    300: '#8FC0A1',
+                    400: '#5A9E75',
+                    500: '#2F7F52',
+                    600: '#226A43',
+                    700: '#1A5536',
+                    800: '#14432B',
+                    900: '#0F3321',
+                    950: '#0A2417',
+                },
+                paper: '#F5F4EF',
+                line: '#DCD9CF',
+                ink: '#1B1F1C',
+                muted: '#5B625D',
+                gold: {
+                    100: '#F6EBD2',
+                    600: '#A6761C',
+                    700: '#8A6117',
                 },
             },
             boxShadow: {
-                card: '0 1px 2px rgba(8, 51, 68, 0.06), 0 4px 16px rgba(8, 51, 68, 0.06)',
-                pop: '0 8px 30px rgba(8, 51, 68, 0.16)',
+                card: '0 1px 0 rgba(15, 51, 33, 0.06)',
             },
         },
     },
