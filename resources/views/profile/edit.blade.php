@@ -1,29 +1,36 @@
-<x-app-layout>
-    <x-slot name="header">
-        <h2 class="font-semibold text-xl text-gray-800 leading-tight">
-            {{ __('Manage account') }}
-        </h2>
-    </x-slot>
+<x-layouts.app title="My profile">
+    <x-page-header title="My profile" description="Keep your contact details up to date so that colleagues and the system can reach you." />
 
-    <div class="py-12">
-        <div class="max-w-7xl mx-auto sm:px-6 lg:px-8 space-y-6">
-            <div class="p-4 sm:p-8 bg-white shadow sm:rounded-lg">
-                <div class="max-w-xl">
-                    @include('profile.partials.profile-form')
-                </div>
+    <div class="grid items-start gap-6 lg:grid-cols-3">
+        <form method="POST" action="{{ route('profile.update') }}" class="panel lg:col-span-2">
+            @csrf
+            @method('PUT')
+            <div class="panel-header"><h2 class="panel-title">Contact details</h2></div>
+            <div class="panel-body grid gap-5 sm:grid-cols-2">
+                <x-field.input name="name" label="Full name" :value="$user->name" class="sm:col-span-2" required />
+                <x-field.input name="email" label="Email address" type="email" :value="$user->email" required />
+                <x-field.input name="phone" label="Phone number" :value="$user->phone" />
             </div>
+            <div class="flex justify-end border-t border-line px-5 py-3">
+                <button type="submit" class="btn-primary">Save changes</button>
+            </div>
+        </form>
 
-            <div class="p-4 sm:p-8 bg-white shadow sm:rounded-lg">
-                <div class="max-w-xl">
-                    @include('profile.partials.password-form')
-                </div>
+        <section class="panel">
+            <div class="panel-header"><h2 class="panel-title">Account</h2></div>
+            <dl class="panel-body space-y-3 text-sm">
+                <div><dt class="text-[12px] uppercase tracking-wide text-muted">Role</dt><dd class="mt-0.5"><span class="badge-{{ $user->role()?->tone() ?? 'neutral' }}">{{ $user->roleLabel() }}</span></dd></div>
+                @if ($user->facility)
+                    <div><dt class="text-[12px] uppercase tracking-wide text-muted">Facility</dt><dd class="mt-0.5">{{ $user->facility->name }}</dd></div>
+                @endif
+                @if ($user->professional_registration_number)
+                    <div><dt class="text-[12px] uppercase tracking-wide text-muted">Registration number</dt><dd class="mono mt-0.5">{{ $user->professional_registration_number }}</dd></div>
+                @endif
+                <div><dt class="text-[12px] uppercase tracking-wide text-muted">Last sign in</dt><dd class="mt-0.5">{{ $user->last_login_at?->format('j M Y, H:i') ?? 'Not recorded' }}</dd></div>
+            </dl>
+            <div class="border-t border-line px-5 py-3">
+                <a href="{{ route('password.change') }}" class="btn-secondary w-full">Change password</a>
             </div>
-
-            <div class="p-4 sm:p-8 bg-white shadow sm:rounded-lg">
-                <div class="max-w-xl">
-                    @include('profile.partials.delete-user-form')
-                </div>
-            </div>
-        </div>
+        </section>
     </div>
-</x-app-layout>
+</x-layouts.app>

@@ -1,6 +1,4 @@
-<x-error-page
-    code="503"
-    title="Service Unavailable"
-    message="The service is temporarily unavailable. Please try again in a few moments."
-    @if(isset($reference)) reference="{{ $reference }}" @endif
-/>
+@extends('errors.layout')
+@section('code', '503')
+@section('title', 'The system is under maintenance')
+@section('message', 'The system is being updated and will be available again shortly. Thank you for your patience.')

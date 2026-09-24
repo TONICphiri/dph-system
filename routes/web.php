@@ -1,241 +1,191 @@
 <?php
 
-use App\Http\Controllers\ActivationController;
-use App\Http\Controllers\AdminLandingSlideController;
-use App\Http\Controllers\AuditLogController;
-use App\Http\Controllers\AdminDashboardController;
+use App\Enums\Permission as P;
+use App\Http\Controllers\Admin;
+use App\Http\Controllers\Auth;
+use App\Http\Controllers\Clinical;
 use App\Http\Controllers\DashboardController;
-use App\Http\Controllers\EnrollmentController;
-use App\Http\Controllers\FacilityController;
-use App\Http\Controllers\FacilitySettingsController;
-use App\Http\Controllers\GlobalSettingsController;
-use App\Http\Controllers\InventoryController;
-use App\Http\Controllers\LabOrderController;
-use App\Http\Controllers\PassportController;
-use App\Http\Controllers\PatientController;
+use App\Http\Controllers\Facility;
+use App\Http\Controllers\NotificationController;
+use App\Http\Controllers\Patients;
+use App\Http\Controllers\Portal;
 use App\Http\Controllers\ProfileController;
-use App\Http\Controllers\ReportsController;
-use App\Http\Controllers\TwoFactorController;
-use App\Http\Controllers\UserController;
-use App\Http\Controllers\VerifyController;
+use App\Http\Controllers\RoadmapController;
 use Illuminate\Support\Facades\Route;
 
-// The /test-* and /test-error-page-* routes below are for local/staging use only.
-// Wrapped so they can never be reached in production.
-if (! app()->environment('production')) {
-    Route::get('/test-server-error', function () {
-        throw new \Exception('Test 500 Error for DHP System');
+/*
+|--------------------------------------------------------------------------
+| Web routes
+|--------------------------------------------------------------------------
+| Each group is protected by the permission it needs. Permission values come
+| from App\Enums\Permission, which is also the source for the role matrix.
+*/
+
+$can = fn (P ...$permissions) => 'permission:'.implode('|', array_map(fn (P $p) => $p->value, $permissions));
+
+Route::redirect('/', '/login');
+
+Route::middleware('guest')->group(function () {
+    Route::get('login', [Auth\LoginController::class, 'create'])->name('login');
+    Route::post('login', [Auth\LoginController::class, 'store'])->middleware('throttle:login')->name('login.store');
+    Route::get('forgot-password', [Auth\PasswordResetController::class, 'request'])->name('password.request');
+    Route::post('forgot-password', [Auth\PasswordResetController::class, 'email'])->middleware('throttle:6,1')->name('password.email');
+    Route::get('reset-password/{token}', [Auth\PasswordResetController::class, 'reset'])->name('password.reset');
+    Route::post('reset-password', [Auth\PasswordResetController::class, 'update'])->name('password.store');
+});
+
+Route::middleware('auth')->group(function () use ($can) {
+    Route::post('logout', [Auth\LoginController::class, 'destroy'])->name('logout');
+    Route::get('change-password', [Auth\ChangePasswordController::class, 'edit'])->name('password.change');
+    Route::put('change-password', [Auth\ChangePasswordController::class, 'update'])->name('password.change.update');
+
+    Route::get('dashboard', DashboardController::class)->name('dashboard');
+    Route::get('profile', [ProfileController::class, 'edit'])->name('profile.edit');
+    Route::put('profile', [ProfileController::class, 'update'])->name('profile.update');
+    Route::get('roadmap', RoadmapController::class)->name('roadmap');
+
+    Route::get('notifications', [NotificationController::class, 'index'])->name('notifications.index');
+    Route::get('notifications/unread', [NotificationController::class, 'unread'])->name('notifications.unread');
+    Route::match(['get', 'post'], 'notifications/{id}/read', [NotificationController::class, 'read'])->name('notifications.read');
+    Route::post('notifications/read-all', [NotificationController::class, 'readAll'])->name('notifications.read-all');
+
+    /* System Administrator */
+    Route::prefix('admin')->name('admin.')->group(function () use ($can) {
+        Route::middleware($can(P::ManageFacilities))->group(function () {
+            Route::resource('facilities', Admin\FacilityController::class)->except('destroy');
+            Route::patch('facilities/{facility}/status', [Admin\FacilityController::class, 'toggleStatus'])->name('facilities.status');
+        });
+        Route::middleware($can(P::ManageFacilityAdministrators))->group(function () {
+            Route::resource('facility-administrators', Admin\FacilityAdministratorController::class)
+                ->parameters(['facility-administrators' => 'user'])->except(['show', 'destroy']);
+            Route::patch('facility-administrators/{user}/status', [Admin\FacilityAdministratorController::class, 'toggleStatus'])->name('facility-administrators.status');
+            Route::post('facility-administrators/{user}/reset-password', [Admin\FacilityAdministratorController::class, 'resetPassword'])->name('facility-administrators.reset-password');
+        });
+        Route::middleware($can(P::ManageSystemSettings))->group(function () {
+            Route::get('settings', [Admin\SettingController::class, 'edit'])->name('settings.edit');
+            Route::put('settings', [Admin\SettingController::class, 'update'])->name('settings.update');
+            Route::resource('districts', Admin\DistrictController::class)->except(['show', 'destroy']);
+        });
+        Route::get('system-health', Admin\SystemHealthController::class)->middleware($can(P::ViewSystemHealth))->name('system-health');
+        Route::resource('vaccines', Admin\VaccineController::class)->except(['show', 'destroy'])->middleware($can(P::ManageVaccineCatalogue));
     });
 
-    Route::get('/test-error-page-403', fn () => view('errors.403'));
-    Route::get('/test-error-page-404', fn () => view('errors.404'));
-    Route::get('/test-error-page-419', fn () => view('errors.419'));
-    Route::get('/test-error-page-429', fn () => view('errors.429'));
-    Route::get('/test-error-page-500', fn () => view('errors.500'));
-    Route::get('/test-error-page-503', fn () => view('errors.503'));
-}
+    Route::get('audit-log', [Admin\AuditLogController::class, 'index'])->middleware($can(P::ViewAuditLogs))->name('audit-log.index');
 
-Route::get('/triage/{patient}', [PatientController::class, 'triage'])
-    ->name('triage')
-    ->middleware(['auth', 'verified']);
+    Route::middleware($can(P::PublishCampaigns))->group(function () {
+        Route::resource('campaigns', Admin\CampaignController::class)->except(['show', 'edit', 'update', 'destroy']);
+        Route::post('campaigns/{campaign}/publish', [Admin\CampaignController::class, 'publish'])->name('campaigns.publish');
+    });
 
-Route::post('/triage/save', [PatientController::class, 'saveTriage'])
-    ->name('triage.save')
-    ->middleware(['auth', 'throttle:60,1']);
+    /* Facility Administrator */
+    Route::prefix('facility')->name('facility.')->group(function () use ($can) {
+        Route::middleware($can(P::ManageStaff))->group(function () {
+            Route::resource('staff', Facility\StaffController::class)->parameters(['staff' => 'user'])->except(['show', 'destroy']);
+            Route::patch('staff/{user}/status', [Facility\StaffController::class, 'toggleStatus'])->name('staff.status');
+            Route::post('staff/{user}/reset-password', [Facility\StaffController::class, 'resetPassword'])->name('staff.reset-password');
+        });
+        Route::middleware($can(P::ManageWards))->group(function () {
+            Route::resource('wards', Facility\WardController::class)->except('destroy');
+            Route::post('wards/{ward}/beds', [Facility\WardController::class, 'addBeds'])->name('wards.beds.store');
+            Route::patch('beds/{bed}', [Facility\WardController::class, 'updateBed'])->name('beds.update');
+        });
+        Route::get('bed-board', [Facility\WardController::class, 'board'])->middleware($can(P::ViewWardStatus))->name('bed-board');
+        Route::middleware($can(P::ManageSchedules))->group(function () {
+            Route::get('schedules', [Facility\ScheduleController::class, 'index'])->name('schedules.index');
+            Route::post('schedules', [Facility\ScheduleController::class, 'store'])->name('schedules.store');
+            Route::delete('schedules/{schedule}', [Facility\ScheduleController::class, 'destroy'])->name('schedules.destroy');
+        });
+        Route::middleware($can(P::ManageFacilityProfile))->group(function () {
+            Route::get('profile', [Facility\FacilityProfileController::class, 'edit'])->name('profile.edit');
+            Route::put('profile', [Facility\FacilityProfileController::class, 'update'])->name('profile.update');
+        });
+        Route::get('reports', Facility\ReportController::class)->middleware($can(P::ViewFacilityReports))->name('reports');
+    });
 
-Route::get('/consultation/{patient}', [PatientController::class, 'consultation'])
-    ->name('consultation')
-    ->middleware(['auth', 'verified']);
+    /* Patients: registration and lookup */
+    Route::middleware($can(P::ViewPatientDemographics))->group(function () {
+        Route::get('patients', [Patients\PatientController::class, 'index'])->name('patients.index');
+        Route::get('patients/scan', [Patients\LookupController::class, 'scan'])->name('patients.scan');
+        Route::post('patients/lookup', [Patients\LookupController::class, 'lookup'])->name('patients.lookup');
+        Route::get('patients/mothers', [Patients\LookupController::class, 'mothers'])->name('patients.mothers');
+    });
+    Route::middleware($can(P::RegisterPatients))->group(function () {
+        Route::get('patients/create', [Patients\PatientController::class, 'create'])->name('patients.create');
+        Route::post('patients', [Patients\PatientController::class, 'store'])->name('patients.store');
+        Route::post('patients/{patient}/portal-account', [Patients\PatientController::class, 'createPortalAccount'])->name('patients.portal-account');
+    });
+    Route::get('patients/{patient}', [Patients\PatientController::class, 'show'])->name('patients.show');
+    Route::get('patients/{patient}/card', [Patients\PatientController::class, 'card'])->name('patients.card');
+    Route::middleware($can(P::EditPatientDemographics))->group(function () {
+        Route::get('patients/{patient}/edit', [Patients\PatientController::class, 'edit'])->name('patients.edit');
+        Route::put('patients/{patient}', [Patients\PatientController::class, 'update'])->name('patients.update');
+    });
 
-Route::post('/consultation/save', [PatientController::class, 'saveConsultation'])
-    ->name('consultation.save')
-    ->middleware(['auth', 'throttle:60,1']);
+    /* Outpatient visits */
+    Route::middleware($can(P::CheckInPatients))->group(function () {
+        Route::post('patients/{patient}/visits', [Clinical\VisitController::class, 'store'])->name('visits.store');
+        Route::patch('visits/{visit}/cancel', [Clinical\VisitController::class, 'cancel'])->name('visits.cancel');
+    });
+    Route::get('queue', [Clinical\VisitController::class, 'queue'])->middleware($can(P::CheckInPatients, P::RecordVitals, P::ConductConsultations))->name('visits.queue');
+    Route::middleware($can(P::RecordVitals))->group(function () {
+        Route::get('visits/{visit}/vitals', [Clinical\VitalController::class, 'create'])->name('vitals.create');
+        Route::post('visits/{visit}/vitals', [Clinical\VitalController::class, 'store'])->name('vitals.store');
+    });
+    Route::middleware($can(P::ConductConsultations))->group(function () {
+        Route::get('visits/{visit}/consultation', [Clinical\ConsultationController::class, 'create'])->name('consultations.create');
+        Route::post('visits/{visit}/consultation', [Clinical\ConsultationController::class, 'store'])->name('consultations.store');
+    });
+    Route::get('visits/{visit}/report', [Clinical\VisitController::class, 'report'])->name('visits.report');
 
-Route::get('/pharmacy/{patient}', [PatientController::class, 'pharmacy'])
-    ->name('pharmacy')
-    ->middleware(['auth', 'verified']);
+    /* Pharmacy */
+    Route::middleware($can(P::DispenseMedication))->group(function () {
+        Route::get('pharmacy', [Clinical\PharmacyController::class, 'index'])->name('pharmacy.index');
+        Route::get('pharmacy/{prescription}', [Clinical\PharmacyController::class, 'show'])->name('pharmacy.show');
+        Route::post('pharmacy/{prescription}/dispense', [Clinical\PharmacyController::class, 'dispense'])->name('pharmacy.dispense');
+        Route::post('pharmacy/{prescription}/cancel', [Clinical\PharmacyController::class, 'cancel'])->name('pharmacy.cancel');
+    });
+    Route::middleware($can(P::ManageMedicineStock))->group(function () {
+        Route::resource('medicines', Clinical\MedicineController::class)->except(['show', 'destroy']);
+    });
 
-Route::post('/pharmacy/dispense', [PatientController::class, 'dispenseMedication'])
-    ->name('pharmacy.dispense')
-    ->middleware(['auth', 'throttle:60,1']);
+    /* Inpatient care */
+    Route::get('admissions', [Clinical\AdmissionController::class, 'index'])->middleware($can(P::ViewWardStatus))->name('admissions.index');
+    Route::get('admissions/{admission}', [Clinical\AdmissionController::class, 'show'])->name('admissions.show');
+    Route::post('admissions/{admission}/bed', [Clinical\AdmissionController::class, 'allocateBed'])->middleware($can(P::AllocateBeds))->name('admissions.allocate-bed');
+    Route::post('admissions/{admission}/vitals', [Clinical\AdmissionController::class, 'storeVitals'])->middleware($can(P::RecordVitals))->name('admissions.vitals');
+    Route::post('admissions/{admission}/notes', [Clinical\AdmissionController::class, 'storeNote'])->middleware($can(P::WriteProgressNotes))->name('admissions.notes');
+    Route::post('admissions/{admission}/medication', [Clinical\AdmissionController::class, 'storeMedication'])->middleware($can(P::RecordMedicationAdministration))->name('admissions.medication');
+    Route::post('admissions/{admission}/prescriptions', [Clinical\AdmissionController::class, 'storePrescription'])->middleware($can(P::PrescribeMedication))->name('admissions.prescriptions');
+    Route::get('admissions/{admission}/discharge', [Clinical\AdmissionController::class, 'dischargeForm'])->middleware($can(P::DischargePatients))->name('admissions.discharge');
+    Route::post('admissions/{admission}/discharge', [Clinical\AdmissionController::class, 'discharge'])->middleware($can(P::DischargePatients))->name('admissions.discharge.store');
+    Route::get('admissions/{admission}/report', [Clinical\AdmissionController::class, 'report'])->name('admissions.report');
 
-Route::get('/admission/{patient}', [PatientController::class, 'admission'])
-    ->name('admission')
-    ->middleware(['auth', 'verified']);
+    /* Vaccinations and reminders */
+    Route::middleware($can(P::RecordVaccinations))->group(function () {
+        Route::get('patients/{patient}/vaccinations/create', [Clinical\VaccinationController::class, 'create'])->name('vaccinations.create');
+        Route::post('patients/{patient}/vaccinations', [Clinical\VaccinationController::class, 'store'])->name('vaccinations.store');
+    });
+    Route::middleware($can(P::ManageReminders))->group(function () {
+        Route::get('patients/{patient}/reminders/create', [Clinical\ReminderController::class, 'create'])->name('reminders.create');
+        Route::post('patients/{patient}/reminders', [Clinical\ReminderController::class, 'store'])->name('reminders.store');
+        Route::patch('reminders/{reminder}/stop', [Clinical\ReminderController::class, 'stop'])->name('reminders.stop');
+    });
 
-Route::post('/admission/create', [PatientController::class, 'createAdmission'])
-    ->name('admission.create')
-    ->middleware(['auth', 'throttle:30,1']);
+    /* Appointments, staff side */
+    Route::middleware($can(P::ApproveAppointments))->group(function () {
+        Route::get('appointments', [Clinical\AppointmentController::class, 'index'])->name('appointments.index');
+        Route::post('appointments/{appointment}/decision', [Clinical\AppointmentController::class, 'decide'])->name('appointments.decide');
+        Route::post('appointments/{appointment}/complete', [Clinical\AppointmentController::class, 'complete'])->name('appointments.complete');
+    });
 
-Route::get('/ward/round/{patient}', [PatientController::class, 'showWardRoundForm'])
-    ->name('ward.round.form')
-    ->middleware(['auth', 'verified']);
-
-Route::post('/ward/round', [PatientController::class, 'wardRound'])
-    ->name('ward.round')
-    ->middleware(['auth', 'throttle:60,1']);
-
-Route::get('/ward/{patient}', [PatientController::class, 'ward'])
-    ->name('ward')
-    ->middleware(['auth', 'verified']);
-
-Route::post('/ward/medication-admin', [PatientController::class, 'administerMedication'])
-    ->name('ward.medication-admin')
-    ->middleware(['auth', 'throttle:60,1']);
-
-Route::post('/ward/progress-note', [PatientController::class, 'saveProgressNote'])
-    ->name('ward.progress-note')
-    ->middleware(['auth', 'throttle:60,1']);
-
-Route::get('/discharge/{patient}', [PatientController::class, 'showDischargeForm'])
-    ->name('discharge')
-    ->middleware(['auth', 'verified']);
-
-Route::post('/discharge/{patient}', [PatientController::class, 'dischargePatient'])
-    ->name('discharge.store')
-    ->middleware(['auth', 'throttle:30,1']);
-
-Route::get('/sync/status', [PatientController::class, 'syncStatus'])
-    ->name('sync.status')
-    ->middleware(['auth']);
-
-Route::post('/sync/upload', [PatientController::class, 'syncUpload'])
-    ->name('sync.upload')
-    ->middleware(['auth']);
-
-Route::post('/sync/retry/{id}', [PatientController::class, 'syncRetry'])
-    ->name('sync.retry')
-    ->middleware(['auth']);
-
-Route::get('/', function () {
-    if (auth()->check()) {
-        return redirect('/dashboard');
-    }
-
-    return view('landing');
-})->name('landing');
-
-// Shown by the service worker when the server cannot be reached at all.
-Route::get('/offline', fn () => view('offline'))->name('offline');
-
-Route::get('/dashboard', DashboardController::class)
-    ->middleware(['auth', 'verified', 'must.change_password'])->name('dashboard');
-
-// Public credential verification (minimal data only, FR-E1). No login required.
-Route::get('/verify/scan', [VerifyController::class, 'scan'])->name('verify.scan');
-Route::post('/verify/scan', [VerifyController::class, 'check'])->name('verify.check')->middleware('throttle:60,1');
-
-Route::middleware('auth')->group(function () {
-    // First-login activation (FR-A5): allowed even with must_change_password flag.
-    Route::get('/activate/password', [ActivationController::class, 'showPassword'])->name('activate.password');
-    Route::post('/activate/password', [ActivationController::class, 'storePassword'])->name('activate.password.store');
-    Route::get('/activate/{user}', [ActivationController::class, 'showSigned'])->name('activate.signed');
-
-    // Two-factor setup + challenge (required for patient medical details).
-    Route::get('/settings/2fa', [TwoFactorController::class, 'settings'])->name('settings.2fa');
-    Route::post('/settings/2fa/confirm', [TwoFactorController::class, 'confirm'])->name('settings.2fa.confirm');
-    Route::post('/settings/2fa/disable', [TwoFactorController::class, 'disable'])->name('settings.2fa.disable');
-    Route::get('/settings/2fa/recovery', [TwoFactorController::class, 'recovery'])->name('settings.2fa.recovery');
-    Route::get('/two-factor-challenge', [TwoFactorController::class, 'challenge'])->name('two-factor.challenge');
-    Route::post('/two-factor-challenge', [TwoFactorController::class, 'verify'])->name('two-factor.verify');
+    /* Patient portal */
+    Route::prefix('my')->name('portal.')->middleware($can(P::UsePatientPortal))->group(function () {
+        Route::get('records', [Portal\RecordController::class, 'index'])->name('records');
+        Route::get('card', [Portal\RecordController::class, 'card'])->name('card');
+        Route::get('appointments', [Portal\AppointmentController::class, 'index'])->name('appointments.index');
+        Route::get('appointments/book', [Portal\AppointmentController::class, 'create'])->name('appointments.create');
+        Route::post('appointments', [Portal\AppointmentController::class, 'store'])->name('appointments.store');
+        Route::patch('appointments/{appointment}/cancel', [Portal\AppointmentController::class, 'cancel'])->name('appointments.cancel');
+        Route::post('appointments/{appointment}/review', [Portal\AppointmentController::class, 'review'])->name('appointments.review');
+    });
 });
-
-Route::middleware(['auth', 'must.change_password'])->group(function () {
-    Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
-    Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
-    Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
-
-    // Inventory Management Routes
-    Route::get('/inventory', [InventoryController::class, 'index'])->name('inventory.index');
-    Route::get('/inventory/create', [InventoryController::class, 'create'])->name('inventory.create');
-    Route::post('/inventory', [InventoryController::class, 'store'])->name('inventory.store');
-    Route::get('/inventory/{item}/edit', [InventoryController::class, 'edit'])->name('inventory.edit');
-    Route::put('/inventory/{item}', [InventoryController::class, 'update'])->name('inventory.update');
-    Route::post('/inventory/{item}/restock', [InventoryController::class, 'restock'])->name('inventory.restock');
-
-    // Admin Management Routes
-    Route::resource('facilities', FacilityController::class)->except(['show']);
-    Route::resource('users', UserController::class)->except(['show']);
-    Route::post('/users/{user}/toggle-status', [UserController::class, 'toggleStatus'])->name('users.toggle-status');
-
-    // System Settings Routes: facility profile (Facility Admin, own
-    // facility) and national passport configuration (National Admin).
-    Route::get('/settings/facility', [FacilitySettingsController::class, 'edit'])->name('settings.facility.edit');
-    Route::put('/settings/facility', [FacilitySettingsController::class, 'update'])->name('settings.facility.update');
-    Route::get('/settings/global', [GlobalSettingsController::class, 'edit'])->name('settings.global.edit');
-    Route::put('/settings/global', [GlobalSettingsController::class, 'update'])->name('settings.global.update');
-
-    // Audit Logs Routes
-    Route::get('/audit-logs', [AuditLogController::class, 'index'])->name('audit-logs.index');
-
-    // National administration home (National Admins only, enforced in controller)
-    Route::get('/admin/dashboard', AdminDashboardController::class)->name('admin.dashboard');
-
-    // Reports Routes
-    Route::get('/reports', [ReportsController::class, 'index'])->name('reports.index');
-    Route::get('/reports/census', [ReportsController::class, 'census'])->name('reports.census');
-    Route::get('/reports/opd-visits', [ReportsController::class, 'opdVisits'])->name('reports.opd-visits');
-    Route::get('/reports/admissions', [ReportsController::class, 'admissions'])->name('reports.admissions');
-    Route::get('/reports/dispensed-meds', [ReportsController::class, 'dispensedMeds'])->name('reports.dispensed-meds');
-    Route::get('/reports/inventory', [ReportsController::class, 'inventory'])->name('reports.inventory');
-    Route::get('/reports/medical-clearance', [ReportsController::class, 'medicalClearance'])->name('reports.medical-clearance');
-    Route::post('/reports/medical-clearance/pdf', [ReportsController::class, 'medicalClearancePdf'])->name('reports.medical-clearance.pdf');
-
-    // Patient Management Routes
-    Route::resource('patients', PatientController::class)->middleware('throttle:120,1');
-    Route::get('/api/patients/search-by-national-id', [PatientController::class, 'searchByNationalId'])->name('patients.search.national-id')->middleware('throttle:120,1');
-    Route::get('/api/patients/search-by-dhp-id', [PatientController::class, 'searchByDhpId'])->name('patients.search.dhp-id')->middleware('throttle:120,1');
-    Route::get('/patients/{patient}/qr-code', [PatientController::class, 'showQrCode'])->name('patients.qr-code');
-    Route::get('/api/patients/{patient}/qr-code', [PatientController::class, 'getQrCode'])->name('patients.qr-code.api');
-
-    /**
-     * Lab Orders Routes
-     *
-     * NOTE: '/lab/orders/patient/{patient}' and '/lab/orders/create/{patient}' MUST be
-     * registered before '/lab/orders/{labOrder}'. Laravel matches routes top to bottom,
-     * and '{labOrder}' is a wildcard that would otherwise swallow any single-segment
-     * path (e.g. a request to /lab/orders/patient/5 would incorrectly hit show()
-     * instead of patientOrders(), trying to bind "patient" as a LabOrder and failing).
-     */
-    Route::get('/lab/orders', [LabOrderController::class, 'index'])->name('lab.orders.index');
-    Route::get('/lab/orders/create/{patient}', [LabOrderController::class, 'create'])->name('lab.orders.create');
-    Route::post('/lab/orders', [LabOrderController::class, 'store'])->name('lab.orders.store');
-    Route::get('/lab/orders/patient/{patient}', [LabOrderController::class, 'patientOrders'])->name('lab.orders.patient');
-    Route::get('/lab/orders/{labOrder}', [LabOrderController::class, 'show'])->name('lab.orders.show');
-    Route::post('/lab/orders/{labOrder}/results', [LabOrderController::class, 'updateResults'])->name('lab.orders.results');
-
-    // ---- User Catalogue: facility enrollment (FR-A1..A3, FR-D1/D3, §6.3) ----
-    Route::get('/enroll/create', [EnrollmentController::class, 'create'])->name('enroll.create');
-    Route::post('/enroll', [EnrollmentController::class, 'store'])->name('enroll.store');
-    Route::get('/enroll/pending', [EnrollmentController::class, 'pending'])->name('enroll.pending');
-    Route::post('/enroll/check-nin', [EnrollmentController::class, 'checkNin'])->name('enroll.check-nin');
-    Route::get('/facility/approvals', [EnrollmentController::class, 'pending'])->name('facility.approvals');
-    Route::post('/facility/approvals/{user}/approve', [EnrollmentController::class, 'approve'])->name('facility.approvals.approve');
-    Route::post('/facility/approvals/{user}/reject', [EnrollmentController::class, 'reject'])->name('facility.approvals.reject');
-    Route::get('/facility/identity-services', [EnrollmentController::class, 'identityServices'])->name('facility.identity-services');
-    Route::post('/facility/identity-services/reset', [EnrollmentController::class, 'identityReset'])->name('facility.identity-services.reset');
-    Route::post('/facility/users/{user}/link-file', [EnrollmentController::class, 'linkFile'])->name('facility.users.link-file');
-
-    // ---- Patient passport: QR credential, appointments, consent (FR-B2..B5, FR-C1) ----
-    Route::get('/patient/credential', [PassportController::class, 'credential'])->name('patient.credential')->middleware('twofactor');
-    Route::post('/patient/credential/issue', [PassportController::class, 'issueCredential'])->name('patient.credential.issue');
-    Route::post('/patient/credential/{id}/revoke', [PassportController::class, 'revokeCredential'])->name('patient.credential.revoke');
-    // Own medical details: linked file only + enforced 2FA (FR-B1).
-    Route::get('/patient/records', [PassportController::class, 'records'])->name('patient.records')->middleware('twofactor');
-    Route::get('/patient/appointments', [PassportController::class, 'appointments'])->name('patient.appointments');
-    Route::post('/patient/appointments', [PassportController::class, 'storeAppointment'])->name('patient.appointments.store');
-    Route::get('/patient/consents', [PassportController::class, 'consentIndex'])->name('patient.consents');
-    Route::post('/patient/consents', [PassportController::class, 'consentStore'])->name('patient.consents.store');
-    Route::post('/patient/consents/{id}/revoke', [PassportController::class, 'consentRevoke'])->name('patient.consents.revoke');
-
-    // ---- Landing slideshow (main/national admin only, NOT facility admin) ----
-    Route::get('/admin/landing-slides', [AdminLandingSlideController::class, 'index'])->name('admin.landing-slides.index');
-    Route::post('/admin/landing-slides', [AdminLandingSlideController::class, 'store'])->name('admin.landing-slides.store');
-    Route::put('/admin/landing-slides/{slide}', [AdminLandingSlideController::class, 'update'])->name('admin.landing-slides.update');
-    Route::delete('/admin/landing-slides/{slide}', [AdminLandingSlideController::class, 'destroy'])->name('admin.landing-slides.destroy');
-    Route::post('/admin/landing-slides/interval', [AdminLandingSlideController::class, 'updateInterval'])->name('admin.landing-slides.interval');
-
-    // ---- Verifier history (FR-E2) ----    Route::get('/verify/history', [VerifyController::class, 'history'])->name('verify.history');
-});
-
-require __DIR__.'/auth.php';

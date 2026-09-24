@@ -1,63 +1,48 @@
-<x-app-layout>
-    <x-slot name="header">
-        <div class="flex flex-col gap-1">
-            <p class="text-xs font-bold uppercase tracking-widest text-dhp-200">National administration · Hospitals</p>
-            <h2 class="text-2xl font-extrabold leading-tight">Facility management</h2>
-            <p class="text-sm text-dhp-100">{{ $facilities->total() }} registered facilities nationwide.</p>
-        </div>
-    </x-slot>
+<x-layouts.app title="Facilities">
+    <x-page-header title="Facilities" description="Hospitals and health centres that use the system. Each facility is run by its own Facility Administrator.">
+        <x-slot:actions>
+            <a href="{{ route('admin.facilities.create') }}" class="btn-primary"><x-icon name="plus" class="h-4 w-4" /> Register facility</a>
+        </x-slot:actions>
+    </x-page-header>
 
-    <div class="mb-4 grid grid-cols-1 gap-4 sm:grid-cols-3">
-        <div class="dhp-stat">
-            <p class="dhp-stat-label">Facility Summary</p>
-            <p class="dhp-stat-value">{{ $totalFacilityStaff ?? 0 }}</p>
-            <p class="mt-1 text-xs text-slate-500">{{ $totalFacilityStaff ?? 0 }} Total Staff</p>
-        </div>
-        <div class="dhp-stat">
-            <p class="dhp-stat-label">Active Staff</p>
-            <p class="mt-1 text-3xl font-extrabold tabular-nums text-emerald-700">{{ $activeFacilityStaff ?? 0 }}</p>
-            <p class="mt-1 text-xs text-slate-500">{{ $activeFacilityStaff ?? 0 }} Active Staff</p>
-        </div>
-        <x-dhp-stat label="Facilities" :value="$facilities->total()" hint="Registered" />
-    </div>
+    <section class="panel">
+        <x-search-bar placeholder="Facility name or code">
+            <select name="district" class="input md:w-48" aria-label="District">
+                <option value="">All districts</option>
+                @foreach ($districts as $district)
+                    <option value="{{ $district->id }}" @selected(request('district') == $district->id)>{{ $district->name }}</option>
+                @endforeach
+            </select>
+            <select name="status" class="input md:w-40" aria-label="Status">
+                <option value="">All statuses</option>
+                @foreach ($statuses as $value => $label)
+                    <option value="{{ $value }}" @selected(request('status') === $value)>{{ $label }}</option>
+                @endforeach
+            </select>
+        </x-search-bar>
 
-    <div class="mb-4 flex justify-end">
-        <a href="{{ route('facilities.create') }}" class="btn-primary">
-            <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" /></svg>
-            Add facility
-        </a>
-    </div>
-
-    @if($facilities->count())
-        <div class="dhp-table-wrap">
-            <table class="dhp-table">
-                <thead><tr><th>Name</th><th>Code</th><th>Type</th><th>District</th><th>Status</th><th><span class="sr-only">Actions</span></th></tr></thead>
-                <tbody>
-                    @foreach($facilities as $facility)
-                        <tr>
-                            <td class="font-semibold">{{ $facility->name }}</td>
-                            <td class="dhp-mono">{{ $facility->facility_code }}</td>
-                            <td>{{ $facility->facility_type }}</td>
-                            <td>{{ $facility->district }}</td>
-                            <td><span class="dhp-badge {{ $facility->status === 'active' ? 'badge-active' : 'badge-neutral' }}">{{ $facility->status }}</span></td>
-                            <td class="whitespace-nowrap">
-                                <a href="{{ route('facilities.edit', $facility) }}" class="btn-warning !min-h-[40px] !px-3 !py-1.5 !text-xs">Edit</a>
-                                <form action="{{ route('facilities.destroy', $facility) }}" method="POST" class="inline" onsubmit="return confirm('Delete facility {{ addslashes($facility->name) }}? This cannot be undone.')">
-                                    @csrf
-                                    @method('DELETE')
-                                    <button type="submit" class="btn-danger !min-h-[40px] !px-3 !py-1.5 !text-xs">Delete</button>
-                                </form>
-                            </td>
-                        </tr>
-                    @endforeach
-                </tbody>
-            </table>
-        </div>
-        <div class="mt-4">{{ $facilities->links() }}</div>
-    @else
-        <div class="dhp-empty">
-            <p class="font-bold text-dhp-900">No facilities found</p>
-            <a href="{{ route('facilities.create') }}" class="btn-primary mt-3">Register the first facility</a>
-        </div>
-    @endif
-</x-app-layout>
+        @if ($facilities->isEmpty())
+            <x-empty title="No facilities match your search" icon="building" />
+        @else
+            <div class="overflow-x-auto">
+                <table class="table">
+                    <thead><tr><th>Facility</th><th>Type</th><th>District</th><th class="text-right">Staff</th><th class="text-right">Patients</th><th>Status</th><th></th></tr></thead>
+                    <tbody>
+                        @foreach ($facilities as $facility)
+                            <tr>
+                                <td><a href="{{ route('admin.facilities.show', $facility) }}" class="font-medium hover:text-brand-700 hover:underline">{{ $facility->name }}</a><p class="mono text-muted">{{ $facility->code }}</p></td>
+                                <td>{{ $facility->type }}<p class="text-[13px] text-muted">{{ $facility->ownership }}</p></td>
+                                <td>{{ $facility->district->name }}</td>
+                                <td class="text-right tabular-nums">{{ $facility->users_count }}</td>
+                                <td class="text-right tabular-nums">{{ $facility->patients_count }}</td>
+                                <td><x-status :value="$facility->status" /></td>
+                                <td class="whitespace-nowrap text-right"><a href="{{ route('admin.facilities.edit', $facility) }}" class="link text-sm">Edit</a></td>
+                            </tr>
+                        @endforeach
+                    </tbody>
+                </table>
+            </div>
+            {{ $facilities->links() }}
+        @endif
+    </section>
+</x-layouts.app>

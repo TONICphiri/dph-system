@@ -2,105 +2,115 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Factories\HasFactory;
+use App\Enums\AdmissionStatus;
+use App\Enums\DischargeOutcome;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Admission extends Model
 {
-    use HasFactory;
-
     protected $fillable = [
-        'encounter_id',
         'patient_id',
+        'visit_id',
         'facility_id',
-        'ward_name',
-        'bed_number',
-        'admission_type',
-        'admission_reason',
-        'admitted_by_user_id',
-        'admitted_at',
-        'discharge_summary',
-        'discharge_status',
-        'discharged_by_user_id',
-        'discharged_at',
-        'follow_up_instructions',
+        'ward_id',
+        'bed_id',
+        'admitted_by',
+        'allocated_by',
+        'discharged_by',
         'status',
+        'admission_reason',
+        'preferred_ward_type',
+        'admitted_at',
+        'bed_allocated_at',
+        'discharged_at',
+        'discharge_outcome',
+        'discharge_summary',
+        'follow_up_instructions',
     ];
 
     protected function casts(): array
     {
         return [
+            'status' => AdmissionStatus::class,
+            'discharge_outcome' => DischargeOutcome::class,
             'admitted_at' => 'datetime',
+            'bed_allocated_at' => 'datetime',
             'discharged_at' => 'datetime',
         ];
     }
 
-    /**
-     * Get the encounter for this admission
-     */
-    public function encounter(): BelongsTo
-    {
-        return $this->belongsTo(Encounter::class);
-    }
-
-    /**
-     * Get the patient for this admission
-     */
     public function patient(): BelongsTo
     {
         return $this->belongsTo(Patient::class);
     }
 
-    /**
-     * Get the facility where admitted
-     */
+    public function visit(): BelongsTo
+    {
+        return $this->belongsTo(Visit::class);
+    }
+
     public function facility(): BelongsTo
     {
         return $this->belongsTo(Facility::class);
     }
 
-    /**
-     * Get the admitting clinician
-     */
-    public function admittedByUser(): BelongsTo
+    public function ward(): BelongsTo
     {
-        return $this->belongsTo(User::class, 'admitted_by_user_id');
+        return $this->belongsTo(Ward::class);
     }
 
-    /**
-     * Get the discharging clinician
-     */
-    public function dischargedByUser(): BelongsTo
+    public function bed(): BelongsTo
     {
-        return $this->belongsTo(User::class, 'discharged_by_user_id');
+        return $this->belongsTo(Bed::class);
     }
 
-    /**
-     * Get medication administrations during this admission
-     */
-    public function medicationAdministrations(): HasMany
+    public function admittedBy(): BelongsTo
     {
-        return $this->hasMany(MedicationAdministration::class)->orderByDesc('administered_at');
+        return $this->belongsTo(User::class, 'admitted_by');
     }
 
-    /**
-     * Get progress notes recorded during this admission
-     */
+    public function allocatedBy(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'allocated_by');
+    }
+
+    public function dischargedBy(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'discharged_by');
+    }
+
+    public function vitals(): HasMany
+    {
+        return $this->hasMany(Vital::class)->latest('recorded_at');
+    }
+
     public function progressNotes(): HasMany
     {
-        return $this->hasMany(ProgressNote::class)->orderByDesc('recorded_at');
+        return $this->hasMany(ProgressNote::class)->latest();
     }
 
-    /**
-     * Calculate length of stay in days
-     */
-    public function getLengthOfStayAttribute(): ?int
+    public function prescriptions(): HasMany
     {
-        if (!$this->discharged_at) {
-            return null;
-        }
-        return $this->admitted_at->diffInDays($this->discharged_at);
+        return $this->hasMany(Prescription::class)->latest();
+    }
+
+    public function medicationAdministrations(): HasMany
+    {
+        return $this->hasMany(MedicationAdministration::class)->latest('given_at');
+    }
+
+    public function lengthOfStayInDays(): int
+    {
+        $end = $this->discharged_at ?? now();
+
+        return max(1, (int) ceil($this->admitted_at->diffInHours($end) / 24));
+    }
+
+    public function scopeCurrent(Builder $query): Builder
+    {
+        return $query->whereIn('status', [AdmissionStatus::AwaitingBed, AdmissionStatus::Admitted]);
     }
 }

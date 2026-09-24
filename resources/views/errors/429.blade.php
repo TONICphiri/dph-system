@@ -1,6 +1,4 @@
-<x-error-page
-    code="429"
-    title="Too Many Requests"
-    message="You have made too many requests to this page. Please try again later."
-    @if(isset($reference)) reference="{{ $reference }}" @endif
-/>
+@extends('errors.layout')
+@section('code', '429')
+@section('title', 'Too many attempts')
+@section('message', 'Too many requests were sent in a short time. Please wait a minute and try again.')

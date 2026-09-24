@@ -1,22 +1,23 @@
 {
     "$schema": "https://getcomposer.org/schema.json",
-    "name": "laravel/laravel",
+    "name": "mubas/digital-health-passport",
     "type": "project",
-    "description": "The skeleton application for the Laravel framework.",
-    "keywords": ["laravel", "framework"],
+    "description": "Digital Health Passport System for health facilities in Malawi.",
+    "keywords": [
+        "health",
+        "passport",
+        "laravel"
+    ],
     "license": "MIT",
     "require": {
         "php": "^8.2",
-        "barryvdh/laravel-dompdf": "^3.1",
         "laravel/framework": "^12.0",
         "laravel/tinker": "^2.10.1",
-        "pragmarx/google2fa": "*",
-        "simplesoftwareio/simple-qrcode": "^4.2",
-        "spatie/laravel-permission": "^6.25"
+        "spatie/laravel-permission": "^6.0",
+        "simplesoftwareio/simple-qrcode": "^4.2"
     },
     "require-dev": {
         "fakerphp/faker": "^1.23",
-        "laravel/breeze": "^2.4",
         "laravel/pail": "^1.2.2",
         "laravel/pint": "^1.24",
         "laravel/sail": "^1.41",
@@ -84,6 +85,9 @@
         "allow-plugins": {
             "pestphp/pest-plugin": true,
             "php-http/discovery": true
+        },
+        "platform": {
+            "php": "8.2.12"
         }
     },
     "minimum-stability": "stable",

@@ -2,91 +2,37 @@
 
 namespace App\Services;
 
+use App\Models\Patient;
+use SimpleSoftwareIO\QrCode\Generator;
+
+/**
+ * Builds the QR code printed on the health passport card. The code holds
+ * only a random token, never personal or medical information, so a lost
+ * card reveals nothing without access to the system.
+ */
 class QrCodeService
 {
-    /**
-     * Generate QR code data URL for patient DHP ID
-     */
-    public static function generateQrCode(string $dhpId): string
+    public const PREFIX = 'DHP:';
+
+    public function forPatient(Patient $patient, int $size = 160): string
     {
-        try {
-            // Using simple-qrcode library
-            return \SimpleSoftwareIO\QrCode\Facades\QrCode::size(300)
-                ->margin(10)
-                ->generate($dhpId);
-        } catch (\Exception $e) {
-            \Log::error("QR Code generation failed", [
-                "error" => $e->getMessage(),
-                "dhp_id" => $dhpId,
-            ]);
-            throw $e;
-        }
+        $svg = (string) (new Generator)
+            ->format('svg')
+            ->size($size)
+            ->margin(0)
+            ->errorCorrection('M')
+            ->generate(self::PREFIX.$patient->qr_token);
+
+        return preg_replace('/^<\?xml[^>]*\?>\s*/', '', $svg);
     }
 
     /**
-     * Generate QR code SVG for patient DHP ID
+     * Returns the token from a scanned value, or null if it is not ours.
      */
-    public static function generateQrCodeSvg(string $dhpId): string
+    public function tokenFromScan(string $value): ?string
     {
-        try {
-            return \SimpleSoftwareIO\QrCode\Facades\QrCode::size(300)
-                ->margin(10)
-                ->format("svg")
-                ->generate($dhpId);
-        } catch (\Exception $e) {
-            \Log::error("QR Code SVG generation failed", [
-                "error" => $e->getMessage(),
-                "dhp_id" => $dhpId,
-            ]);
-            throw $e;
-        }
-    }
+        $value = trim($value);
 
-    /**
-     * Generate QR code with additional patient info as JSON
-     */
-    public static function generateQrCodeWithData(string $dhpId, array $data = []): string
-    {
-        $qrData = [
-            "dhp_id" => $dhpId,
-            "generated_at" => now()->toIso8601String(),
-            ...$data,
-        ];
-
-        try {
-            return \SimpleSoftwareIO\QrCode\Facades\QrCode::size(400)
-                ->margin(15)
-                ->generate(json_encode($qrData));
-        } catch (\Exception $e) {
-            \Log::error("QR Code with data generation failed", [
-                "error" => $e->getMessage(),
-                "dhp_id" => $dhpId,
-            ]);
-            throw $e;
-        }
-    }
-
-    /**
-     * Parse QR code data
-     */
-    public static function parseQrCodeData(string $qrData): array
-    {
-        try {
-            $decoded = json_decode($qrData, true);
-            
-            // If JSON, return decoded
-            if (is_array($decoded)) {
-                return $decoded;
-            }
-
-            // If plain string, assume it''s the DHP ID
-            return ["dhp_id" => $qrData];
-        } catch (\Exception $e) {
-            \Log::error("QR Code parsing failed", [
-                "error" => $e->getMessage(),
-            ]);
-            
-            return ["dhp_id" => $qrData];
-        }
+        return str_starts_with($value, self::PREFIX) ? substr($value, strlen(self::PREFIX)) : null;
     }
 }

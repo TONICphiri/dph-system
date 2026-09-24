@@ -2,9 +2,13 @@
 
 namespace App\Models;
 
+use App\Enums\FacilityStatus;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasManyThrough;
 
 class Facility extends Model
 {
@@ -12,78 +16,75 @@ class Facility extends Model
 
     protected $fillable = [
         'name',
-        'facility_code',
-        'facility_type',
-        'district',
-        'region',
-        'address',
-        'phone_number',
-        'secondary_phone',
+        'code',
+        'type',
+        'ownership',
+        'district_id',
+        'physical_address',
+        'phone',
         'email',
-        'website',
-        'working_hours',
-        'map_url',
-        'logo_path',
-        'services',
-        'departments',
         'status',
-        'synced_at',
     ];
 
     protected function casts(): array
     {
         return [
-            'synced_at' => 'datetime',
-            'services' => 'array',
-            'departments' => 'array',
+            'status' => FacilityStatus::class,
         ];
     }
 
-    /**
-     * Get all users working at this facility
-     */
+    public function district(): BelongsTo
+    {
+        return $this->belongsTo(District::class);
+    }
+
     public function users(): HasMany
     {
         return $this->hasMany(User::class);
     }
 
-    /**
-     * Get all patients registered at this facility
-     */
-    public function patients(): HasMany
+    public function wards(): HasMany
     {
-        return $this->hasMany(Patient::class, 'registered_by_facility_id');
+        return $this->hasMany(Ward::class);
     }
 
-    /**
-     * Get all encounters at this facility
-     */
-    public function encounters(): HasMany
+    public function beds(): HasManyThrough
     {
-        return $this->hasMany(Encounter::class);
+        return $this->hasManyThrough(Bed::class, Ward::class);
     }
 
-    /**
-     * Get all admissions at this facility
-     */
+    public function visits(): HasMany
+    {
+        return $this->hasMany(Visit::class);
+    }
+
     public function admissions(): HasMany
     {
         return $this->hasMany(Admission::class);
     }
 
-    /**
-     * Get all inventory records for this facility
-     */
-    public function inventory(): HasMany
+    public function medicines(): HasMany
     {
-        return $this->hasMany(Inventory::class);
+        return $this->hasMany(Medicine::class);
     }
 
-    /**
-     * Get all sync queue records for this facility
-     */
-    public function syncQueue(): HasMany
+    public function patients(): HasMany
     {
-        return $this->hasMany(SyncQueue::class);
+        return $this->hasMany(Patient::class, 'registered_facility_id');
+    }
+
+    public function schedules(): HasMany
+    {
+        return $this->hasMany(DoctorSchedule::class);
+    }
+
+    public function isActive(): bool
+    {
+        return $this->status === FacilityStatus::Active;
+    }
+
+    public function scopeActive(Builder $query): Builder
+    {
+        return $query->where('status', FacilityStatus::Active);
     }
 }

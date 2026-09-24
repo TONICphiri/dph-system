@@ -2,69 +2,65 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Factories\HasFactory;
+use App\Enums\PrescriptionStatus;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Prescription extends Model
 {
-    use HasFactory;
-
     protected $fillable = [
-        'encounter_id',
         'patient_id',
-        'prescribed_by_user_id',
-        'medication_name',
-        'medication_code',
-        'dose',
-        'frequency',
-        'quantity',
-        'duration',
-        'instructions',
+        'facility_id',
+        'visit_id',
+        'admission_id',
+        'prescribed_by',
         'status',
-        'dispensed_by_user_id',
-        'dispensed_at',
         'notes',
-        'prescribed_at',
+        'dispensed_by',
+        'dispensed_at',
     ];
 
     protected function casts(): array
     {
         return [
-            'prescribed_at' => 'datetime',
+            'status' => PrescriptionStatus::class,
             'dispensed_at' => 'datetime',
         ];
     }
 
-    /**
-     * Get the encounter for this prescription
-     */
-    public function encounter(): BelongsTo
-    {
-        return $this->belongsTo(Encounter::class);
-    }
-
-    /**
-     * Get the patient for this prescription
-     */
     public function patient(): BelongsTo
     {
         return $this->belongsTo(Patient::class);
     }
 
-    /**
-     * Get the prescribing clinician
-     */
-    public function prescribedByUser(): BelongsTo
+    public function facility(): BelongsTo
     {
-        return $this->belongsTo(User::class, 'prescribed_by_user_id');
+        return $this->belongsTo(Facility::class);
     }
 
-    /**
-     * Get the dispensing pharmacist
-     */
-    public function dispensedByUser(): BelongsTo
+    public function visit(): BelongsTo
     {
-        return $this->belongsTo(User::class, 'dispensed_by_user_id');
+        return $this->belongsTo(Visit::class);
+    }
+
+    public function admission(): BelongsTo
+    {
+        return $this->belongsTo(Admission::class);
+    }
+
+    public function items(): HasMany
+    {
+        return $this->hasMany(PrescriptionItem::class);
+    }
+
+    public function prescriber(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'prescribed_by');
+    }
+
+    public function dispenser(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'dispensed_by');
     }
 }

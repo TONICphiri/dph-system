@@ -1,6 +1,4 @@
-<x-error-page
-    code="404"
-    title="Page Not Found"
-    message="The page you are looking for could not be found. It may have been moved, removed, or the address may be incorrect."
-    @if(isset($reference)) reference="{{ $reference }}" @endif
-/>
+@extends('errors.layout')
+@section('code', '404')
+@section('title', 'Page not found')
+@section('message', 'The page or record you are looking for does not exist or may have been removed. Check the address and try again.')

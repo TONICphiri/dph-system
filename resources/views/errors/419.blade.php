@@ -1,6 +1,4 @@
-<x-error-page
-    code="419"
-    title="Page Expired"
-    message="The page you are looking for has expired. Please refresh the page and try again."
-    @if(isset($reference)) reference="{{ $reference }}" @endif
-/>
+@extends('errors.layout')
+@section('code', '419')
+@section('title', 'Your session has expired')
+@section('message', 'For your security, the page expired after a period without activity. Go back, refresh the page and try again.')

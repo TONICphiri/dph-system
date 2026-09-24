@@ -1,11 +1,21 @@
 <?php
 
+use App\Exceptions\WorkflowException;
+use App\Http\Middleware\EnsureAccountIsActive;
+use App\Http\Middleware\EnsurePasswordIsChanged;
+use Illuminate\Auth\Access\AuthorizationException;
+use Illuminate\Auth\AuthenticationException;
+use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
+use Illuminate\Http\Request;
+use Illuminate\Session\TokenMismatchException;
+use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
-use App\Services\ErrorReferenceService;
-use App\Http\Middleware\SecurityHeaders;
+use Spatie\Permission\Middleware\PermissionMiddleware;
+use Spatie\Permission\Middleware\RoleMiddleware;
+use Spatie\Permission\Middleware\RoleOrPermissionMiddleware;
 use Symfony\Component\HttpKernel\Exception\HttpExceptionInterface;
 
 return Application::configure(basePath: dirname(__DIR__))
@@ -14,75 +24,64 @@ return Application::configure(basePath: dirname(__DIR__))
         commands: __DIR__.'/../routes/console.php',
         health: '/up',
     )
-    ->withMiddleware(function (Middleware $middleware) {
-        // Applies security headers (CSP, HSTS, X-Frame-Options, etc.) to every response.
-        $middleware->append(SecurityHeaders::class);
-
-        // FR-A5: forced first-login password set (system-description2.md §5.4).
-        $middleware->alias([
-            'must.change_password' => \App\Http\Middleware\MustChangePassword::class,
-            // Patients must pass 2FA before any medical-detail page.
-            'twofactor' => \App\Http\Middleware\RequireTwoFactor::class,
+    ->withMiddleware(function (Middleware $middleware): void {
+        $middleware->web(append: [
+            EnsureAccountIsActive::class,
+            EnsurePasswordIsChanged::class,
         ]);
+
+        $middleware->alias([
+            'role' => RoleMiddleware::class,
+            'permission' => PermissionMiddleware::class,
+            'role_or_permission' => RoleOrPermissionMiddleware::class,
+        ]);
+
+        $middleware->redirectGuestsTo(fn () => route('login'));
+        $middleware->redirectUsersTo(fn () => route('dashboard'));
     })
-    ->withExceptions(function (Exceptions $exceptions) {
-        $exceptions->render(function (\Throwable $exception, $request) {
-            if ($exception instanceof \Illuminate\Auth\AuthenticationException
-                || $exception instanceof ValidationException) {
+    ->withExceptions(function (Exceptions $exceptions): void {
+        // Business rule messages are expected and shown to the user, not logged.
+        $exceptions->dontReport(WorkflowException::class);
+
+        // Every logged error carries a short reference number. The same number
+        // is shown to the user so support staff can find the entry in the log.
+        $exceptions->context(fn () => ['reference' => app()->has('error.reference')
+            ? app('error.reference')
+            : tap(strtoupper(Str::random(8)), fn ($reference) => app()->instance('error.reference', $reference))]);
+
+        // An expired form session sends the user back with a clear message
+        // instead of the default "Page Expired" screen.
+        $exceptions->render(function (TokenMismatchException $exception, Request $request) {
+            if ($request->expectsJson()) {
                 return null;
             }
 
-            $errorService = app(ErrorReferenceService::class);
-            $referenceId = $errorService->logError($exception);
+            return back()->withInput($request->except('password', 'password_confirmation', '_token'))
+                ->with('error', 'Your session expired before the form was sent. Please try again.');
+        });
 
-            $status = 500;
-
-            if ($exception instanceof HttpExceptionInterface) {
-                $status = $exception->getStatusCode();
-            } elseif ($exception instanceof ValidationException) {
-                $status = 422;
-            } elseif (method_exists($exception, 'getStatusCode')) {
-                $status = $exception->getStatusCode();
+        // Unexpected errors show a friendly page with the reference number.
+        // Details are only shown on screen when debug mode is switched on.
+        $exceptions->render(function (Throwable $exception, Request $request) {
+            if (config('app.debug')
+                || $exception instanceof HttpExceptionInterface
+                || $exception instanceof ModelNotFoundException
+                || $exception instanceof AuthorizationException
+                || $exception instanceof WorkflowException
+                || $exception instanceof ValidationException
+                || $exception instanceof AuthenticationException) {
+                return null;
             }
 
-            if ($status < 400 || $status > 599) {
-                $status = 500;
+            $reference = app()->has('error.reference') ? app('error.reference') : null;
+
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'message' => 'Something went wrong on our side. Please try again.',
+                    'reference' => $reference,
+                ], 500);
             }
 
-            $message = match ($status) {
-                400 => 'Bad request. Please check your input.',
-                401 => 'Unauthorized. Please log in and try again.',
-                403 => 'You do not have permission to access this page.',
-                404 => 'The requested page could not be found.',
-                419 => 'The page has expired. Please refresh and try again.',
-                429 => 'Too many requests. Please slow down.',
-                503 => 'The service is currently unavailable. Please try again later.',
-                default => 'An unexpected error occurred. Please contact support with this reference.',
-            };
-
-            if ($request->expectsJson() || $request->wantsJson() || $request->isJson()) {
-                $payload = [
-                    'message' => $message,
-                    'referenceId' => $referenceId,
-                ];
-
-                if ($exception instanceof ValidationException) {
-                    $payload['errors'] = $exception->errors();
-                }
-
-                return response()->json($payload, $status);
-            }
-
-            $viewName = "errors.{$status}";
-
-            if (!view()->exists($viewName)) {
-                $viewName = 'errors.500';
-                $status = 500;
-            }
-
-            return response()->view($viewName, [
-                'message' => $message,
-                'reference' => $referenceId,
-            ], $status);
+            return response()->view('errors.500', ['reference' => $reference], 500);
         });
     })->create();

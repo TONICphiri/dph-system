@@ -2,22 +2,53 @@
 
 namespace App\Policies;
 
+use App\Enums\Permission;
 use App\Models\Patient;
 use App\Models\User;
 
 /**
- * Own-file rule for medical details.
- * - Patient-role accounts open ONLY the clinical file linked to them.
- * - Staff keep the existing permission-based access (consent included).
+ * Patient records are national: staff at any facility can find a patient.
+ * What they can see inside the record depends on their role.
  */
 class PatientPolicy
 {
+    public function viewAny(User $user): bool
+    {
+        return $user->can(Permission::ViewPatientDemographics->value);
+    }
+
     public function view(User $user, Patient $patient): bool
     {
-        if ($user->hasRole('patient')) {
-            return $user->ownsPatient($patient);
-        }
+        return $user->can(Permission::ViewPatientDemographics->value) || $user->ownsPatientRecord($patient);
+    }
 
-        return $user->can('view_patient');
+    public function create(User $user): bool
+    {
+        return $user->can(Permission::RegisterPatients->value);
+    }
+
+    public function update(User $user, Patient $patient): bool
+    {
+        return $user->can(Permission::EditPatientDemographics->value);
+    }
+
+    public function viewBasicHistory(User $user, Patient $patient): bool
+    {
+        return $user->can(Permission::ViewBasicHistory->value) || $user->ownsPatientRecord($patient);
+    }
+
+    public function viewFullRecord(User $user, Patient $patient): bool
+    {
+        return $user->can(Permission::ViewFullMedicalRecord->value) || $user->ownsPatientRecord($patient);
+    }
+
+    public function viewVaccinations(User $user, Patient $patient): bool
+    {
+        return $user->can(Permission::ViewVaccinations->value) || $user->ownsPatientRecord($patient);
+    }
+
+    public function printCard(User $user, Patient $patient): bool
+    {
+        return $user->can(Permission::RegisterPatients->value) || $user->ownsPatientRecord($patient);
     }
 }

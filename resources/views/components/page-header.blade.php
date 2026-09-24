@@ -1,15 +1,15 @@
-@props(['title', 'subtitle' => null, 'actions' => null])
-
-<div class="mb-6 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+@props(['title', 'description' => null])
+<div class="mb-6 flex flex-wrap items-end justify-between gap-4 border-b border-line pb-5">
     <div>
-        <p class="dhp-eyebrow">Digital Health Passport · Malawi</p>
-        <h1 class="mt-1 text-2xl font-extrabold sm:text-3xl">{{ $title }}</h1>
-        @if($subtitle)
-            <p class="mt-1 max-w-2xl text-sm text-slate-500">{{ $subtitle }}</p>
+        @isset($breadcrumb)
+            <div class="mb-2 flex items-center gap-1.5 text-[13px] text-muted">{{ $breadcrumb }}</div>
+        @endisset
+        <h1 class="text-2xl">{{ $title }}</h1>
+        @if ($description)
+            <p class="mt-1 max-w-3xl text-sm text-muted">{{ $description }}</p>
         @endif
     </div>
-    @if($actions || isset($actions))
-        <div class="flex flex-wrap gap-2">{{ $actions ?? '' }}</div>
-    @endif
-    {{ $slot ?? '' }}
+    @isset($actions)
+        <div class="flex flex-wrap items-center gap-2">{{ $actions }}</div>
+    @endisset
 </div>

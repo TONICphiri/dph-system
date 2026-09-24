@@ -1,20 +1,11 @@
 <?php
 
-use Illuminate\Foundation\Inspiring;
-use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Schedule;
 
-Artisan::command('inspire', function () {
-    $this->comment(Inspiring::quote());
-})->purpose('Display an inspiring quote');
+/*
+| Scheduled tasks. On cPanel, add one cron job that runs every minute:
+| php /home/USERNAME/health-passport/artisan schedule:run >> /dev/null 2>&1
+*/
 
-// Process the national sync queue every minute
-Schedule::command('sync:process')->everyMinute();
-
-// Back up the database every night at 02:00 and notify admins of the result.
-// withoutOverlapping() prevents a slow backup from double-running if the
-// scheduler ticks again before the previous run finishes.
-Schedule::command('backup:run --keep-days=14')
-    ->dailyAt('02:00')
-    ->withoutOverlapping()
-    ->runInBackground();
+Schedule::command('reminders:send')->dailyAt('07:00')->withoutOverlapping();
+Schedule::command('patients:separate-adults')->dailyAt('01:00')->withoutOverlapping();
