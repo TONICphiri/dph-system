@@ -5,6 +5,7 @@ use App\Http\Controllers\Admin;
 use App\Http\Controllers\Auth;
 use App\Http\Controllers\Clinical;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\Dhp;
 use App\Http\Controllers\Facility;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\Patients;
@@ -188,4 +189,29 @@ Route::middleware('auth')->group(function () use ($can) {
         Route::patch('appointments/{appointment}/cancel', [Portal\AppointmentController::class, 'cancel'])->name('appointments.cancel');
         Route::post('appointments/{appointment}/review', [Portal\AppointmentController::class, 'review'])->name('appointments.review');
     });
+});
+
+/*
+|--------------------------------------------------------------------------
+| Digital Health Passport routes (Phase 2+)
+|--------------------------------------------------------------------------
+| Separate from the legacy hospital routes above. Access is granted by
+| users.role + users.is_active through the dhp.role middleware only;
+| legacy Spatie roles are ignored here. Route names use the dhp. prefix
+| so they never collide with legacy names.
+*/
+Route::middleware(['auth', 'dhp.role:citizen'])->prefix('citizen')->name('dhp.citizen.')->group(function () {
+    Route::get('dashboard', [Dhp\DashboardController::class, 'citizen'])->name('dashboard');
+});
+
+Route::middleware(['auth', 'dhp.role:issuer'])->prefix('issuer')->name('dhp.issuer.')->group(function () {
+    Route::get('dashboard', [Dhp\DashboardController::class, 'issuer'])->name('dashboard');
+});
+
+Route::middleware(['auth', 'dhp.role:verifier'])->prefix('verifier')->name('dhp.verifier.')->group(function () {
+    Route::get('dashboard', [Dhp\DashboardController::class, 'verifier'])->name('dashboard');
+});
+
+Route::middleware(['auth', 'dhp.role:admin'])->prefix('admin')->name('dhp.admin.')->group(function () {
+    Route::get('dashboard', [Dhp\DashboardController::class, 'admin'])->name('dashboard');
 });

@@ -25,6 +25,15 @@ class LoginController extends Controller
         ]);
 
         if (! Auth::attempt($credentials, $request->boolean('remember'))) {
+            \App\Services\DhpAuditLogger::log(
+                user: null,
+                action: 'failed_login',
+                entityType: 'user',
+                entityId: null,
+                details: ['route' => 'login.store'],
+                ipAddress: $request->ip(),
+            );
+
             throw ValidationException::withMessages([
                 'email' => 'The email address or password is incorrect.',
             ]);

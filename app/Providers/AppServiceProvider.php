@@ -26,6 +26,12 @@ class AppServiceProvider extends ServiceProvider
         RateLimiter::for('login', fn (Request $request) => Limit::perMinute(5)
             ->by(strtolower((string) $request->input('email')).'|'.$request->ip()));
 
+        // Citizen kiosk PIN attempts: 5 per 10 minutes per Passport ID /
+        // National ID and device. The PIN endpoint itself arrives in Phase 3;
+        // the limiter is defined here so tests and controllers share it.
+        RateLimiter::for('dhp-pin', fn (Request $request) => Limit::perMinutes(10, 5)
+            ->by(strtoupper((string) ($request->input('passport_id') ?? $request->input('national_id'))).'|'.$request->ip()));
+
         // The system name is edited on the Settings page, so every page reads
         // it from the settings table instead of a fixed value.
         // If the database cannot be reached, for example on an error page, the

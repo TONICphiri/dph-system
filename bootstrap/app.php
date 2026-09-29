@@ -34,6 +34,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'role' => RoleMiddleware::class,
             'permission' => PermissionMiddleware::class,
             'role_or_permission' => RoleOrPermissionMiddleware::class,
+            'dhp.role' => \App\Http\Middleware\EnsureDhpRole::class,
         ]);
 
         $middleware->redirectGuestsTo(fn () => route('login'));

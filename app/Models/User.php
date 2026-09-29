@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Spatie\Permission\Traits\HasRoles;
@@ -61,6 +62,16 @@ class User extends Authenticatable
     public function citizen(): HasMany
     {
         return $this->hasMany(Citizen::class, 'user_id');
+    }
+
+    /**
+     * The single citizen profile linked to this login, if any.
+     * One citizen user links to only one citizen record
+     * (enforced by the unique constraint on citizens.user_id).
+     */
+    public function citizenProfile(): HasOne
+    {
+        return $this->hasOne(Citizen::class, 'user_id');
     }
 
     public function createdCitizens(): HasMany
