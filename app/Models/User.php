@@ -20,6 +20,8 @@ class User extends Authenticatable
         'name',
         'email',
         'phone',
+        'role',
+        'is_active',
         'job_title',
         'professional_registration_number',
         'facility_id',
@@ -37,6 +39,8 @@ class User extends Authenticatable
     protected function casts(): array
     {
         return [
+            'role' => \App\Enums\DhpRole::class,
+            'is_active' => 'boolean',
             'status' => UserStatus::class,
             'must_change_password' => 'boolean',
             'last_login_at' => 'datetime',
@@ -52,6 +56,21 @@ class User extends Authenticatable
     public function patient(): BelongsTo
     {
         return $this->belongsTo(Patient::class);
+    }
+
+    public function citizen(): HasMany
+    {
+        return $this->hasMany(Citizen::class, 'user_id');
+    }
+
+    public function createdCitizens(): HasMany
+    {
+        return $this->hasMany(Citizen::class, 'created_by');
+    }
+
+    public function issuedCredentials(): HasMany
+    {
+        return $this->hasMany(Credential::class, 'issued_by');
     }
 
     public function schedules(): HasMany

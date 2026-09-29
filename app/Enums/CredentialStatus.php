@@ -1,0 +1,28 @@
+<?php
+
+namespace App\Enums;
+
+enum CredentialStatus: string
+{
+    use HasOptions;
+
+    case Active = 'active';
+    case Expired = 'expired';
+    case Revoked = 'revoked';
+    case Superseded = 'superseded';
+
+    public function label(): string
+    {
+        return ucfirst($this->value);
+    }
+
+    public function tone(): string
+    {
+        return match ($this) {
+            self::Active => 'success',
+            self::Expired => 'warning',
+            self::Revoked => 'danger',
+            self::Superseded => 'neutral',
+        };
+    }
+}

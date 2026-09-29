@@ -24,12 +24,14 @@ class Facility extends Model
         'phone',
         'email',
         'status',
+        'is_active',
     ];
 
     protected function casts(): array
     {
         return [
             'status' => FacilityStatus::class,
+            'is_active' => 'boolean',
         ];
     }
 
@@ -76,6 +78,11 @@ class Facility extends Model
     public function schedules(): HasMany
     {
         return $this->hasMany(DoctorSchedule::class);
+    }
+
+    public function credentials(): HasMany
+    {
+        return $this->hasMany(Credential::class);
     }
 
     public function isActive(): bool
