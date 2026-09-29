@@ -206,6 +206,32 @@ Route::middleware(['auth', 'dhp.role:citizen'])->prefix('citizen')->name('dhp.ci
 
 Route::middleware(['auth', 'dhp.role:issuer'])->prefix('issuer')->name('dhp.issuer.')->group(function () {
     Route::get('dashboard', [Dhp\DashboardController::class, 'issuer'])->name('dashboard');
+
+    Route::get('citizens/search', [Dhp\Issuer\CitizenController::class, 'search'])->name('citizens.search');
+    Route::get('citizens/suggestions', [Dhp\Issuer\CitizenController::class, 'suggestions'])
+        ->middleware('throttle:60,1')->name('citizens.suggestions');
+    Route::post('citizens/confirm-identity', [Dhp\Issuer\CitizenController::class, 'confirmIdentity'])->name('citizens.confirm-identity');
+    Route::get('citizens/register', [Dhp\Issuer\CitizenController::class, 'create'])->name('citizens.create');
+    Route::post('citizens', [Dhp\Issuer\CitizenController::class, 'store'])->name('citizens.store');
+    Route::get('citizens/{citizen}/confirm', [Dhp\Issuer\CitizenController::class, 'confirmForm'])->name('citizens.confirm-form');
+    Route::get('citizens/{citizen}/registration-slip', [Dhp\Issuer\CitizenController::class, 'registrationSlip'])->name('citizens.registration-slip');
+    Route::get('citizens/{citizen}', [Dhp\Issuer\CitizenController::class, 'show'])
+        ->middleware('dhp.confirmed:citizen')->name('citizens.show');
+    Route::get('citizens/{citizen}/credentials/create', [Dhp\Issuer\CredentialController::class, 'create'])
+        ->middleware('dhp.confirmed:citizen')->name('credentials.create');
+    Route::post('citizens/{citizen}/credentials', [Dhp\Issuer\CredentialController::class, 'store'])
+        ->middleware('dhp.confirmed:citizen')->name('credentials.store');
+
+    Route::get('credentials/{credential}/edit', [Dhp\Issuer\CredentialController::class, 'edit'])
+        ->middleware('dhp.confirmed:credential')->name('credentials.edit');
+    Route::put('credentials/{credential}', [Dhp\Issuer\CredentialController::class, 'update'])
+        ->middleware('dhp.confirmed:credential')->name('credentials.update');
+    Route::get('credentials/{credential}/revoke', [Dhp\Issuer\CredentialController::class, 'revokeForm'])
+        ->middleware('dhp.confirmed:credential')->name('credentials.revoke-form');
+    Route::post('credentials/{credential}/revoke', [Dhp\Issuer\CredentialController::class, 'revoke'])
+        ->middleware('dhp.confirmed:credential')->name('credentials.revoke');
+    Route::get('credentials/{credential}/print', [Dhp\Issuer\CredentialController::class, 'print'])
+        ->middleware('dhp.confirmed:credential')->name('credentials.print');
 });
 
 Route::middleware(['auth', 'dhp.role:verifier'])->prefix('verifier')->name('dhp.verifier.')->group(function () {

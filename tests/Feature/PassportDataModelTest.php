@@ -14,6 +14,9 @@ class PassportDataModelTest extends TestCase
 {
     use RefreshDatabase;
 
+    // Seed like the legacy suites so every execution order finds demo data.
+    protected bool $seed = true;
+
     public function test_expired_accessor_reports_expired_when_expiry_is_past(): void
     {
         $credential = Credential::factory()->expired()->make();

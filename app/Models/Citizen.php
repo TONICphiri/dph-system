@@ -46,6 +46,21 @@ class Citizen extends Model
         return Attribute::get(fn () => trim("{$this->first_name} {$this->last_name}"));
     }
 
+    /**
+     * Masked National ID for screens and printouts. The full value is
+     * never shown on search results, slips or certificates.
+     */
+    public function maskedNationalId(): ?string
+    {
+        if (! $this->national_id) {
+            return null;
+        }
+
+        $id = (string) $this->national_id;
+
+        return str_repeat('*', max(0, strlen($id) - 2)).substr($id, -2);
+    }
+
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);

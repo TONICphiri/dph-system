@@ -20,6 +20,9 @@ class DhpAccessTest extends TestCase
 {
     use RefreshDatabase;
 
+    // Seed like the legacy suites so every execution order finds demo data.
+    protected bool $seed = true;
+
     private function dhpUser(string $role, bool $active = true): User
     {
         return User::factory()->create(['role' => $role, 'is_active' => $active]);
