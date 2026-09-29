@@ -201,7 +201,9 @@ Route::middleware('auth')->group(function () use ($can) {
 | so they never collide with legacy names.
 */
 Route::middleware(['auth', 'dhp.role:citizen'])->prefix('citizen')->name('dhp.citizen.')->group(function () {
-    Route::get('dashboard', [Dhp\DashboardController::class, 'citizen'])->name('dashboard');
+    Route::get('dashboard', [Dhp\Citizen\PassportController::class, 'dashboard'])->name('dashboard');
+    Route::get('credentials/{credential}', [Dhp\Citizen\PassportController::class, 'show'])->name('credentials.show');
+    Route::get('credentials/{credential}/print', [Dhp\Citizen\PassportController::class, 'print'])->name('credentials.print');
 });
 
 Route::middleware(['auth', 'dhp.role:issuer'])->prefix('issuer')->name('dhp.issuer.')->group(function () {
