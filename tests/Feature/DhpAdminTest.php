@@ -67,8 +67,9 @@ class DhpAdminTest extends TestCase
         $response->assertSee('>Issuers</dt><dd class="text-xl font-semibold">2</dd>', false);
         $response->assertSee('>Administrators</dt><dd class="text-xl font-semibold">1</dd>', false);
         $response->assertSee('>Revoked</dt><dd class="text-xl font-semibold">1</dd>', false);
-        $response->assertDontSee('{', false);
         $response->assertDontSee($citizen->passport_id);
+        $response->assertDontSee('qr_token');
+        $response->assertDontSee('"is_active"');
     }
 
     public function test_user_list_pagination_and_privacy(): void

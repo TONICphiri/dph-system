@@ -1,4 +1,4 @@
-<x-dhp.layout title="Verify Certificate" :nav="[['label' => 'Verify Certificate', 'url' => route('dhp.verifier.dashboard')], ['label' => 'Verification', 'url' => route('dhp.verifier.verify')]]">
+<x-dhp.layout title="Verify Certificate" :nav="[['label' => 'Verify Certificate', 'url' => route('dhp.verifier.verify')]]">
     <div class="panel">
         <div class="panel-header">
             <h1 class="panel-title">Verify Certificate</h1>

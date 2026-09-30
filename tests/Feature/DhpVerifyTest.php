@@ -60,7 +60,7 @@ class DhpVerifyTest extends TestCase
 
         $scannerSource = file_get_contents(base_path('resources/js/verify-scanner.js'));
         $this->assertStringContainsString('window.location.origin', $scannerSource);
-        $this->assertStringContainsString('not a Digital Health Passport code', $scannerSource);
+        $this->assertStringContainsString('is not a Digital Health Passport credential', $scannerSource);
         $this->assertStringContainsString('options.buildUrl(token)', $scannerSource);
     }
 

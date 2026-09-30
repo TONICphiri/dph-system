@@ -11,7 +11,7 @@
     <div class="panel mx-auto max-w-xl">
         <div class="panel-header">
             <h1 class="panel-title">{{ $credential->type->label() }} Credential</h1>
-            <x-badge :tone="$credential->effective_status->tone()">{{ $credential->effective_status->label() }}</x-badge>
+            <x-dhp.status-badge :status="$credential->effective_status->value" />
         </div>
         <div class="panel-body">
             <p class="border px-4 py-3 text-sm {{ $isActive ? 'border-brand-200 bg-brand-50 text-brand-800' : 'border-red-200 bg-red-50 text-red-800' }}">{{ $statusMessages[$credential->effective_status->value] }}</p>
@@ -42,7 +42,7 @@
             </div>
             @if ($isActive)
                 <div id="qr-detail" class="mt-3 hidden border border-line p-3 text-center">
-                    <div class="mx-auto w-36 [&>svg]:h-auto [&>svg]:w-full">{!! $qrCode !!}</div>
+                    <div class="mx-auto w-36 [&>svg]:h-auto [&>svg]:w-full" role="img" aria-label="QR code for credential verification">{!! $qrCode !!}</div>
                     <p class="mt-1 text-[12px] text-muted">Present this QR code only when verification is required.</p>
                 </div>
             @endif

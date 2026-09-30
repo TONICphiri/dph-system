@@ -14,15 +14,15 @@
                     <div><dt>Issue date</dt><dd>{{ $credential->issue_date?->format('j M Y') }}</dd></div>
                     <div><dt>Expiry date</dt><dd>{{ $credential->expiry_date?->format('j M Y') ?? 'No expiry recorded' }}</dd></div>
                     <div><dt>Issuing facility</dt><dd>{{ $credential->facility?->name ?? '—' }}</dd></div>
-                    <div><dt>Status at printing</dt><dd><x-badge :tone="$credential->effective_status->tone()">{{ $credential->effective_status->label() }}</x-badge></dd></div>
+                    <div><dt>Status at printing</dt><dd><x-dhp.status-badge :status="$credential->effective_status->value" /></dd></div>
                     <div><dt>Print date</dt><dd>{{ now()->format('j M Y') }}</dd></div>
                 </dl>
                 <div class="w-40 shrink-0 text-center">
-                    <div class="[&>svg]:h-auto [&>svg]:w-full">{!! $qrCode !!}</div>
+                    <div class="[&>svg]:h-auto [&>svg]:w-full" role="img" aria-label="QR code for credential verification">{!! $qrCode !!}</div>
                     <p class="mono mt-1 break-all text-[11px] text-muted">{{ $verifyUrl }}</p>
                 </div>
             </div>
-            <p class="mt-4 text-[13px] text-muted">This certificate is one passport entry, not a complete medical record. Scan the code or open the address above to verify it.</p>
+            <p class="mt-4 text-[13px] text-muted">This certificate is one passport entry, not a complete medical record. Scan the code or open the address above to verify it. This certificate contains a QR code that can be checked for validity.</p>
         </div>
     </div>
 </x-dhp.layout>

@@ -72,7 +72,7 @@ class DhpCitizenPortalTest extends TestCase
         [$user, $citizen] = $this->citizenAccount();
 
         $this->actingAs($user)->get(route('dhp.citizen.dashboard'))
-            ->assertOk()->assertSee('no credentials yet');
+            ->assertOk()->assertSee('No health credentials are available in your passport yet.');
 
         Credential::factory()->create(['citizen_id' => $citizen->id]);
         Credential::factory()->expired()->create(['citizen_id' => $citizen->id]);
@@ -80,7 +80,7 @@ class DhpCitizenPortalTest extends TestCase
         Credential::factory()->create(['citizen_id' => $citizen->id, 'status' => 'superseded']);
 
         $response = $this->actingAs($user)->get(route('dhp.citizen.dashboard'))->assertOk();
-        foreach (['Active', 'Expired', 'Revoked', 'Superseded'] as $heading) {
+        foreach (['Active', 'Expired', 'Revoked', 'Replaced'] as $heading) {
             $response->assertSee($heading);
         }
     }

@@ -28,6 +28,9 @@
                     </tbody>
                 </table>
             </div>
+            @if ($logs->isEmpty())
+                <p class="mt-2 text-sm text-muted">No audit activity matched your filters.</p>
+            @endif
             <div class="mt-4">{{ $logs->links() }}</div>
         </div>
     </div>

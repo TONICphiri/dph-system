@@ -1,6 +1,6 @@
 {{-- Messages shown after an action: success, business rule errors and one time passwords. --}}
 @if (session('success'))
-    <div class="mb-5 flex items-start gap-3 border border-brand-200 border-l-4 border-l-brand-700 bg-brand-50 px-4 py-3 text-sm text-brand-900" role="status">
+    <div class="mb-5 flex items-start gap-3 border border-brand-200 border-l-4 border-l-brand-700 bg-brand-50 px-4 py-3 text-sm text-brand-900" role="status" aria-live="polite">
         <x-icon name="check" class="mt-0.5 h-4 w-4 shrink-0" />
         <p>{{ session('success') }}</p>
     </div>
@@ -28,7 +28,7 @@
 @endif
 
 @if ($credentials = session('temporary_password'))
-    <div class="mb-5 border border-gold-600/40 border-l-4 border-l-gold-600 bg-gold-100 px-4 py-4 text-sm text-ink" role="status">
+    <div class="mb-5 border border-gold-600/40 border-l-4 border-l-gold-600 bg-gold-100 px-4 py-4 text-sm text-ink" role="status" aria-live="polite">
         <p class="font-semibold">One time password for {{ $credentials['name'] }}</p>
         <p class="mt-1 text-muted">Give these sign in details to the account holder. The password is shown only once and must be changed at first sign in.</p>
         <dl class="mt-3 grid gap-2 sm:grid-cols-2">

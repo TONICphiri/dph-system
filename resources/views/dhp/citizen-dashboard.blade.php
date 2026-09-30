@@ -10,17 +10,17 @@
                 <p class="mt-3 text-sm text-muted">These are your verified health credentials. Show the QR code or print a certificate when requested by an authorized organization.</p>
 
                 @if ($credentials->isEmpty())
-                    <p class="mt-4 border border-line bg-paper px-4 py-3 text-sm">You have no credentials yet. Visit a participating health facility to receive your first credential.</p>
+                    <p class="mt-4 border border-line bg-paper px-4 py-3 text-sm">No health credentials are available in your passport yet. Visit a participating health facility to receive your first credential.</p>
                 @else
                     @foreach (['active', 'expired', 'revoked', 'superseded'] as $status)
                         @if ($grouped->has($status))
-                            <h2 class="mt-6 text-sm font-semibold">{{ ucfirst($status) }}</h2>
+                            <h2 class="mt-6 text-sm font-semibold">{{ $status === 'superseded' ? 'Replaced' : ucfirst($status) }}</h2>
                             <div class="mt-2 grid gap-4 sm:grid-cols-2">
                                 @foreach ($grouped[$status] as $credential)
                                     <article class="border border-line bg-white p-4" aria-label="{{ $credential->type->label() }} credential">
                                         <div class="flex flex-wrap items-center justify-between gap-2">
                                             <p class="text-sm font-semibold">{{ $credential->type->label() }} Credential</p>
-                                            <x-badge :tone="$credential->effective_status->tone()">{{ $credential->effective_status->label() }}</x-badge>
+                                            <x-dhp.status-badge :status="$credential->effective_status->value" />
                                         </div>
                                         <dl class="mt-2 space-y-1 text-[13px] text-muted">
                                             <div class="flex justify-between gap-2"><dt>Issued</dt><dd class="text-ink">{{ $credential->issue_date?->format('j M Y') }}</dd></div>
@@ -37,7 +37,7 @@
                                         </div>
                                         @if ($credential->effective_status->value === 'active')
                                             <div id="qr-{{ $credential->id }}" class="mt-3 hidden border border-line p-3 text-center">
-                                                <div class="mx-auto w-36 [&>svg]:h-auto [&>svg]:w-full">{!! $qrCodes[$credential->id] !!}</div>
+                                                <div class="mx-auto w-36 [&>svg]:h-auto [&>svg]:w-full" role="img" aria-label="QR code for credential verification">{!! $qrCodes[$credential->id] !!}</div>
                                                 <p class="mt-1 text-[12px] text-muted">Present this QR code only when verification is required.</p>
                                             </div>
                                         @endif

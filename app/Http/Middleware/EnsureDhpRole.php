@@ -39,7 +39,7 @@ class EnsureDhpRole
             $request->session()->invalidate();
             $request->session()->regenerateToken();
 
-            return redirect()->route('login')->with('error', 'Your account has been deactivated. Please contact your administrator.');
+            return redirect()->route('login')->with('error', 'Your account is not active. Contact the system administrator.');
         }
 
         $allowed = collect($roles)->map(fn (string $role) => DhpRole::tryFrom($role))->filter()->all();
@@ -54,7 +54,7 @@ class EnsureDhpRole
                 ipAddress: $request->ip(),
             );
 
-            abort(403, 'You do not have permission to open this page.');
+            abort(403, 'You do not have permission to access this page.');
         }
 
         return $next($request);

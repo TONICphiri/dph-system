@@ -28,7 +28,7 @@
             @if (is_array($results))
                 <h2 class="mt-6 text-sm font-semibold">Results ({{ count($results) }})</h2>
                 @if ($results === [])
-                    <p class="mt-2 text-sm text-muted">No citizen found. Check the spelling or <a href="{{ route('dhp.issuer.citizens.create') }}" class="link">register a new citizen</a>.</p>
+                    <p class="mt-2 text-sm text-muted">No matching citizen was found. Check the information and try again, or <a href="{{ route('dhp.issuer.citizens.create') }}" class="link">register a new citizen</a>.</p>
                 @else
                     <div class="mt-2 overflow-x-auto">
                         <table class="table">

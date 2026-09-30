@@ -25,11 +25,12 @@
                 </dl>
                 @if ($isActive)
                     <div class="w-40 shrink-0 text-center">
-                        <div class="[&>svg]:h-auto [&>svg]:w-full">{!! $qrCode !!}</div>
+                        <div class="[&>svg]:h-auto [&>svg]:w-full" role="img" aria-label="QR code for credential verification">{!! $qrCode !!}</div>
                         <p class="mt-1 text-[12px] text-muted">Present this QR code only when verification is required.</p>
                     </div>
                 @endif
             </div>
+            <p class="mt-4 text-[13px] text-muted">This certificate contains a QR code that can be checked for validity.</p>
         </div>
     </div>
 </x-dhp.layout>

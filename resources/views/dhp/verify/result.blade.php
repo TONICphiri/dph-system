@@ -2,11 +2,6 @@
     use App\Enums\VerificationResult;
     use App\Services\DhpCredentialVerificationService;
 
-    $tones = [
-        'valid' => 'success', 'expired' => 'warning',
-        'revoked' => 'danger', 'superseded' => 'danger',
-        'invalid' => 'danger', 'not_found' => 'danger',
-    ];
     $messages = [
         'valid' => 'This credential is active and was issued by an authorized facility.',
         'expired' => 'This credential has expired and may no longer be accepted.',
@@ -21,7 +16,7 @@
     <div class="panel">
         <div class="panel-header">
             <h1 class="panel-title">Verification Result</h1>
-            <span class="badge-{{ $tones[$key] }}">{{ $result->label() }}</span>
+            <x-dhp.status-badge :status="$result->value" />
         </div>
         <div class="panel-body space-y-3">
             <p class="text-sm">{{ $messages[$key] }}</p>

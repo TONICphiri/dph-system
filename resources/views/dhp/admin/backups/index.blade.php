@@ -38,7 +38,7 @@
                                     <td>{{ $run->failure_stage && $run->status === 'failed' && $run->failure_stage !== 'in_progress' ? $run->failure_stage : '—' }}</td>
                                 </tr>
                             @empty
-                                <tr><td colspan="6" class="text-muted">No backup runs yet.</td></tr>
+                                <tr><td colspan="6" class="text-muted">No backup activity has been recorded yet.</td></tr>
                             @endforelse
                         </tbody>
                     </table>

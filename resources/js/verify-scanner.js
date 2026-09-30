@@ -55,7 +55,7 @@ window.dhpVerifyScannerInit = function (options) {
                 async (decoded) => {
                     const token = extractVerifyToken(decoded);
                     if (!token) {
-                        setStatus('This is not a Digital Health Passport code. Try again or enter the credential number.');
+                        setStatus('This QR code is not a Digital Health Passport credential. Try again or enter the credential number.');
                         return;
                     }
                     await stop();
@@ -69,7 +69,7 @@ window.dhpVerifyScannerInit = function (options) {
             if (stopButton) stopButton.disabled = false;
             setStatus('Hold the QR certificate in front of the camera.');
         } catch {
-            setStatus('The camera could not be started. Allow camera access, or enter the credential number below.');
+            setStatus('Camera scanning is unavailable. Enter the credential number instead.');
         }
     });
 

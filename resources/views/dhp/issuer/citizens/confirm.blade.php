@@ -4,7 +4,7 @@
             <h1 class="panel-title">Confirm Identity</h1>
         </div>
         <div class="panel-body">
-            <p class="text-sm text-muted">Ask the citizen for at least <strong>two</strong> of the details below. The passport opens only when two or more match.</p>
+            <p class="text-sm text-muted">Confirm at least two details before opening a citizen passport profile. Ask the citizen for the details below; the passport opens only when two or more match.</p>
             <dl class="detail-list mt-4">
                 <div><dt>Passport ID</dt><dd class="mono">{{ $citizen->passport_id }}</dd></div>
                 <div><dt>Name on record</dt><dd>{{ $citizen->full_name }}</dd></div>

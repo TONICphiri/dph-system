@@ -24,7 +24,7 @@
             @else
                 @foreach (['active', 'expired', 'revoked', 'superseded'] as $status)
                     @if ($grouped->has($status))
-                        <h3 class="mt-4 text-[13px] font-semibold uppercase tracking-wide text-muted">{{ $status }}</h3>
+                        <h3 class="mt-4 text-[13px] font-semibold uppercase tracking-wide text-muted">{{ $status === 'superseded' ? 'Replaced' : $status }}</h3>
                         <ul class="mt-1 divide-y divide-line border border-line">
                             @foreach ($grouped[$status] as $credential)
                                 <li class="flex flex-wrap items-center justify-between gap-2 px-4 py-2.5 text-sm">
