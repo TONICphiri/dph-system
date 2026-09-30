@@ -60,6 +60,16 @@ return [
             'report' => false,
         ],
 
+        /*
+        | Dedicated non-public disk for encrypted database backups.
+        | Never served from public/ and never downloadable via the web app.
+        */
+        'dhp_backups' => [
+            'driver' => 'local',
+            'root' => storage_path('app/backups'),
+            'throw' => false,
+        ],
+
     ],
 
     /*

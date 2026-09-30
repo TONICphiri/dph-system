@@ -1,4 +1,4 @@
-<x-dhp.layout :title="$facility->exists ? 'Edit Facility' : 'New Facility'" :nav="[['label' => 'Administration', 'url' => route('dhp.admin.dashboard')], ['label' => 'Users', 'url' => route('dhp.admin.users.index')], ['label' => 'Facilities', 'url' => route('dhp.admin.facilities.index')], ['label' => 'Audit Log', 'url' => route('dhp.admin.audit-logs.index')]]">
+<x-dhp.layout :title="$facility->exists ? 'Edit Facility' : 'New Facility'" :nav="[['label' => 'Administration', 'url' => route('dhp.admin.dashboard')], ['label' => 'Users', 'url' => route('dhp.admin.users.index')], ['label' => 'Facilities', 'url' => route('dhp.admin.facilities.index')], ['label' => 'Audit Log', 'url' => route('dhp.admin.audit-logs.index')], ['label' => 'Backups', 'url' => route('dhp.admin.backups.index')]]">
     <div class="panel mx-auto max-w-xl">
         <div class="panel-header"><h1 class="panel-title">{{ $facility->exists ? 'Edit Facility' : 'New Facility' }}</h1></div>
         <div class="panel-body">

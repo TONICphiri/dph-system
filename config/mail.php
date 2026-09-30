@@ -49,6 +49,22 @@ return [
             'local_domain' => env('MAIL_EHLO_DOMAIN', parse_url((string) env('APP_URL', 'http://localhost'), PHP_URL_HOST)),
         ],
 
+        /*
+        | Dedicated backup mailer. Backup archives leave the server only
+        | through this mailer with its own SMTP settings, while normal
+        | notifications keep using the default mailer. Never the default.
+        */
+        'smtp_backup' => [
+            'transport' => env('MAIL_BACKUP_MAILER', 'smtp'),
+            'host' => env('MAIL_BACKUP_HOST', '127.0.0.1'),
+            'port' => env('MAIL_BACKUP_PORT', 2525),
+            'username' => env('MAIL_BACKUP_USERNAME'),
+            'password' => env('MAIL_BACKUP_PASSWORD'),
+            'encryption' => env('MAIL_BACKUP_ENCRYPTION', 'tls'),
+            'timeout' => null,
+            'local_domain' => env('MAIL_EHLO_DOMAIN', parse_url((string) env('APP_URL', 'http://localhost'), PHP_URL_HOST)),
+        ],
+
         'ses' => [
             'transport' => 'ses',
         ],
@@ -113,6 +129,14 @@ return [
     'from' => [
         'address' => env('MAIL_FROM_ADDRESS', 'hello@example.com'),
         'name' => env('MAIL_FROM_NAME', env('APP_NAME', 'Laravel')),
+    ],
+
+    /*
+    | Default sender for backup mail. Normal mail keeps MAIL_FROM_*.
+    */
+    'backup_from' => [
+        'address' => env('MAIL_BACKUP_FROM_ADDRESS', env('MAIL_FROM_ADDRESS', 'hello@example.com')),
+        'name' => env('MAIL_BACKUP_FROM_NAME', 'Digital Health Passport Backup'),
     ],
 
 ];

@@ -278,4 +278,7 @@ Route::middleware(['auth', 'dhp.role:admin'])->prefix('admin')->name('dhp.admin.
     Route::post('facilities/{facility}/toggle-active', [Dhp\Admin\FacilityController::class, 'toggleActive'])->name('facilities.toggle-active');
 
     Route::get('audit-logs', [Dhp\Admin\AuditLogController::class, 'index'])->name('audit-logs.index');
+
+    Route::get('backups', [Dhp\Admin\BackupController::class, 'index'])->name('backups.index');
+    Route::post('backups/run', [Dhp\Admin\BackupController::class, 'run'])->name('backups.run');
 });

@@ -151,6 +151,20 @@ class User extends Authenticatable
         return $query->where('status', UserStatus::Active);
     }
 
+    /**
+     * Active DHP administrators with an email address (backup alerts).
+     *
+     * @return \Illuminate\Database\Eloquent\Collection<int, self>
+     */
+    public static function dhpAdminsWithEmail()
+    {
+        return self::query()
+            ->where('role', \App\Enums\DhpRole::Admin)
+            ->where('is_active', true)
+            ->whereNotNull('email')
+            ->get();
+    }
+
     public function scopeWithRole(Builder $query, RoleName $role): Builder
     {
         return $query->role($role->value);

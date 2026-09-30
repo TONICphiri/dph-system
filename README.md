@@ -187,3 +187,45 @@ After any later update, run `php artisan migrate --force` and repeat the three c
 ## Future features
 
 Listed on the Future features page inside the system and not yet built: mobile money and card payments, medical insurance claims, and an assistant for patient questions.
+
+## Backups and restore (Digital Health Passport)
+
+The scheduler creates an encrypted MySQL-only backup daily at 02:00
+(`backup:run-and-email`), keeps daily backups for 14 days, weekly for
+8 weeks and monthly for 6 months, and can email the encrypted archive
+through a dedicated backup mailer. Backups are encrypted with
+`BACKUP_ARCHIVE_PASSWORD` and stored under `storage/app/backups`,
+never in a public folder. The server needs this cron entry:
+
+```text
+* * * * * php /path/to/project/artisan schedule:run >> /dev/null 2>&1
+```
+
+### Restore (overwrites the current database)
+
+1. Copy the encrypted archive (from the backup email or server storage)
+   into the new server's `storage/app/backups` directory without
+   renaming or decrypting it.
+2. Set the same `BACKUP_ARCHIVE_PASSWORD` in the new server's `.env`.
+3. Run, using only the archive file name:
+
+```bash
+php artisan backup:restore example-backup.zip --force
+```
+
+Omit `--force` for an interactive confirmation. In production a restore
+is refused without `--force`. Temporary files are removed automatically.
+
+### Manual fallback
+
+1. Extract the archive with the password on a trusted computer.
+2. Find the single `.sql` dump inside.
+3. Import it with a local trusted MySQL client using credentials from
+   the server environment, for example:
+
+```bash
+mysql -h 127.0.0.1 -u DB_USER -p DB_NAME < dump.sql
+```
+
+Never publish archive names, passwords, database names, recipient
+addresses or server paths.
