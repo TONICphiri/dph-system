@@ -52,10 +52,6 @@ Route::middleware('auth')->group(function () use ($can) {
 
     /* System Administrator */
     Route::prefix('admin')->name('admin.')->group(function () use ($can) {
-        Route::middleware($can(P::ManageFacilities))->group(function () {
-            Route::resource('facilities', Admin\FacilityController::class)->except('destroy');
-            Route::patch('facilities/{facility}/status', [Admin\FacilityController::class, 'toggleStatus'])->name('facilities.status');
-        });
         Route::middleware($can(P::ManageFacilityAdministrators))->group(function () {
             Route::resource('facility-administrators', Admin\FacilityAdministratorController::class)
                 ->parameters(['facility-administrators' => 'user'])->except(['show', 'destroy']);
@@ -72,6 +68,17 @@ Route::middleware('auth')->group(function () use ($can) {
     });
 
     Route::get('audit-log', [Admin\AuditLogController::class, 'index'])->middleware($can(P::ViewAuditLogs))->name('audit-log.index');
+
+    /*
+    | Legacy hospital facility administration. Lives under a legacy URI
+    | prefix because the Digital Health Passport administration
+    | (dhp.admin.facilities.*) owns /admin/facilities. Route NAMES are
+    | unchanged so legacy links, navigation and tests keep working.
+    */
+    Route::prefix('legacy/admin')->name('admin.')->middleware($can(P::ManageFacilities))->group(function () {
+        Route::resource('facilities', Admin\FacilityController::class)->except('destroy');
+        Route::patch('facilities/{facility}/status', [Admin\FacilityController::class, 'toggleStatus'])->name('facilities.status');
+    });
 
     Route::middleware($can(P::PublishCampaigns))->group(function () {
         Route::resource('campaigns', Admin\CampaignController::class)->except(['show', 'edit', 'update', 'destroy']);
@@ -255,4 +262,20 @@ Route::middleware('throttle:verify-public')->name('dhp.verify.')->group(function
 
 Route::middleware(['auth', 'dhp.role:admin'])->prefix('admin')->name('dhp.admin.')->group(function () {
     Route::get('dashboard', [Dhp\DashboardController::class, 'admin'])->name('dashboard');
+
+    Route::get('users', [Dhp\Admin\UserController::class, 'index'])->name('users.index');
+    Route::get('users/create', [Dhp\Admin\UserController::class, 'create'])->name('users.create');
+    Route::post('users', [Dhp\Admin\UserController::class, 'store'])->name('users.store');
+    Route::get('users/{user}/edit', [Dhp\Admin\UserController::class, 'edit'])->name('users.edit');
+    Route::match(['put', 'patch'], 'users/{user}', [Dhp\Admin\UserController::class, 'update'])->name('users.update');
+    Route::post('users/{user}/toggle-active', [Dhp\Admin\UserController::class, 'toggleActive'])->name('users.toggle-active');
+
+    Route::get('facilities', [Dhp\Admin\FacilityController::class, 'index'])->name('facilities.index');
+    Route::get('facilities/create', [Dhp\Admin\FacilityController::class, 'create'])->name('facilities.create');
+    Route::post('facilities', [Dhp\Admin\FacilityController::class, 'store'])->name('facilities.store');
+    Route::get('facilities/{facility}/edit', [Dhp\Admin\FacilityController::class, 'edit'])->name('facilities.edit');
+    Route::match(['put', 'patch'], 'facilities/{facility}', [Dhp\Admin\FacilityController::class, 'update'])->name('facilities.update');
+    Route::post('facilities/{facility}/toggle-active', [Dhp\Admin\FacilityController::class, 'toggleActive'])->name('facilities.toggle-active');
+
+    Route::get('audit-logs', [Dhp\Admin\AuditLogController::class, 'index'])->name('audit-logs.index');
 });

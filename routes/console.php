@@ -9,3 +9,4 @@ use Illuminate\Support\Facades\Schedule;
 
 Schedule::command('reminders:send')->dailyAt('07:00')->withoutOverlapping();
 Schedule::command('patients:separate-adults')->dailyAt('01:00')->withoutOverlapping();
+Schedule::command('credentials:mark-expired')->dailyAt('01:00')->withoutOverlapping();
