@@ -105,6 +105,40 @@ class DhpAccessTest extends TestCase
         }
     }
 
+    public function test_forbidden_page_points_each_role_to_a_permitted_route(): void
+    {
+        $cases = [
+            'citizen' => ['Go to My Passport', 'dhp.citizen.dashboard', '/issuer/dashboard'],
+            'issuer' => ['Go to Issuer Dashboard', 'dhp.issuer.dashboard', '/citizen/dashboard'],
+            'verifier' => ['Go to Verify Certificate', 'dhp.verifier.dashboard', '/citizen/dashboard'],
+            'admin' => ['Go to Administration', 'dhp.admin.dashboard', '/citizen/dashboard'],
+        ];
+
+        foreach ($cases as $role => [$label, $routeName, $forbiddenPath]) {
+            $response = $this->actingAs($this->dhpUser($role))->get($forbiddenPath)->assertForbidden();
+            $response->assertSee($label);
+            $response->assertSee(route($routeName), false);
+            $response->assertDontSee('history.back', false);
+            $response->assertDontSee('Go to the dashboard');
+        }
+    }
+
+    public function test_forbidden_page_sends_roleless_and_guest_users_to_login(): void
+    {
+        $user = User::factory()->create(['role' => null, 'is_active' => true]);
+
+        $this->actingAs($user)->get('/issuer/dashboard')->assertForbidden()
+            ->assertSee('Go to Login')
+            ->assertSee(route('login'), false);
+
+        $html = view('errors.403', [
+            'exception' => new \Symfony\Component\HttpKernel\Exception\HttpException(403),
+        ])->render();
+        $this->assertStringContainsString('Go to Login', $html);
+        $this->assertStringContainsString(route('login'), $html);
+        $this->assertStringNotContainsString('history.back', $html);
+    }
+
     public function test_citizen_policy_rejects_other_citizens_credentials(): void
     {
         $owner = $this->dhpUser('citizen');
