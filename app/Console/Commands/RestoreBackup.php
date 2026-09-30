@@ -85,7 +85,7 @@ class RestoreBackup extends Command
         try {
             @mkdir($tempDir, 0700, true);
 
-            $zip = new ZipArchive();
+            $zip = new ZipArchive;
             $absolute = $disk->path($relative);
 
             if ($zip->open($absolute) !== true) {

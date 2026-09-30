@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests\Dhp;
 
+use App\Models\Credential;
 use Illuminate\Foundation\Http\FormRequest;
 
 /**
@@ -12,7 +13,7 @@ class StoreCredentialRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        return $this->user()->can('create', \App\Models\Credential::class);
+        return $this->user()->can('create', Credential::class);
     }
 
     /**

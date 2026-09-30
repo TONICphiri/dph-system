@@ -23,6 +23,7 @@ class DatabaseSeeder extends Seeder
 
         if (config('health_passport.seed_demo_data')) {
             $this->call(DemoDataSeeder::class);
+            $this->call(DhpDemoSeeder::class);
         }
     }
 }

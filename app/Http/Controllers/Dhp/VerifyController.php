@@ -18,9 +18,7 @@ use Illuminate\View\View;
  */
 class VerifyController extends Controller
 {
-    public function __construct(private readonly DhpCredentialVerificationService $checks)
-    {
-    }
+    public function __construct(private readonly DhpCredentialVerificationService $checks) {}
 
     public function index(): View
     {
@@ -56,7 +54,7 @@ class VerifyController extends Controller
     }
 
     /**
-     * @param array{result: VerificationResult, credential: mixed} $outcome
+     * @param  array{result: VerificationResult, credential: mixed}  $outcome
      */
     private function record(array $outcome, VerificationMethod $method, Request $request): void
     {

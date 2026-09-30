@@ -8,7 +8,7 @@ use App\Models\Citizen;
 use App\Models\Credential;
 use App\Models\Facility;
 use App\Models\User;
-use App\Models\Verification;
+use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -58,15 +58,24 @@ class DhpAdminTest extends TestCase
     public function test_dashboard_counts_and_excludes_sensitive_fields(): void
     {
         $admin = $this->admin();
+
+        $countRole = fn (string $role) => User::query()->where('role', $role)->where('is_active', true)->count();
+        $countStatus = fn (string $status) => Credential::query()->where('status', $status)->count();
+        $base = [
+            'issuers' => $countRole('issuer'),
+            'admins' => $countRole('admin'),
+            'revoked' => $countStatus('revoked'),
+        ];
+
         User::factory()->count(2)->create(['role' => 'issuer', 'is_active' => true]);
         $citizen = Citizen::factory()->create();
         Credential::factory()->create(['citizen_id' => $citizen->id]);
         Credential::factory()->revoked()->create(['citizen_id' => $citizen->id]);
 
         $response = $this->actingAs($admin)->get(route('dhp.admin.dashboard'))->assertOk();
-        $response->assertSee('>Issuers</dt><dd class="text-xl font-semibold">2</dd>', false);
-        $response->assertSee('>Administrators</dt><dd class="text-xl font-semibold">1</dd>', false);
-        $response->assertSee('>Revoked</dt><dd class="text-xl font-semibold">1</dd>', false);
+        $response->assertSee('>Issuers</dt><dd class="text-xl font-semibold">'.($base['issuers'] + 2).'</dd>', false);
+        $response->assertSee('>Administrators</dt><dd class="text-xl font-semibold">'.$base['admins'].'</dd>', false);
+        $response->assertSee('>Revoked</dt><dd class="text-xl font-semibold">'.($base['revoked'] + 1).'</dd>', false);
         $response->assertDontSee($citizen->passport_id);
         $response->assertDontSee('qr_token');
         $response->assertDontSee('"is_active"');
@@ -115,7 +124,9 @@ class DhpAdminTest extends TestCase
         $this->actingAs($issuer->fresh())->get(route('dhp.verifier.dashboard'))->assertOk();
         $this->actingAs($issuer->fresh())->get(route('dhp.issuer.dashboard'))->assertForbidden();
 
-        // Final active admin cannot be deactivated.
+        // Final active admin cannot be deactivated: remove any other admins
+        // (including seeded demo admins) so only this one remains.
+        User::query()->where('role', 'admin')->whereKeyNot($admin->id)->delete();
         $this->actingAs($admin)->post(route('dhp.admin.users.toggle-active', $admin))
             ->assertRedirect()->assertSessionHas('error');
         $this->assertTrue($admin->fresh()->is_active);
@@ -254,7 +265,7 @@ class DhpAdminTest extends TestCase
     public function test_expiry_command_is_scheduled(): void
     {
         $found = false;
-        foreach (app(\Illuminate\Console\Scheduling\Schedule::class)->events() as $event) {
+        foreach (app(Schedule::class)->events() as $event) {
             if (str_contains((string) ($event->command ?? ''), 'credentials:mark-expired')) {
                 $found = true;
             }

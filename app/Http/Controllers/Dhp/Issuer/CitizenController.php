@@ -11,7 +11,7 @@ use App\Models\User;
 use App\Services\DhpAuditLogger;
 use App\Services\DhpIdentifierService;
 use App\Services\DhpIdentityConfirmation;
-use App\Services\QrCodeService;
+use App\Services\DhpNotificationService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -284,7 +284,7 @@ class CitizenController extends Controller
         );
 
         if ($portalAccount && $citizen->user) {
-            \App\Services\DhpNotificationService::queueCitizenAccountCreated($citizen->user, $citizen, $request->user());
+            DhpNotificationService::queueCitizenAccountCreated($citizen->user, $citizen, $request->user());
         }
 
         $message = $portalAccount

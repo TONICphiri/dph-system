@@ -1,231 +1,242 @@
 # Digital Health Passport
 
-A web based health record system for public health facilities in Malawi. Every patient receives one passport number and a printable card with a QR code. The same record follows the patient to any facility that uses the system, and each health worker sees only the part of the record their role needs.
+Digital Health Passport is a **web-based final-year prototype for Malawi**.
+It digitizes selected paper health-passport entries as **verifiable credentials**.
+The prototype supports **vaccination** and **laboratory-test** credentials.
+It is **not a hospital management system** and **not a full electronic medical record**.
 
-Built with Laravel 12, Blade, PHP 8.2 or newer, Tailwind CSS, Alpine.js and MySQL.
+Citizens without smartphones are served through health-worker assisted access:
+a health worker searches with National ID or Passport ID, confirms at least
+two demographic details, issues or updates credentials, and prints a QR
+certificate. National ID is an **identifier, not a password, PIN source,
+QR payload, or verification token**.
 
 ## Contents
 
-1. [Roles and what each one sees](#roles-and-what-each-one-sees)
-2. [How a patient moves through the system](#how-a-patient-moves-through-the-system)
-3. [Running on a computer with XAMPP](#running-on-a-computer-with-xampp)
-4. [Demonstration accounts](#demonstration-accounts)
-5. [Running the tests](#running-the-tests)
-6. [Hosting on cPanel](#hosting-on-cpanel)
-7. [Project structure](#project-structure)
-8. [Design rules](#design-rules)
-9. [Future features](#future-features)
+1. [Credential lifecycle](#credential-lifecycle)
+2. [Roles](#roles)
+3. [Scope and exclusions](#scope-and-exclusions)
+4. [Technology stack](#technology-stack)
+5. [Setup instructions](#setup-instructions)
+6. [Demo accounts](#demo-accounts)
+7. [Demo walkthrough](#demo-walkthrough)
+8. [Queue and email](#queue-and-email)
+9. [Scheduler and cron](#scheduler-and-cron)
+10. [Backup and restore](#backup-and-restore)
+11. [Testing](#testing)
+12. [Known limitations](#known-limitations)
 
-## Roles and what each one sees
+## Credential lifecycle
 
-| Role | Main work | Can see |
-| --- | --- | --- |
-| System Administrator | Registers facilities and their administrators, manages the vaccine list, districts and system settings, checks system health | Facilities, accounts, settings, activity log. No clinical notes |
-| Facility Administrator | Registers clerks, nurses, doctors and pharmacists, manages wards, beds and doctor schedules, approves appointments, reads facility reports | Staff, wards, beds, appointments, stock, reports for their own facility |
-| Clerk | Registers patients, links children to their mother, checks patients in | Personal details and emergency contacts only |
-| Nurse | Records vital signs, allocates beds, keeps the inpatient chart, gives vaccinations | Vital signs, ward information and basic history |
-| Doctor | Consults, prescribes, admits and discharges | The full medical record |
-| Pharmacist | Dispenses prescriptions and manages medicine stock | Prescriptions and dosage only |
-| Patient | Views their own record and their children's records, books appointments, rates visits | Their own record |
-
-Access is enforced on the server by roles and permissions (spatie/laravel-permission), by route middleware and by policies. The sidebar only lists pages the signed in user may open, and any direct attempt to open another page returns an access denied page.
-
-## How a patient moves through the system
-
-**Registration.** The clerk searches first to avoid duplicates. Adults are registered with their National ID. A child under 18 is registered under the mother's record. Every patient receives a passport number and a QR code. Each night the system separates children who have reached the separation age (18 by default, set in System settings) so they get an independent record.
-
-**Outpatient care.** Clerk checks the patient in by scanning the card or entering the passport number. Nurse records vital signs. Doctor consults and prescribes. Pharmacist dispenses, and stock is reduced automatically. The visit is completed and a printable visit report is produced.
-
-**Inpatient care.** The doctor decides to admit. A nurse or the Facility Administrator allocates a ward and bed. Only wards that accept the patient's sex and age are offered. Nurses record vital signs, progress notes and each dose given. The doctor discharges the patient, the bed is released automatically and an inpatient report is produced.
-
-**Patient portal.** Patients book appointments on days when a doctor is scheduled and places remain. The facility approves or declines each request and the patient is notified. After a completed appointment the patient can rate the doctor and say whether they would recommend them.
-
-**Vaccinations and reminders.** Nurses record each dose. The next dose date is calculated from the vaccine schedule and a reminder is created. Reminders are also used for medication refills, including confidential antiretroviral therapy refills. Due reminders are sent every morning.
-
-## Running on a computer with XAMPP
-
-Requirements: XAMPP with PHP 8.2 or newer, Composer, Node.js 18 or newer.
-
-1. Start Apache and MySQL in the XAMPP Control Panel.
-2. Open phpMyAdmin at http://localhost/phpmyadmin and create a database named `health_passport` with collation `utf8mb4_unicode_ci`.
-3. In a terminal inside the project folder, run:
-
-```bash
-composer install
-npm install
-npm run build
-copy .env.example .env        # on macOS or Linux: cp .env.example .env
-php artisan key:generate
-php artisan migrate --seed
-php artisan storage:link
-php artisan serve
+```text
+Register citizen
+→ Confirm identity
+→ Issue credential
+→ Present QR or printed certificate
+→ Verify certificate
+→ Correct / Revoke / Replace
+→ Expire
+→ Audit
 ```
 
-4. Open http://localhost:8000 and sign in with one of the accounts below.
+## Roles
 
-The `.env.example` file already uses the XAMPP defaults: user `root` with no password. Change `DB_USERNAME` and `DB_PASSWORD` if your MySQL is set up differently.
+| Role | Main capabilities |
+|---|---|
+| Citizen | View own passport; show active QR; print own certificate |
+| Issuer | Search/register citizen; confirm identity; issue/correct/revoke/replace credential; print certificate |
+| Verifier | Scan QR or enter credential number; receive minimum required verification result |
+| Administrator | Manage DHP users/facilities; review safe audit activity; run/view backup status |
 
-To start again with fresh demonstration data at any time:
+Two access models:
+
+- **Smartphone citizen:** portal account, views own credentials, shows QR code or prints a certificate.
+- **Non-smartphone citizen:** visits a participating health facility; a health worker searches with National ID/Passport ID, confirms at least two demographics, issues/updates credentials and prints a QR certificate.
+
+## Scope and exclusions
+
+Excluded functions:
+
+```text
+Appointments, queues, triage, clinical notes, diagnoses, prescriptions, pharmacy, inventory, billing, insurance, admissions, beds, wards, theatre, staff scheduling, and full medical history.
+```
+
+Detailed medical consultation data is not digitized by this prototype.
+Verification discloses the minimum necessary result, never a medical record.
+
+## Technology stack
+
+- Backend: Laravel 11 (PHP), MySQL, Eloquent, Form Requests, Policies/Gates, middleware.
+- Frontend: Blade templates with Tailwind CSS and plain vanilla JavaScript. No SPA framework.
+- QR generation: server-side with `simplesoftwareio/simple-qrcode`, rendered in Blade.
+- Camera QR scanning: `html5-qrcode` library (locally bundled with Vite, loaded only on verification pages).
+- Queues: Laravel database queue (`php artisan queue:work`).
+- Email: Laravel mail via SMTP; Mailtrap for development notifications.
+- Backups: `spatie/laravel-backup` 9.x (database-only, encrypted ZIP archives).
+- Required tooling: PHP 8.2+, Composer, Node.js 18+, MySQL with `mysqldump`/`mysql` clients, PHP `zip` extension.
+
+## Setup instructions
+
+```bash
+git clone <repository-url>
+cd <project-directory>
+composer install
+npm install
+cp .env.example .env        # on Windows: copy .env.example .env
+php artisan key:generate
+```
+
+Configure `.env` (all from environment, never hardcoded):
+
+- Application and database: `APP_URL`, `DB_DATABASE`, `DB_USERNAME`, `DB_PASSWORD`.
+- Mailtrap/default mail: `MAIL_MAILER`, `MAIL_HOST`, `MAIL_PORT`, `MAIL_USERNAME`, `MAIL_PASSWORD`, `MAIL_FROM_ADDRESS`, `MAIL_FROM_NAME`.
+- Queue connection: `QUEUE_CONNECTION=database`.
+- Backup archive password and recipient: `BACKUP_ARCHIVE_PASSWORD`, `BACKUP_EMAIL_RECIPIENT`, `BACKUP_EMAIL_MAX_MB`.
+- Backup SMTP: `MAIL_BACKUP_*` (separate mailer so normal mail can stay on Mailtrap).
+- Optional: `MYSQLDUMP_PATH` (only needed when `mysqldump` is not on the server PATH).
+
+Then:
 
 ```bash
 php artisan migrate:fresh --seed
+npm run build
+php artisan serve
+php artisan queue:work
+php artisan schedule:work
 ```
 
-To run the daily reminder and age separation tasks by hand:
+On deployment the scheduler may instead run by cron (see below).
+To reset demo data at any time: `php artisan migrate:fresh --seed`.
 
-```bash
-php artisan reminders:send
-php artisan patients:separate-adults
-```
+## Demo accounts
 
-## Demonstration accounts
+Fictional local-development accounts (password `password` for all; local use only, change or remove in deployment):
 
-Created when `SEED_DEMO_DATA=true`. Every account uses the password `Password@2026`.
+| Role | Email | Password |
+|---|---|---|
+| Citizen | citizen@example.test | password |
+| Issuer | issuer@example.test | password |
+| Verifier | verifier@example.test | password |
+| Administrator | admin@example.test | password |
 
-| Role | Email | Facility |
-| --- | --- | --- |
-| System Administrator | admin@healthpassport.mw | All facilities |
-| Facility Administrator | facility@healthpassport.mw | Ndirande Community Hospital |
-| Clerk | clerk@healthpassport.mw | Ndirande Community Hospital |
-| Nurse | nurse@healthpassport.mw | Ndirande Community Hospital |
-| Doctor | doctor@healthpassport.mw | Ndirande Community Hospital |
-| Doctor | doctor2@healthpassport.mw | Ndirande Community Hospital |
-| Pharmacist | pharmacist@healthpassport.mw | Ndirande Community Hospital |
-| Patient | patient@healthpassport.mw | Grace Banda, mother of Daniel Banda |
-| Facility Administrator | zomba.admin@healthpassport.mw | Zomba Central Hospital |
-| Doctor | zomba.doctor@healthpassport.mw | Zomba Central Hospital |
+Seeded demo citizens include Yamikani Phiri (National ID `DEMO0001`, no portal account — assisted access) and Tadala Mvula (portal account). Demo credentials cover active, expired, revoked and replaced states.
 
-The demonstration data places patients at every stage: waiting for vital signs, waiting for the doctor, waiting at the pharmacy, admitted to a bed, waiting for a bed, discharged, and a completed outpatient visit with a report.
+## Demo walkthrough
 
-## Running the tests
-
-The tests use a separate database so your working data is never touched.
-
-1. Create a second database named `health_passport_test`.
-2. The tests connect with the MySQL user in `.env`. The test database name is set in `phpunit.xml`.
-3. Run:
-
-```bash
-php artisan test
-```
-
-The tests cover page access for every role, patient registration, the full outpatient journey to dispensing, inpatient admission and bed release, ward suitability rules, role based visibility of records, and appointment booking with approval.
-
-## Hosting on cPanel
-
-1. **Build locally.** Run `composer install --no-dev --optimize-autoloader` and `npm run build`.
-2. **Upload.** Compress the project without `node_modules` and `.env`, upload it with File Manager to a folder outside `public_html`, for example `/home/USERNAME/health-passport`, and extract it.
-3. **Point the domain to the public folder.** In cPanel, set the document root of the domain to `/home/USERNAME/health-passport/public`. If the document root cannot be changed, copy the contents of `public` into `public_html` and edit the two paths in `public_html/index.php` so they point to `../health-passport/vendor/autoload.php` and `../health-passport/bootstrap/app.php`.
-4. **Create the database.** Use MySQL Databases in cPanel to create a database and a user, and give the user all privileges on the database.
-5. **Create `.env`.** Copy `.env.example` to `.env` and set at least:
-
-```
-APP_ENV=production
-APP_DEBUG=false
-APP_URL=https://your-domain
-DB_DATABASE=cpanel_database_name
-DB_USERNAME=cpanel_database_user
-DB_PASSWORD=strong_password
-SEED_DEMO_DATA=false
-ADMIN_EMAIL=your_admin_email
-ADMIN_PASSWORD=a_strong_password
-MAIL_MAILER=smtp
-```
-
-   Fill in the mail settings from the cPanel email account if you want email notifications.
-
-6. **Finish the set up** from cPanel Terminal or SSH, inside the project folder:
-
-```bash
-php artisan key:generate
-php artisan migrate --force --seed
-php artisan storage:link
-php artisan config:cache
-php artisan route:cache
-php artisan view:cache
-```
-
-7. **Add the cron job.** In cPanel Cron Jobs, add one job that runs every minute:
-
-```
-* * * * * php /home/USERNAME/health-passport/artisan schedule:run >> /dev/null 2>&1
-```
-
-   This sends due reminders at 07:00 and separates adult records at 01:00 every day.
-
-8. **Sign in** as the System Administrator, change the password on the profile page, then register the first facility and its administrator.
-
-After any later update, run `php artisan migrate --force` and repeat the three cache commands.
-
-## Project structure
-
-| Folder | Contents |
-| --- | --- |
-| `app/Enums` | Roles, permissions and every status used in the system |
-| `app/Http/Controllers` | Grouped by area: `Admin`, `Facility`, `Clinical`, `Portal` |
-| `app/Http/Requests` | Validation rules and plain error messages for every form |
-| `app/Services` | Workflow rules: registration, visits, consultations, admissions, prescriptions, appointments, reports |
-| `app/Policies` | Record level access checks |
-| `app/Console/Commands` | Daily reminder and age separation tasks |
-| `app/Support/Navigation.php` | Builds the sidebar from the user's permissions |
-| `database/seeders` | Reference data, the first administrator and optional demonstration data |
-| `resources/views` | Blade views grouped the same way as the controllers |
-| `tests/Feature` | Access and workflow tests |
-| `docs` | System design and requirements document |
-
-**Nothing is hard coded.** Facility types, ownership types, ward types, contact relationships, campaign categories, dosage forms, dosage frequencies, regions, the passport number prefix and the child separation age are all stored in the settings table and edited on the System settings page. Districts and vaccines have their own management pages.
-
-**Error handling.** Every form is validated with clear messages next to each field. Workflow rules that are broken, such as allocating an occupied bed, show a plain message at the top of the page. Missing records, denied access, expired sessions and server errors each have their own page, and unexpected errors are logged without showing technical details to the user.
-
-## Design rules
-
-- Square corners on every container, button and field. The Tailwind configuration sets every border radius to 0.
-- No gradients. Gradient utilities are switched off in the Tailwind configuration.
-- Plain words instead of abbreviations, for example "antiretroviral therapy clinic".
-- One green brand colour for actions and navigation, with amber and red kept for warnings and errors.
-
-## Future features
-
-Listed on the Future features page inside the system and not yet built: mobile money and card payments, medical insurance claims, and an assistant for patient questions.
-
-## Backups and restore (Digital Health Passport)
-
-The scheduler creates an encrypted MySQL-only backup daily at 02:00
-(`backup:run-and-email`), keeps daily backups for 14 days, weekly for
-8 weeks and monthly for 6 months, and can email the encrypted archive
-through a dedicated backup mailer. Backups are encrypted with
-`BACKUP_ARCHIVE_PASSWORD` and stored under `storage/app/backups`,
-never in a public folder. The server needs this cron entry:
+See [docs/demo-walkthrough.md](docs/demo-walkthrough.md) for the reproducible end-to-end scenario (register → confirm → issue → print → verify Valid → citizen view → revoke → verify Revoked → audit/backup/Mailtrap checks). What it proves:
 
 ```text
-* * * * * php /path/to/project/artisan schedule:run >> /dev/null 2>&1
+- Smartphone and non-smartphone access support.
+- National ID is lookup/identity support, not a password.
+- QR contains no medical data.
+- Verification uses minimum disclosure.
+- Revoked/replaced credentials fail verification.
+- Audit logs are privacy-safe.
+- Backups are encrypted and not publicly downloadable.
 ```
 
-### Restore (overwrites the current database)
+## Queue and email
 
-1. Copy the encrypted archive (from the backup email or server storage)
-   into the new server's `storage/app/backups` directory without
-   renaming or decrypting it.
-2. Set the same `BACKUP_ARCHIVE_PASSWORD` in the new server's `.env`.
-3. Run, using only the archive file name:
+```bash
+php artisan queue:work
+```
+
+Every notification is queued (never sent during the HTTP request). Configure
+Mailtrap from `.env` and watch the Mailtrap inbox during the demo.
+
+```text
+Queued means the application successfully submitted a notification to Laravel's configured queue. It does not prove that the recipient received, opened, or read the email.
+```
+
+Notifications intentionally exclude National ID, passwords, PINs, test results,
+vaccine details, QR images/tokens, and full medical details. Citizens without
+an email address are skipped silently and never blocked from care.
+
+## Scheduler and cron
+
+Local development:
+
+```bash
+php artisan schedule:work
+```
+
+Deployment cron (runs every minute):
+
+```cron
+* * * * * cd /path/to/project && php artisan schedule:run >> /dev/null 2>&1
+```
+
+| Task | Schedule |
+|---|---|
+| Mark credentials expired | Daily 01:00 |
+| Notify expiring credentials | Daily 01:15 |
+| Encrypted database backup and optional backup email | Daily 02:00 |
+| Backup cleanup | Daily 02:30 |
+| Backup monitoring | Daily 03:00 |
+
+## Backup and restore
+
+- Database-only backups (no application files, `.env`, logs, or vendor code).
+- Archives are AES-256 encrypted with `BACKUP_ARCHIVE_PASSWORD` and stored in non-public `storage/app/backups`. No web download route exists.
+- Run manually: `php artisan backup:run-and-email`.
+- Archives attach to backup email only below `BACKUP_EMAIL_MAX_MB` (default 20); larger backups send a status note instead. Backup mail uses the separate `smtp_backup` mailer.
+- Administrators can trigger and monitor backups from the DHP Backups page.
+
+A restore overwrites the target database and should be performed only by an authorized system operator.
+
+Before restoring in production or a shared environment:
+
+1. Announce a maintenance window.
+2. Put the application in maintenance mode:
+   ```bash
+   php artisan down
+   ```
+3. Stop or pause queue workers and scheduled jobs to prevent database writes.
+4. Make a fresh encrypted backup of the current database where possible.
+5. Confirm the archive and target environment.
+6. Restore through the guarded command.
+7. Validate the restored system.
+8. Resume workers/scheduler and bring the application online:
+   ```bash
+   php artisan up
+   ```
+
+Restore with only the archive file name (production requires `--force`):
 
 ```bash
 php artisan backup:restore example-backup.zip --force
 ```
 
-Omit `--force` for an interactive confirmation. In production a restore
-is refused without `--force`. Temporary files are removed automatically.
+Rules: only a safe archive basename is accepted; `BACKUP_ARCHIVE_PASSWORD` is required; copy archives securely into the non-public backup directory; never put archive paths, passwords, or database credentials in tickets or documentation. A manual fallback (extract with password, import the single `.sql` dump with a trusted local MySQL client) is available to trusted operators. `backup_restore_completed` is the durable success indicator once the schema exists; `backup_restore_started` may not persist when restoring an empty database.
 
-### Manual fallback
-
-1. Extract the archive with the password on a trusted computer.
-2. Find the single `.sql` dump inside.
-3. Import it with a local trusted MySQL client using credentials from
-   the server environment, for example:
+## Testing
 
 ```bash
-mysql -h 127.0.0.1 -u DB_USER -p DB_NAME < dump.sql
+php artisan test
 ```
 
-Never publish archive names, passwords, database names, recipient
-addresses or server paths.
+Coverage:
+
+- Passport data model (identifiers, opaque QR tokens, expiry logic).
+- Role access (citizen/issuer/verifier/admin separation, inactive denial).
+- Issuer registration, identity confirmation, issuance, correction, revocation, replacement.
+- Citizen ownership and privacy (own records only, no clinical/sensitive disclosure).
+- QR/manual verification and minimum-disclosure privacy.
+- Administration and expiry (user/facility management, audit viewer, idempotent expiry).
+- Notifications and queue safety (Mailtrap-safe, no sensitive content).
+- Backup/restore (encrypted archives, guarded restore, safe metadata).
+- UI, accessibility, and hospital-scope separation.
+
+## Known limitations
+
+- No live integration with Malawi National Registration Bureau, MaHIS/EIR, laboratories, DHIS2, border systems, or National ID services.
+- No SMS/USSD or offline mobile app.
+- QR verification needs web connectivity to check status and facility activity.
+- Printed certificates are supported, but health-worker assisted access remains necessary for citizens without smartphones.
+- Email notifications require an email address; no-email citizens are not excluded from service.
+- Backup/restore requires `mysqldump`, `mysql`, Zip/PHP extension, controlled server access, and authorized technical operation.
+- Before national deployment, the solution would require Ministry of Health governance, data-protection/legal review, hosting/security hardening, key-management policy, and interoperability standards/integration.
+
+---
+
+Legacy hospital-management modules from the original codebase are out of scope for this prototype. The destructive narrowing migration is parked at `database/migrations-parked/` and must not be executed without a separate, backed-up legacy-retirement plan.

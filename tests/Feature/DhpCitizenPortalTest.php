@@ -2,10 +2,10 @@
 
 namespace Tests\Feature;
 
-use App\Enums\CredentialStatus;
 use App\Models\AuditLog;
 use App\Models\Citizen;
 use App\Models\Credential;
+use App\Models\Facility;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -43,7 +43,7 @@ class DhpCitizenPortalTest extends TestCase
         [$user, $citizen] = $this->citizenAccount();
         [$otherUser, $otherCitizen] = $this->citizenAccount(['national_id' => 'PORTAL02', 'email' => 'other@example.com', 'phone' => '+265992223344']);
 
-        $facility = \App\Models\Facility::factory()->create(['name' => 'Ndirande Health Centre']);
+        $facility = Facility::factory()->create(['name' => 'Portal Test Health Centre']);
         $own = Credential::factory()->create(['citizen_id' => $citizen->id, 'facility_id' => $facility->id]);
         Credential::factory()->create(['citizen_id' => $otherCitizen->id, 'facility_id' => $facility->id]);
 

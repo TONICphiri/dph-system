@@ -22,8 +22,7 @@ class BackupArchiveMail extends Mailable implements ShouldQueue
         public readonly bool $attached,
         public readonly ?string $archivePath = null,
         public readonly ?string $archiveName = null,
-    ) {
-    }
+    ) {}
 
     public function envelope(): Envelope
     {

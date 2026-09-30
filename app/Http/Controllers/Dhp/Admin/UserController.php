@@ -6,6 +6,7 @@ use App\Enums\DhpRole;
 use App\Http\Controllers\Controller;
 use App\Models\User;
 use App\Services\DhpAuditLogger;
+use App\Services\DhpNotificationService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
@@ -79,7 +80,7 @@ class UserController extends Controller
             ipAddress: $request->ip(),
         );
 
-        \App\Services\DhpNotificationService::queueStaffAccountCreated($user, $request->user());
+        DhpNotificationService::queueStaffAccountCreated($user, $request->user());
 
         return redirect()->route('dhp.admin.users.index')
             ->with('success', 'User created and pending activation. The holder sets a password through the normal password reset process.');

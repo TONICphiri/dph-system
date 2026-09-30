@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests\Dhp;
 
+use App\Models\Citizen;
 use App\Services\DhpIdentityConfirmation;
 use Illuminate\Foundation\Http\FormRequest;
 
@@ -13,7 +14,7 @@ class ConfirmIdentityRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        return $this->user()->can('viewAny', \App\Models\Citizen::class);
+        return $this->user()->can('viewAny', Citizen::class);
     }
 
     /**

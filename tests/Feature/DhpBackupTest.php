@@ -5,10 +5,11 @@ namespace Tests\Feature;
 use App\Mail\Dhp\BackupArchiveMail;
 use App\Models\AuditLog;
 use App\Models\BackupRun;
-use App\Models\Citizen;
+use App\Models\Patient;
 use App\Models\User;
 use App\Notifications\Dhp\BackupFailedNotification;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Storage;
@@ -258,20 +259,20 @@ class DhpBackupTest extends TestCase
         $probe = 'health_passport_restore_probe';
         $original = config('database.connections.mysql.database');
 
-        $this->assertNotNull(\App\Models\Patient::query()->where('national_id', 'KT7Y4M21')->first());
+        $this->assertNotNull(Patient::query()->where('national_id', 'KT7Y4M21')->first());
         $this->artisan('backup:run-and-email')->assertSuccessful();
         $zip = basename((string) $this->newestZip());
         $this->assertNotEmpty($zip);
 
-        \Illuminate\Support\Facades\DB::statement("CREATE DATABASE IF NOT EXISTS `{$probe}`");
+        DB::statement("CREATE DATABASE IF NOT EXISTS `{$probe}`");
 
         try {
             config()->set('database.connections.mysql.database', $probe);
-            \Illuminate\Support\Facades\DB::purge('mysql');
+            DB::purge('mysql');
 
             $this->artisan('backup:restore', ['file' => $zip, '--force' => true])->assertSuccessful();
 
-            $this->assertNotNull(\App\Models\Patient::query()->where('national_id', 'KT7Y4M21')->first());
+            $this->assertNotNull(Patient::query()->where('national_id', 'KT7Y4M21')->first());
             $this->assertDirectoryDoesNotExist(storage_path('app/backup-restore-temp'));
             // The started-audit cannot persist on an empty target: it fires
             // before the import creates the tables. The completed audit proves
@@ -279,8 +280,8 @@ class DhpBackupTest extends TestCase
             $this->assertDatabaseHas('audit_logs', ['action' => 'backup_restore_completed']);
         } finally {
             config()->set('database.connections.mysql.database', $original);
-            \Illuminate\Support\Facades\DB::purge('mysql');
-            \Illuminate\Support\Facades\DB::statement("DROP DATABASE IF EXISTS `{$probe}`");
+            DB::purge('mysql');
+            DB::statement("DROP DATABASE IF EXISTS `{$probe}`");
         }
     }
 

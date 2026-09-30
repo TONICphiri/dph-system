@@ -1,4 +1,6 @@
 *.log
+*.sql
+*.zip
 .DS_Store
 .env
 .env.backup
@@ -17,6 +19,8 @@
 /public/hot
 /public/storage
 /storage/*.key
+/storage/app/backups
+/storage/app/backup-restore-temp
 /storage/pail
 /vendor
 Homestead.json

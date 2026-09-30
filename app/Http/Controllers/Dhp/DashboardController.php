@@ -3,6 +3,11 @@
 namespace App\Http\Controllers\Dhp;
 
 use App\Http\Controllers\Controller;
+use App\Models\AuditLog;
+use App\Models\Credential;
+use App\Models\Facility;
+use App\Models\User;
+use App\Models\Verification;
 use Illuminate\View\View;
 
 /**
@@ -31,14 +36,14 @@ class DashboardController extends Controller
 
     public function admin(): View
     {
-        $usersByRole = \App\Models\User::query()
+        $usersByRole = User::query()
             ->where('is_active', true)
             ->selectRaw('role, COUNT(*) as total')
             ->groupBy('role')
             ->pluck('total', 'role')
             ->all();
 
-        $credentials = \App\Models\Credential::query()->get();
+        $credentials = Credential::query()->get();
         $credentialCounts = ['active' => 0, 'expired' => 0, 'revoked' => 0, 'superseded' => 0];
         $expiringSoon = 0;
         foreach ($credentials as $credential) {
@@ -52,18 +57,18 @@ class DashboardController extends Controller
             }
         }
 
-        $lastExpiryJob = \App\Models\AuditLog::query()
+        $lastExpiryJob = AuditLog::query()
             ->where('action', 'credentials_expiry_job_completed')
             ->latest('id')
             ->first();
 
         return view('dhp.admin-dashboard', [
             'usersByRole' => $usersByRole,
-            'activeFacilities' => \App\Models\Facility::query()->where('is_active', true)->count(),
+            'activeFacilities' => Facility::query()->where('is_active', true)->count(),
             'credentialCounts' => $credentialCounts,
-            'verificationsToday' => \App\Models\Verification::query()->whereDate('verified_at', today())->count(),
-            'verificationsWeek' => \App\Models\Verification::query()->where('verified_at', '>=', now()->subDays(7))->count(),
-            'recentAudits' => \App\Models\AuditLog::query()->with('user')->latest('id')->limit(10)->get(),
+            'verificationsToday' => Verification::query()->whereDate('verified_at', today())->count(),
+            'verificationsWeek' => Verification::query()->where('verified_at', '>=', now()->subDays(7))->count(),
+            'recentAudits' => AuditLog::query()->with('user')->latest('id')->limit(10)->get(),
             'expiringSoon' => $expiringSoon,
             'lastExpiryJob' => $lastExpiryJob,
         ]);

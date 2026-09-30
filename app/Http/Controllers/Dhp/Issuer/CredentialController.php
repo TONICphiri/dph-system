@@ -12,6 +12,8 @@ use App\Models\Credential;
 use App\Models\Facility;
 use App\Services\DhpAuditLogger;
 use App\Services\DhpIdentifierService;
+use App\Services\DhpIdentityConfirmation;
+use App\Services\DhpNotificationService;
 use App\Services\QrCodeService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -128,7 +130,7 @@ class CredentialController extends Controller
         });
 
         $credential->load('citizen.user');
-        \App\Services\DhpNotificationService::queueCredentialIssued($credential, $request->user());
+        DhpNotificationService::queueCredentialIssued($credential, $request->user());
 
         return redirect()->route('dhp.issuer.credentials.print', $credential)
             ->with('success', 'Credential issued.');
@@ -276,17 +278,17 @@ class CredentialController extends Controller
 
         if ($wantsReplace) {
             $credential->load('citizen.user');
-            \App\Services\DhpNotificationService::queueCredentialRevoked($credential, $data['reason'], true, $request->user());
+            DhpNotificationService::queueCredentialRevoked($credential, $data['reason'], true, $request->user());
 
             return redirect()->route('dhp.issuer.credentials.create', ['citizen' => $credential->citizen_id, 'replace_of' => $credential->id])
                 ->with('success', 'Credential revoked. Review the replacement below and submit it.');
         }
 
         $credential->load('citizen.user');
-        \App\Services\DhpNotificationService::queueCredentialRevoked($credential, $data['reason'], false, $request->user());
+        DhpNotificationService::queueCredentialRevoked($credential, $data['reason'], false, $request->user());
 
         // Server-side session confirmation is short-lived; revoke it with the credential.
-        \App\Services\DhpIdentityConfirmation::revoke($credential->citizen_id);
+        DhpIdentityConfirmation::revoke($credential->citizen_id);
 
         return redirect()->route('dhp.issuer.citizens.show', $credential->citizen_id)
             ->with('success', 'Credential revoked.');

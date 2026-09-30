@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Models\AuditLog;
 use App\Models\Citizen;
 use App\Models\Credential;
 use App\Models\User;
@@ -126,7 +127,7 @@ class DhpAccessTest extends TestCase
             ipAddress: '127.0.0.1',
         );
 
-        $row = \App\Models\AuditLog::query()->where('action', 'credential_issued')->firstOrFail();
+        $row = AuditLog::query()->where('action', 'credential_issued')->latest('id')->firstOrFail();
         $this->assertSame('credential', $row->entity_type);
         $this->assertSame(42, (int) $row->entity_id);
         $this->assertSame('dhp.issuer.dashboard', $row->details['route']);

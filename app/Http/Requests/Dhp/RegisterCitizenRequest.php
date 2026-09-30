@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests\Dhp;
 
+use App\Models\Citizen;
 use Illuminate\Foundation\Http\FormRequest;
 
 /**
@@ -12,7 +13,7 @@ class RegisterCitizenRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        return $this->user()->can('create', \App\Models\Citizen::class);
+        return $this->user()->can('create', Citizen::class);
     }
 
     /**

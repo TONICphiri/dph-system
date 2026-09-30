@@ -107,6 +107,9 @@ class DhpVerifyTest extends TestCase
 
     public function test_non_valid_results_hide_all_details(): void
     {
+        $verificationsBefore = Verification::query()->count();
+        $auditsBefore = AuditLog::query()->where('action', 'credential_verified')->count();
+
         $expired = $this->credential();
         Credential::factory()->expired()->create(['citizen_id' => $expired->citizen_id, 'facility_id' => $expired->facility_id]);
         $revoked = Credential::factory()->revoked()->create();
@@ -124,8 +127,8 @@ class DhpVerifyTest extends TestCase
         $this->get(route('dhp.verify.by-token', 'short'))->assertOk()->assertSee('could not be verified');
         $this->get(route('dhp.verify.by-token', str_repeat('z', 64)))->assertOk()->assertSee('could not be verified');
 
-        $this->assertSame(6, Verification::query()->count());
-        $this->assertSame(6, AuditLog::query()->where('action', 'credential_verified')->count());
+        $this->assertSame($verificationsBefore + 6, Verification::query()->count());
+        $this->assertSame($auditsBefore + 6, AuditLog::query()->where('action', 'credential_verified')->count());
     }
 
     public function test_inactive_facility_returns_invalid(): void
