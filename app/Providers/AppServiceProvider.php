@@ -32,6 +32,10 @@ class AppServiceProvider extends ServiceProvider
         RateLimiter::for('dhp-pin', fn (Request $request) => Limit::perMinutes(10, 5)
             ->by(strtoupper((string) ($request->input('passport_id') ?? $request->input('national_id'))).'|'.$request->ip()));
 
+        // Public verification: 30 attempts per minute per IP only.
+        // Tokens and credential numbers are never keys, to avoid enumeration.
+        RateLimiter::for('verify-public', fn (Request $request) => Limit::perMinute(30)->by($request->ip()));
+
         // The system name is edited on the Settings page, so every page reads
         // it from the settings table instead of a fixed value.
         // If the database cannot be reached, for example on an error page, the

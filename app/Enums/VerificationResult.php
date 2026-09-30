@@ -9,6 +9,7 @@ enum VerificationResult: string
     case Valid = 'valid';
     case Expired = 'expired';
     case Revoked = 'revoked';
+    case Superseded = 'superseded';
     case Invalid = 'invalid';
     case NotFound = 'not_found';
 
@@ -18,6 +19,7 @@ enum VerificationResult: string
             self::Valid => 'Valid',
             self::Expired => 'Expired',
             self::Revoked => 'Revoked',
+            self::Superseded => 'Replaced',
             self::Invalid => 'Invalid',
             self::NotFound => 'Not Found',
         };

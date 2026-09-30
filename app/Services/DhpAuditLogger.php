@@ -21,6 +21,10 @@ class DhpAuditLogger
     /**
      * Keys removed from details at any nesting level (case-insensitive,
      * matched as substrings so e.g. "nationalId" and "NATIONAL_ID" also go).
+     * Two precise exceptions keep required safe metadata:
+     * - exact key "result" with a verification outcome value
+     *   (valid/expired/revoked/superseded/invalid/not_found);
+     * - "has_*" boolean presence flags (e.g. has_national_id: true).
      *
      * @var array<int, string>
      */
@@ -32,7 +36,10 @@ class DhpAuditLogger
         'date_of_birth',
         'dob',
         'birth',
-        'result',
+        'test_result',
+        'result_date',
+        'result_value',
+        'lab_result',
         'diagnos',
         'medical',
         'qr_token',
@@ -41,6 +48,11 @@ class DhpAuditLogger
         'session',
         'remember',
     ];
+
+    /**
+     * @var array<int, string>
+     */
+    private const OUTCOME_VALUES = ['valid', 'expired', 'revoked', 'superseded', 'invalid', 'not_found'];
 
     public static function log(
         ?User $user,
@@ -78,6 +90,24 @@ class DhpAuditLogger
 
         foreach ($details as $key => $value) {
             $name = strtolower((string) $key);
+
+            // Verification outcome only: any other "result" value is clinical.
+            if ($name === 'result') {
+                if (is_string($value) && in_array(strtolower($value), self::OUTCOME_VALUES, true)) {
+                    $clean[$key] = $value;
+                }
+
+                continue;
+            }
+
+            // Presence flags only: a non-boolean has_* value may carry identity.
+            if (str_starts_with($name, 'has_')) {
+                if (is_bool($value)) {
+                    $clean[$key] = $value;
+                }
+
+                continue;
+            }
 
             foreach (self::SENSITIVE_KEYS as $banned) {
                 if (str_contains($name, $banned)) {

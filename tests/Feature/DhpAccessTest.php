@@ -50,7 +50,7 @@ class DhpAccessTest extends TestCase
 
     public function test_active_verifier_and_admin_reach_their_dashboards(): void
     {
-        $this->actingAs($this->dhpUser('verifier'))->get('/verifier/dashboard')->assertOk()->assertSee('Verifier Dashboard');
+        $this->actingAs($this->dhpUser('verifier'))->get('/verifier/dashboard')->assertOk()->assertSee('Verify Certificate');
         $this->actingAs($this->dhpUser('verifier'))->get('/citizen/dashboard')->assertForbidden();
         $this->actingAs($this->dhpUser('admin'))->get('/admin/dashboard')->assertOk()->assertSee('Passport Administration');
         $this->actingAs($this->dhpUser('admin'))->get('/citizen/dashboard')->assertForbidden();

@@ -238,6 +238,19 @@ Route::middleware(['auth', 'dhp.role:issuer'])->prefix('issuer')->name('dhp.issu
 
 Route::middleware(['auth', 'dhp.role:verifier'])->prefix('verifier')->name('dhp.verifier.')->group(function () {
     Route::get('dashboard', [Dhp\DashboardController::class, 'verifier'])->name('dashboard');
+    Route::get('verify', [Dhp\Verifier\VerificationController::class, 'verify'])->name('verify');
+    Route::get('by-token/{token}', [Dhp\Verifier\VerificationController::class, 'byToken'])->name('by-token');
+    Route::post('by-number', [Dhp\Verifier\VerificationController::class, 'byNumber'])->name('by-number');
+});
+
+/*
+| Public credential verification: no login, strict throttle, minimal
+| disclosure. Tokens/numbers are never rate-limit keys (no enumeration).
+*/
+Route::middleware('throttle:verify-public')->name('dhp.verify.')->group(function () {
+    Route::get('verify', [Dhp\VerifyController::class, 'index'])->name('index');
+    Route::get('verify/by-token/{token}', [Dhp\VerifyController::class, 'byToken'])->name('by-token');
+    Route::post('verify/by-number', [Dhp\VerifyController::class, 'byNumber'])->name('by-number');
 });
 
 Route::middleware(['auth', 'dhp.role:admin'])->prefix('admin')->name('dhp.admin.')->group(function () {
