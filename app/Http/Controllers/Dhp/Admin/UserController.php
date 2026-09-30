@@ -79,6 +79,8 @@ class UserController extends Controller
             ipAddress: $request->ip(),
         );
 
+        \App\Services\DhpNotificationService::queueStaffAccountCreated($user, $request->user());
+
         return redirect()->route('dhp.admin.users.index')
             ->with('success', 'User created and pending activation. The holder sets a password through the normal password reset process.');
     }

@@ -127,6 +127,9 @@ class CredentialController extends Controller
             return $credential;
         });
 
+        $credential->load('citizen.user');
+        \App\Services\DhpNotificationService::queueCredentialIssued($credential, $request->user());
+
         return redirect()->route('dhp.issuer.credentials.print', $credential)
             ->with('success', 'Credential issued.');
     }
@@ -272,9 +275,15 @@ class CredentialController extends Controller
         });
 
         if ($wantsReplace) {
+            $credential->load('citizen.user');
+            \App\Services\DhpNotificationService::queueCredentialRevoked($credential, $data['reason'], true, $request->user());
+
             return redirect()->route('dhp.issuer.credentials.create', ['citizen' => $credential->citizen_id, 'replace_of' => $credential->id])
                 ->with('success', 'Credential revoked. Review the replacement below and submit it.');
         }
+
+        $credential->load('citizen.user');
+        \App\Services\DhpNotificationService::queueCredentialRevoked($credential, $data['reason'], false, $request->user());
 
         // Server-side session confirmation is short-lived; revoke it with the credential.
         \App\Services\DhpIdentityConfirmation::revoke($credential->citizen_id);

@@ -283,6 +283,10 @@ class CitizenController extends Controller
             ipAddress: $request->ip(),
         );
 
+        if ($portalAccount && $citizen->user) {
+            \App\Services\DhpNotificationService::queueCitizenAccountCreated($citizen->user, $citizen, $request->user());
+        }
+
         $message = $portalAccount
             ? 'Citizen registered. The portal account was created; activation notification will be configured later.'
             : 'Citizen registered.';
