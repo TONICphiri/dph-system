@@ -68,6 +68,36 @@ class DhpAccessTest extends TestCase
         }
     }
 
+    public function test_login_redirects_by_dhp_role(): void
+    {
+        $issuer = User::factory()->create([
+            'role' => 'issuer', 'is_active' => true,
+            'password' => \Illuminate\Support\Facades\Hash::make('password'),
+        ]);
+
+        $this->post(route('login.store'), ['email' => $issuer->email, 'password' => 'password'])
+            ->assertRedirect(route('dhp.issuer.dashboard'));
+        $this->post(route('logout'));
+
+        $citizen = User::factory()->create([
+            'role' => 'citizen', 'is_active' => true,
+            'password' => \Illuminate\Support\Facades\Hash::make('password'),
+        ]);
+        $this->post(route('login.store'), ['email' => $citizen->email, 'password' => 'password'])
+            ->assertRedirect(route('dhp.citizen.dashboard'));
+    }
+
+    public function test_login_keeps_legacy_dashboard_for_accounts_without_dhp_role(): void
+    {
+        $legacy = User::factory()->create([
+            'role' => null, 'is_active' => true,
+            'password' => \Illuminate\Support\Facades\Hash::make('password'),
+        ]);
+
+        $this->post(route('login.store'), ['email' => $legacy->email, 'password' => 'password'])
+            ->assertRedirect(route('dashboard'));
+    }
+
     public function test_guests_are_redirected_to_login(): void
     {
         foreach (['/citizen/dashboard', '/issuer/dashboard', '/verifier/dashboard', '/admin/dashboard'] as $path) {

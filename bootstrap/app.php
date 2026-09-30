@@ -39,7 +39,7 @@ return Application::configure(basePath: dirname(__DIR__))
         ]);
 
         $middleware->redirectGuestsTo(fn () => route('login'));
-        $middleware->redirectUsersTo(fn () => route('dashboard'));
+        $middleware->redirectUsersTo(fn (Request $request) => $request->user()?->dhpHomeUrl() ?? route('dashboard'));
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         // Business rule messages are expected and shown to the user, not logged.

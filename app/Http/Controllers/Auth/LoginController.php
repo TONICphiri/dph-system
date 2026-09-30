@@ -44,7 +44,7 @@ class LoginController extends Controller
         $user->forceFill(['last_login_at' => now()])->save();
         $audit->record('user.signed-in', "Signed in to the system.");
 
-        return redirect()->intended(route('dashboard'));
+        return redirect()->intended($user->dhpHomeUrl() ?? route('dashboard'));
     }
 
     public function destroy(Request $request): RedirectResponse

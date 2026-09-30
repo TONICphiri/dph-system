@@ -139,6 +139,21 @@ class User extends Authenticatable
         return $patient->id === $this->patient_id || $patient->mother_id === $this->patient_id;
     }
 
+    /**
+     * DHP home page for this login, or null for legacy accounts without
+     * a passport role (they keep the legacy dashboard).
+     */
+    public function dhpHomeUrl(): ?string
+    {
+        return match ($this->role) {
+            \App\Enums\DhpRole::Citizen => route('dhp.citizen.dashboard'),
+            \App\Enums\DhpRole::Issuer => route('dhp.issuer.dashboard'),
+            \App\Enums\DhpRole::Verifier => route('dhp.verifier.dashboard'),
+            \App\Enums\DhpRole::Admin => route('dhp.admin.dashboard'),
+            default => null,
+        };
+    }
+
     public function initials(): string
     {
         $parts = preg_split('/\s+/', trim($this->name)) ?: [];
