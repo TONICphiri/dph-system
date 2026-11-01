@@ -19,7 +19,35 @@ class RestoreBackup extends Command
         $disk = Storage::disk(config('health_passport.backup.disk'));
         $stored = config('health_passport.backup.directory').'/'.basename($name);
 
-        $path = is_file($name) ? $name : ($disk->exists($stored) ? $disk->path($stored) : null);
+        $path = null;
+        $temporary = null;
+
+        if (is_file($name)) {
+            $path = $name;
+        } elseif ($disk->exists($stored)) {
+            $stream = $disk->readStream($stored);
+
+            if (! is_resource($stream)) {
+                $this->error('That backup file could not be read.');
+
+                return self::FAILURE;
+            }
+
+            $temporary = tempnam(sys_get_temp_dir(), 'dhp-restore-');
+            $target = $temporary === false ? false : fopen($temporary, 'wb');
+
+            if ($target === false) {
+                fclose($stream);
+                $this->error('A temporary file for the backup could not be created.');
+
+                return self::FAILURE;
+            }
+
+            stream_copy_to_stream($stream, $target);
+            fclose($target);
+            fclose($stream);
+            $path = $temporary;
+        }
 
         if (! $path) {
             $this->error('That backup file could not be found.');
@@ -28,6 +56,10 @@ class RestoreBackup extends Command
         }
 
         if (! $this->option('force') && ! $this->confirm('This replaces all current data with the backup. Continue?')) {
+            if ($temporary !== null && is_file($temporary)) {
+                @unlink($temporary);
+            }
+
             return self::FAILURE;
         }
 
@@ -37,6 +69,10 @@ class RestoreBackup extends Command
             $this->error($exception->getMessage());
 
             return self::FAILURE;
+        } finally {
+            if ($temporary !== null && is_file($temporary)) {
+                @unlink($temporary);
+            }
         }
 
         foreach ($restored as $table => $count) {

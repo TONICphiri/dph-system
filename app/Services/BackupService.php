@@ -41,9 +41,30 @@ class BackupService
 
         $backup = Backup::create(['status' => 'running', 'trigger' => $trigger, 'created_by' => $by?->id]);
 
+        // The file is written locally first because an S3 disk has no local
+        // path to fopen. It is then streamed to the configured disk, which
+        // works for local storage as well as S3 and R2.
+        $temporary = tempnam(sys_get_temp_dir(), 'dhp-backup-');
+
         try {
+            if ($temporary === false) {
+                throw new RuntimeException('A temporary file for the backup could not be created.');
+            }
+
             $disk->makeDirectory($directory);
-            $this->write($disk->path($path));
+            $this->write($temporary);
+
+            $handle = fopen($temporary, 'rb');
+
+            if (! $handle) {
+                throw new RuntimeException('The temporary backup file could not be read.');
+            }
+
+            try {
+                $disk->writeStream($path, $handle);
+            } finally {
+                fclose($handle);
+            }
 
             $backup->update([
                 'filename' => $filename,
@@ -54,9 +75,18 @@ class BackupService
             $this->removeExpired();
         } catch (Throwable $exception) {
             report($exception);
-            $disk->delete($path);
+
+            try {
+                $disk->delete($path);
+            } catch (Throwable) {
+                // The upload may not have created anything to delete.
+            }
 
             $backup->update(['status' => Backup::FAILED, 'error' => mb_substr($exception->getMessage(), 0, 500)]);
+        } finally {
+            if (is_string($temporary) && is_file($temporary)) {
+                @unlink($temporary);
+            }
         }
 
         $this->notifyAdministrators($backup->fresh());

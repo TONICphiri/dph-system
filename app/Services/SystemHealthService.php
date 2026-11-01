@@ -23,6 +23,8 @@ class SystemHealthService
             $this->databaseCheck(),
             $this->migrationsCheck(),
             $this->storageCheck(),
+            $this->backupStorageCheck(),
+            $this->cronCheck(),
             $this->queueCheck(),
             $this->failedJobsCheck(),
             [
@@ -112,6 +114,41 @@ class SystemHealthService
             'label' => 'File storage',
             'value' => $writable ? 'Writable' : 'Not writable. Check folder permissions for storage.',
             'healthy' => $writable,
+        ];
+    }
+
+    /**
+     * Vercel only offers temporary local storage, so a local backup disk
+     * means the nightly copy disappears when the function is recycled.
+     */
+    private function backupStorageCheck(): array
+    {
+        $disk = (string) config('health_passport.backup.disk', 'local');
+        $durable = $disk !== 'local' || ! app()->isProduction();
+
+        return [
+            'label' => 'Backup storage',
+            'value' => $durable
+                ? "Using the {$disk} disk"
+                : 'Backups are stored on the local disk, which is temporary on Vercel. Set BACKUP_DISK=s3.',
+            'healthy' => $durable,
+        ];
+    }
+
+    /**
+     * The cron secret protects the endpoints Vercel calls for reminders,
+     * backups and adult separation.
+     */
+    private function cronCheck(): array
+    {
+        $configured = filled(config('health_passport.cron_secret'));
+
+        return [
+            'label' => 'Scheduled jobs',
+            'value' => $configured
+                ? 'Protected cron endpoint configured'
+                : 'CRON_SECRET is not set, so Vercel cron requests are refused.',
+            'healthy' => $configured || ! app()->isProduction(),
         ];
     }
 

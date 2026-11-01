@@ -12,6 +12,8 @@ It is not a hospital management system or a patient record system. It has no war
 - Demonstration accounts
 - Running the tests
 - Hosting on cPanel
+- Hosting on Vercel
+- Backups
 - Design rules
 
 ## Roles
@@ -72,7 +74,7 @@ php artisan patients:separate-adults
 
 ## Demonstration accounts
 
-Created when `SEED_DEMO_DATA=true`. Every account uses the password `Password@2026`.
+Created when `SEED_DEMO_DATA=true`. Every demonstration account uses the value of `ADMIN_PASSWORD` from `.env`. Never enable demonstration data on a public server.
 
 | Role / Position | Email | Belongs to |
 |---|---|---|
@@ -152,11 +154,39 @@ php artisan view:cache
 
 After any later update, run `php artisan migrate --force` and repeat the three cache commands.
 
+## Hosting on Vercel
+
+Vercel has no long running scheduler, so the daily work is called by Vercel Cron. The project's `vercel.json` already contains the two schedules, in UTC:
+
+| Schedule | Malawi time | Work |
+|---|---|---|
+| `0 5 * * *` | 07:00 | Create and send due vaccination reminders |
+| `0 0 * * *` | 02:00 | Back up the database and separate adult records |
+
+1. Set these environment variables in the Vercel project:
+   - `APP_ENV=production`, `APP_DEBUG=false`, `APP_URL=https://your-project.vercel.app`
+   - `DB_CONNECTION=mysql` and the TiDB connection values
+   - `SEED_DEMO_DATA=false`
+   - `CRON_SECRET` — a long random value. Vercel sends it as `Authorization: Bearer <CRON_SECRET>`; the endpoints refuse every request when it is empty.
+   - `BACKUP_DISK=s3` and the `AWS_*` values for a durable bucket. For Cloudflare R2, also set `AWS_ENDPOINT` and `AWS_USE_PATH_STYLE_ENDPOINT=true`.
+2. Deploy. Vercel reads the schedules from `vercel.json` and calls the protected endpoints automatically. The Hobby plan allows two daily cron jobs, which matches the two schedules above.
+3. Run the migrations once against the live database:
+
+```bash
+php artisan migrate --force
+```
+
+4. Open **System Health** and confirm that the database schema is up to date, scheduled jobs are protected, and backups use the `s3` disk.
+
+Vercel Cron uses UTC. The schedules above assume the application timezone is Africa/Blantyre (UTC+2). If the timezone changes, update `vercel.json` as well.
+
 ## Backups
 
 The System Administrator opens **Backups** to make a backup now, download any copy, or delete one. A copy is also made every day at the time set by `BACKUP_TIME` (default 02:00), and the administrators are notified when it finishes or fails. How many days copies are kept, and whether the daily backup runs, are on the Settings page. The newest three copies are always kept.
 
 A backup file is compressed and encrypted with `APP_KEY`, so it cannot be read without that key. **Keep a copy of `APP_KEY` somewhere safe, away from the server.** A backup cannot be restored with a different key.
+
+On Vercel, set `BACKUP_DISK=s3` (or another S3 compatible bucket such as Cloudflare R2). The `/tmp` folder used by a serverless function is temporary, so a backup written to the local disk would disappear. The backup is written to temporary storage and then streamed to the configured disk, so the same code works on cPanel and on Vercel.
 
 To restore on a working installation (same migrations, same `APP_KEY`):
 
@@ -164,7 +194,7 @@ To restore on a working installation (same migrations, same `APP_KEY`):
 php artisan backup:restore dhp-20261004-020000.dhpbak
 ```
 
-To restore on a new server, install the project, copy the old `APP_KEY` into `.env`, run `php artisan migrate --force`, copy the backup file into `storage/app/private/backups/`, then run the command above. Restoring replaces all current data.
+To restore on a new server, install the project, copy the old `APP_KEY` into `.env`, run `php artisan migrate --force`, then pass either the full path to the backup file or upload it to the configured backup disk under `backups/` and run the command above. Restoring replaces all current data.
 
 ## Working without a connection
 

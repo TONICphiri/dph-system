@@ -68,7 +68,9 @@ class PageAccessTest extends TestCase
             ->get(route('admin.system-health'))
             ->assertOk()
             ->assertSee('Database schema')
-            ->assertSee('Up to date');
+            ->assertSee('Up to date')
+            ->assertSee('Backup storage')
+            ->assertSee('Scheduled jobs');
     }
 
     public function test_hospital_management_pages_do_not_exist(): void
