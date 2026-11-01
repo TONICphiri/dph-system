@@ -30,12 +30,12 @@ return Application::configure(basePath: dirname(__DIR__))
        
         $middleware->trustProxies(at: '*');
 
-        // Signs out users whose account or facility has been deactivated,
-        // and sends users with a one time password to choose their own.
-        $middleware->append([
-            EnsureAccountIsActive::class,
-            EnsurePasswordIsChanged::class,
-        ]);
+        // Signs out users whose account or facility has been deactivated.
+        $middleware->append(EnsureAccountIsActive::class);
+
+        // Runs inside the web group so the matched route name is available;
+        // users with a one time password are held on the dashboard pop-up.
+        $middleware->appendToGroup('web', EnsurePasswordIsChanged::class);
 
         $middleware->alias([
             'role' => RoleMiddleware::class,

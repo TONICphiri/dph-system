@@ -16,8 +16,15 @@ class EnsurePasswordIsChanged
     {
         $user = $request->user();
 
-        if ($user && $user->must_change_password && ! $request->routeIs('password.change', 'password.change.update', 'logout')) {
-            return redirect()->route('password.change');
+        // The dashboard renders the blocking "change password" pop-up, so it is
+        // always allowed. Every other page sends the user back there until the
+        // one time password has been replaced.
+        if ($user && $user->must_change_password && ! $request->routeIs('dashboard', 'password.change', 'password.change.update', 'logout')) {
+            if ($request->expectsJson()) {
+                return response()->json(['message' => 'Change your password to continue.'], 423);
+            }
+
+            return redirect()->route('dashboard');
         }
 
         return $next($request);

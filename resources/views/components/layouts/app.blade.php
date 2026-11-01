@@ -151,6 +151,59 @@
         </main>
     </div>
 
+    @if ($user?->must_change_password)
+        {{-- First sign-in: a blocking pop-up until the one time password is replaced. --}}
+        <div class="fixed inset-0 z-[70] flex items-center justify-center overflow-y-auto bg-brand-950/80 px-4 py-8"
+             role="dialog" aria-modal="true" aria-labelledby="first-login-title"
+             x-data x-init="document.body.style.overflow = 'hidden'">
+            <div class="w-full max-w-md border border-line bg-white shadow-xl">
+                <div class="flex items-start gap-3 border-b border-line bg-gold-100 px-5 py-4">
+                    <span class="mt-0.5 flex h-9 w-9 flex-shrink-0 items-center justify-center bg-gold-600 text-white">
+                        <x-icon name="key" class="h-5 w-5" />
+                    </span>
+                    <div>
+                        <h2 id="first-login-title" class="text-lg font-semibold text-ink">Change your password</h2>
+                        <p class="mt-1 text-sm text-ink/80">You signed in with a one-time password. Choose your own password before using the system.</p>
+                    </div>
+                </div>
+
+                <form method="POST" action="{{ route('password.change.update') }}" class="space-y-4 px-5 py-5">
+                    @csrf
+                    @method('PUT')
+
+                    <div>
+                        <label for="first-login-current" class="label">Current password</label>
+                        <input id="first-login-current" name="current_password" type="password"
+                               autocomplete="current-password" required autofocus
+                               class="input @error('current_password') input-error @enderror">
+                        @error('current_password')
+                            <p class="field-error">{{ $message }}</p>
+                        @enderror
+                    </div>
+
+                    <div>
+                        <label for="first-login-new" class="label">New password</label>
+                        <input id="first-login-new" name="password" type="password"
+                               autocomplete="new-password" required
+                               class="input @error('password') input-error @enderror">
+                        <p class="mt-1 text-[13px] text-muted">At least 8 characters, with letters and numbers.</p>
+                        @error('password')
+                            <p class="field-error">{{ $message }}</p>
+                        @enderror
+                    </div>
+
+                    <div>
+                        <label for="first-login-confirm" class="label">Confirm new password</label>
+                        <input id="first-login-confirm" name="password_confirmation" type="password"
+                               autocomplete="new-password" required class="input">
+                    </div>
+
+                    <button type="submit" class="btn-primary w-full py-2.5">Save new password</button>
+                </form>
+            </div>
+        </div>
+    @endif
+
     @stack('scripts')
 </body>
 </html>
