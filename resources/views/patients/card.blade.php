@@ -13,9 +13,12 @@
             <div class="flex flex-1 gap-3 p-3">
                 <div class="min-w-0 flex-1 space-y-1 text-[10px] leading-tight">
                     <p class="text-[12px] font-semibold text-ink">{{ $patient->full_name }}</p>
+                    @if ($patient->isProvisional())
+                        <p class="text-[9px] font-semibold uppercase tracking-wider text-amber-700">Provisional identity</p>
+                    @endif
                     <p><span class="text-muted">Passport</span> <span class="mono text-[11px] font-semibold">{{ $patient->masked_passport_number }}</span></p>
                     <p><span class="text-muted">National ID</span> <span class="mono">{{ $patient->masked_national_id }}</span></p>
-                    <p><span class="text-muted">Born</span> {{ $patient->date_of_birth->format('j M Y') }}, {{ $patient->sex->label() }}</p>
+                    <p><span class="text-muted">Born</span> {{ $patient->date_of_birth->format('j M Y') }}@if ($patient->dob_is_estimated) (estimated)@endif, {{ $patient->sex->label() }}</p>
                     <p><span class="text-muted">Blood group</span> {{ $patient->blood_group ?? 'Not known' }}</p>
                 </div>
                 <div class="h-[30mm] w-[30mm] shrink-0 [&>svg]:h-full [&>svg]:w-full">{!! $qrCode !!}</div>
@@ -28,6 +31,10 @@
             <p class="font-medium text-red-700">{{ $patient->allergies ?? 'None recorded' }}</p>
             <p class="mt-2 text-[9px] font-semibold uppercase tracking-wider text-muted">Emergency contact</p>
             <p>{{ $contact ? $contact->full_name.' ('.$contact->relationship.'), '.$contact->phone : 'Not recorded' }}</p>
+            @if ($patient->isProvisional() && $patient->guardian_name)
+                <p class="mt-2 text-[9px] font-semibold uppercase tracking-wider text-muted">Guardian</p>
+                <p>{{ $patient->guardian_name }}@if($patient->guardian_relationship) ({{ $patient->guardian_relationship }})@endif, {{ $patient->guardian_phone }}</p>
+            @endif
             <p class="mt-2 text-[9px] font-semibold uppercase tracking-wider text-muted">Issued by</p>
             <p>{{ $patient->registeredFacility?->name }}</p>
             <p class="mt-auto border-t border-line pt-1.5 text-[9px] text-muted">If found, return to any health facility.</p>

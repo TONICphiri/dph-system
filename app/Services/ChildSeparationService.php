@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Enums\IdentityStatus;
 use App\Models\Patient;
 
 /**
@@ -26,6 +27,7 @@ class ChildSeparationService
 
         Patient::query()
             ->whereNotNull('mother_id')
+            ->where('identity_status', IdentityStatus::Verified)
             ->whereDate('date_of_birth', '<=', $cutoff)
             ->chunkById(200, function ($patients) use (&$count) {
                 foreach ($patients as $patient) {

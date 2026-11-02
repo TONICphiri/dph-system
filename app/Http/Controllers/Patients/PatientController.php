@@ -20,6 +20,7 @@ use App\Services\QrCodeService;
 use App\Services\SettingService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
@@ -57,12 +58,17 @@ class PatientController extends Controller
             $request->contacts(),
             $request->user(),
             $request->boolean('create_portal_account'),
+            $request->isEmergencyChild(),
+            $request->emergencyReason(),
+            $request->emergencyReasonNote(),
         );
 
         $patient = $result['patient'];
 
         $redirect = redirect()->route('patients.show', $patient)
-            ->with('success', "{$patient->full_name} now has passport number {$patient->passport_number}.");
+            ->with('success', $patient->isProvisional()
+                ? "{$patient->full_name} now has provisional passport number {$patient->passport_number}. Link the mother when she is available."
+                : "{$patient->full_name} now has passport number {$patient->passport_number}.");
 
         if ($result['temporary_password']) {
             $redirect->with('temporary_password', [
@@ -86,7 +92,7 @@ class PatientController extends Controller
             abort(403, 'This passport belongs to a deceased person.');
         }
 
-        $patient->load(['district', 'registeredFacility', 'emergencyContacts', 'mother', 'children', 'portalAccount']);
+        $patient->load(['district', 'registeredFacility', 'emergencyContacts', 'mother', 'children', 'portalAccount', 'provisionalRegisteredBy', 'identityCompletedBy']);
 
         $openVisit = $patient->visits()->open()
             ->with(['stages.recordedBy', 'stages.editedBy', 'observations.recordedBy', 'medications.prescribedBy', 'medications.dispensedBy', 'startedBy'])
@@ -152,7 +158,15 @@ class PatientController extends Controller
             unset($data['is_child']);
         }
 
-        $age = $patient->date_of_birth ? $patient->date_of_birth->diffInYears(now()) : null;
+        // A provisional child keeps the reason and guardian details until the
+        // record is completed. The form sends them on every save.
+        if ($request->isEmergencyChild()) {
+            $data['provisional_reason'] = $request->emergencyReason();
+            $data['provisional_reason_note'] = $request->emergencyReasonNote();
+        }
+
+        $dateOfBirth = isset($data['date_of_birth']) ? Carbon::parse($data['date_of_birth']) : $patient->date_of_birth;
+        $age = $dateOfBirth ? $dateOfBirth->diffInYears(now()) : null;
         $isChild = $age !== null && $age < $this->settings->childSeparationAge();
 
         if (! $isChild) {
@@ -173,6 +187,10 @@ class PatientController extends Controller
 
         $patient->update([...$data, 'status' => $status]);
         $this->registration->syncEmergencyContacts($patient, $request->contacts());
+
+        // Saving the corrected details can be the last step that completes a
+        // provisional emergency record.
+        $this->registration->completeIdentityIfReady($patient->fresh(), $request->user());
 
         $this->audit->record('patient.updated', "Updated the personal details of {$patient->full_name}.", $patient);
 
@@ -213,6 +231,7 @@ class PatientController extends Controller
             'statuses' => PatientStatus::options(),
             'bloodGroups' => config('health_passport.blood_groups'),
             'relationships' => $this->settings->list('relationship_types'),
+            'emergencyReasons' => config('health_passport.emergency_child_reasons'),
             'separationAge' => $this->settings->childSeparationAge(),
             'nationalIdLength' => $this->settings->nationalIdLength(),
         ];

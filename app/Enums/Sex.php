@@ -11,12 +11,14 @@ enum Sex: string
 
     case Female = 'female';
     case Male = 'male';
+    case Unknown = 'unknown';
 
     public function label(): string
     {
         return match ($this) {
             self::Female => 'Female',
             self::Male => 'Male',
+            self::Unknown => 'Unknown',
         };
     }
 

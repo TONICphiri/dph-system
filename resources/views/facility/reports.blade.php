@@ -19,6 +19,16 @@
     </div>
 
     <section class="panel mt-6">
+        <div class="panel-body flex flex-wrap items-center justify-between gap-3">
+            <div>
+                <h2 class="panel-title">Provisional registrations</h2>
+                <p class="mt-1 text-sm text-muted">Children registered without the mother present. Link the mother or confirm the date of birth to complete them.</p>
+            </div>
+            <x-badge :tone="$report['provisional_children'] > 0 ? 'warning' : 'neutral'">{{ $report['provisional_children'] }} pending</x-badge>
+        </div>
+    </section>
+
+    <section class="panel mt-6">
         <div class="panel-header"><h2 class="panel-title">Visits per day</h2></div>
         @php $max = max(1, $report['daily_visits']->max() ?? 1); @endphp
         @if ($report['daily_visits']->sum() === 0)
