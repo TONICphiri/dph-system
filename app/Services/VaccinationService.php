@@ -18,28 +18,32 @@ use Illuminate\Support\Facades\DB;
  */
 class VaccinationService
 {
-    public function __construct(private readonly AuditLogger $audit)
-    {
-    }
+    public function __construct(private readonly AuditLogger $audit) {}
 
     /**
      * @param  array<string, mixed>  $data  administered_on, batch_number, notes
      */
     public function record(Patient $patient, Vaccine $vaccine, array $data, User $staff): Vaccination
     {
-        $dosesGiven = $patient->vaccinations()->where('vaccine_id', $vaccine->id)->count();
+        return DB::transaction(function () use ($patient, $vaccine, $data, $staff) {
+            $patient = Patient::query()->whereKey($patient->id)->lockForUpdate()->firstOrFail();
+            $administeredOn = Carbon::parse($data['administered_on']);
 
-        if ($dosesGiven >= $vaccine->total_doses) {
-            throw new WorkflowException("{$patient->full_name} has already received all {$vaccine->total_doses} doses of {$vaccine->name}.");
-        }
+            if ($patient->vaccinations()->where('vaccine_id', $vaccine->id)->whereDate('administered_on', $administeredOn)->exists()) {
+                throw new WorkflowException("A dose of {$vaccine->name} has already been recorded for this holder on {$administeredOn->format('j F Y')}.");
+            }
 
-        $doseNumber = $dosesGiven + 1;
-        $administeredOn = Carbon::parse($data['administered_on']);
-        $nextDue = ($doseNumber < $vaccine->total_doses && $vaccine->days_between_doses)
-            ? $administeredOn->copy()->addDays($vaccine->days_between_doses)
-            : null;
+            $dosesGiven = $patient->vaccinations()->where('vaccine_id', $vaccine->id)->count();
 
-        return DB::transaction(function () use ($patient, $vaccine, $data, $staff, $doseNumber, $administeredOn, $nextDue) {
+            if ($dosesGiven >= $vaccine->total_doses) {
+                throw new WorkflowException("{$patient->full_name} has already received all {$vaccine->total_doses} doses of {$vaccine->name}.");
+            }
+
+            $doseNumber = $dosesGiven + 1;
+            $nextDue = ($doseNumber < $vaccine->total_doses && $vaccine->days_between_doses)
+                ? $administeredOn->copy()->addDays($vaccine->days_between_doses)
+                : null;
+
             Reminder::query()
                 ->where('patient_id', $patient->id)
                 ->where('source_type', (new Vaccine)->getMorphClass())
@@ -64,7 +68,7 @@ class VaccinationService
                     'patient_id' => $patient->id,
                     'category' => ReminderCategory::Vaccination,
                     'title' => "{$vaccine->name}, dose ".($doseNumber + 1),
-                    'message' => "Dose ".($doseNumber + 1)." of {$vaccine->name} is due on {$nextDue->format('j F Y')}. Please visit your nearest health facility.",
+                    'message' => 'Dose '.($doseNumber + 1)." of {$vaccine->name} is due on {$nextDue->format('j F Y')}. Please visit your nearest health facility.",
                     'due_on' => $nextDue->toDateString(),
                     'status' => ReminderStatus::Active,
                     'source_type' => $vaccine->getMorphClass(),

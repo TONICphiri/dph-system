@@ -142,9 +142,11 @@ fact that the suite needs no database server.
   an open access record. Offline scans are replayed through the same rule.
 - **Audit coverage.** 32 write paths log; `AuditLogger` swallows its own failures so a
   broken log can never block a clinician.
-- **The visit state machine.** Stage positions come from config, a consultation with no
-  medicines completes the visit immediately, dispensing remembers the pharmacist, a full
-  visit locks, and edits are attributed rather than overwritten. All covered by tests.
+- **The visit state machine.** Reception, nurse triage and doctor consultation are
+  enforced in order; pharmacist dispensing is available only after prescribed medicines
+  exist. A consultation with no medicines completes the visit immediately, dispensing
+  remembers the pharmacist, a full visit locks, and edits are attributed rather than
+  overwritten. All covered by tests.
 - **Data protection.** Clinical free text is encrypted at rest, national IDs and passport
   numbers are masked to their last four characters on cards and printable summaries,
   backups are encrypted and asserted to contain no readable names or national IDs, and

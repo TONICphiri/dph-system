@@ -3,7 +3,9 @@
 namespace Tests\Feature;
 
 use App\Models\Reminder;
+use App\Models\ReminderDelivery;
 use App\Models\User;
+use App\Notifications\ReminderDueNotification;
 use App\Services\ReminderService;
 use App\Services\SettingService;
 use App\Services\Sms\SmsManager;
@@ -59,20 +61,34 @@ class SmsNotificationTest extends TestCase
             && ! str_contains($request['Body'], 'medication'));
     }
 
-    public function test_no_text_message_is_sent_without_consent(): void
+    public function test_reminder_notification_and_email_are_sent_without_sms_consent(): void
     {
         config(['services.sms.driver' => 'twilio', 'services.twilio' => ['sid' => 'ACtest', 'token' => 't', 'from' => '+15005550006', 'messaging_service_sid' => null]]);
+        config(['mail.default' => 'array']);
         Http::fake();
 
         $account = $this->portalAccount();
-        $account->update(['phone' => '0999123456']);
+        $account->update([
+            'phone' => '0999123456',
+            'notification_preferences' => [
+                'email' => true,
+                'categories' => ['vaccination' => true, 'medication' => true, 'follow_up' => true],
+            ],
+        ]);
         $account->patient->update(['sms_consent' => false]);
         app(SettingService::class)->update(['sms_notifications_enabled' => '1']);
-        $this->dueReminderFor($account);
+        app(SettingService::class)->update(['email_notifications_enabled' => '1']);
+        $reminder = $this->dueReminderFor($account);
 
         app(ReminderService::class)->sendDue();
 
         Http::assertNothingSent();
+        $this->assertTrue($account->notifications()->where('type', ReminderDueNotification::class)->exists());
+        $deliveries = ReminderDelivery::query()
+            ->where('reminder_id', $reminder->id)
+            ->pluck('status', 'channel');
+        $this->assertSame('sent', $deliveries['portal']);
+        $this->assertSame('sent', $deliveries['email']);
     }
 
     public function test_a_provider_failure_does_not_stop_the_reminder_run(): void

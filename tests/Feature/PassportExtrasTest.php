@@ -210,6 +210,9 @@ class PassportExtrasTest extends TestCase
         $worker = (string) file_get_contents(public_path('sw.js'));
         $this->assertStringContainsString('offline/scan', $worker);
         $this->assertStringContainsString('caches.open(SHELL)', $worker);
+        $this->assertStringNotContainsString('cachePatientPage', $worker);
+        $this->assertStringNotContainsString('dhp-patient', $worker);
+        $this->assertStringContainsString('![STATIC, SHELL].includes(key)', $worker);
     }
 
     /* Backups */

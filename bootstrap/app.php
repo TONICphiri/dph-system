@@ -4,6 +4,7 @@ use App\Console\Commands\CreateAdminCommand;
 use App\Exceptions\WorkflowException;
 use App\Http\Middleware\EnsureAccountIsActive;
 use App\Http\Middleware\EnsurePasswordIsChanged;
+use App\Http\Middleware\PreventAuthenticatedResponseCaching;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Auth\AuthenticationException;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
@@ -27,15 +28,13 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
-       
+
         $middleware->trustProxies(at: '*');
 
-        // Signs out users whose account or facility has been deactivated.
-        $middleware->append(EnsureAccountIsActive::class);
-
-        // Runs inside the web group so the matched route name is available;
-        // users with a one time password are held on the dashboard pop-up.
+        // These checks need the session-backed user, so run inside the web group.
+        $middleware->appendToGroup('web', EnsureAccountIsActive::class);
         $middleware->appendToGroup('web', EnsurePasswordIsChanged::class);
+        $middleware->appendToGroup('web', PreventAuthenticatedResponseCaching::class);
 
         $middleware->alias([
             'role' => RoleMiddleware::class,
@@ -67,7 +66,6 @@ return Application::configure(basePath: dirname(__DIR__))
                 ->with('error', 'Your session expired before the form was sent. Please try again.');
         });
 
-  
         $exceptions->render(function (Throwable $exception, Request $request) {
             if (config('app.debug')
                 || $exception instanceof HttpExceptionInterface

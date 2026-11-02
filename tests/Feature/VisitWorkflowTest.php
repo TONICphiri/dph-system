@@ -62,6 +62,17 @@ class VisitWorkflowTest extends TestCase
         $this->post(route('patients.open'), ['code' => 'DHP:'.$patient->qr_token]);
     }
 
+    private function recordReceptionAndTriage(Patient $patient): void
+    {
+        $this->actingAs($this->clerk());
+        $this->open($patient);
+        $this->post(route('visits.stage.store', [$patient, 'reception']), ['reason' => 'Clinical review']);
+
+        $this->actingAs($this->nurse());
+        $this->open($patient);
+        $this->post(route('visits.stage.store', [$patient, 'triage']), ['symptoms' => 'Under assessment']);
+    }
+
     public function test_a_full_visit_locks_only_after_every_medicine_is_handed_over(): void
     {
         [$clerk, $nurse, $doctor, $pharmacist] = array_values($this->workers());
@@ -160,6 +171,7 @@ class VisitWorkflowTest extends TestCase
         $pharmacist = $this->pharmacist();
         $patient = $this->patient();
 
+        $this->recordReceptionAndTriage($patient);
         $this->actingAs($doctor);
         $this->open($patient);
         $this->post(route('visits.stage.store', [$patient, 'consultation']), [
@@ -176,12 +188,50 @@ class VisitWorkflowTest extends TestCase
         $this->get(route('visits.dispense', [$patient, $visit]))->assertForbidden();
     }
 
+    public function test_a_completed_visit_requires_an_explicit_start_before_another_visit(): void
+    {
+        $doctor = $this->doctor();
+        $patient = $this->patient();
+
+        $this->recordReceptionAndTriage($patient);
+        $this->actingAs($doctor);
+        $this->open($patient);
+        $this->post(route('visits.stage.store', [$patient, 'consultation']), [
+            'diagnosis' => 'First visit',
+            'treatment_summary' => 'No medicine required',
+        ])->assertRedirect(route('patients.show', $patient));
+
+        $completedVisit = Visit::query()->where('patient_id', $patient->id)->firstOrFail();
+        $this->assertNotNull($completedVisit->locked_at);
+
+        $this->from(route('patients.show', $patient))->post(route('visits.stage.store', [$patient, 'consultation']), [
+            'diagnosis' => 'Must not create a visit',
+        ])->assertRedirect(route('patients.show', $patient))
+            ->assertSessionHas('error');
+
+        $this->assertSame(1, Visit::query()->where('patient_id', $patient->id)->count());
+        $this->assertSame('First visit', $completedVisit->fresh()->stage(VisitStageType::Consultation)->summary);
+
+        $clerk = $this->clerk();
+        $this->actingAs($clerk);
+        $this->open($patient);
+        $this->post(route('visits.start', $patient))
+            ->assertRedirect(route('visits.stage.create', [$patient, 'reception']))
+            ->assertSessionHas('success');
+
+        $this->assertSame(2, Visit::query()->where('patient_id', $patient->id)->count());
+        $newVisit = Visit::query()->where('patient_id', $patient->id)->latest('started_at')->firstOrFail();
+        $this->assertSame($clerk->id, $newVisit->started_by);
+        $this->assertNull($newVisit->locked_at);
+    }
+
     public function test_changing_a_stage_keeps_the_first_recorder_and_marks_the_editor(): void
     {
         $doctor = $this->doctor();
         $patient = $this->patient();
         $followUp = now()->addWeek()->toDateString();
 
+        $this->recordReceptionAndTriage($patient);
         $this->actingAs($doctor);
         $this->open($patient);
         $this->post(route('visits.stage.store', [$patient, 'consultation']), [
@@ -269,5 +319,77 @@ class VisitWorkflowTest extends TestCase
             ->assertSee($clerk->name)
             ->assertSee($nurse->name)
             ->assertSee($doctor->name);
+    }
+
+    public function test_visit_stages_cannot_be_recorded_out_of_order(): void
+    {
+        $patient = $this->patient();
+        $nurse = $this->nurse();
+
+        $this->actingAs($nurse);
+        $this->open($patient);
+        $this->post(route('visits.stage.store', [$patient, 'triage']), ['symptoms' => 'Fever'])
+            ->assertForbidden();
+        $this->assertDatabaseMissing('visits', ['patient_id' => $patient->id]);
+
+        $this->actingAs($this->clerk());
+        $this->open($patient);
+        $this->post(route('visits.stage.store', [$patient, 'reception']), ['reason' => 'Fever']);
+
+        $doctor = $this->doctor();
+        $this->actingAs($doctor);
+        $this->open($patient);
+        $this->post(route('visits.stage.store', [$patient, 'consultation']), ['diagnosis' => 'Fever'])
+            ->assertForbidden();
+
+        $visit = Visit::query()->where('patient_id', $patient->id)->firstOrFail();
+        $this->assertNull($visit->stage(VisitStageType::Consultation));
+        $this->assertSame(VisitStatus::InProgress, $visit->status);
+    }
+
+    public function test_only_a_nurse_can_record_triage(): void
+    {
+        $patient = $this->patient();
+        $this->actingAs($this->clerk());
+        $this->open($patient);
+        $this->post(route('visits.stage.store', [$patient, 'reception']), ['reason' => 'Fever']);
+
+        $this->actingAs($this->doctor());
+        $this->open($patient);
+        $this->post(route('visits.stage.store', [$patient, 'triage']), ['symptoms' => 'Fever'])
+            ->assertForbidden();
+
+        $this->assertDatabaseMissing('visit_stages', [
+            'visit_id' => Visit::query()->where('patient_id', $patient->id)->value('id'),
+            'type' => VisitStageType::Triage->value,
+        ]);
+    }
+
+    public function test_the_patient_page_exposes_only_the_next_stage_to_its_authorized_worker(): void
+    {
+        $patient = $this->patient();
+
+        $this->actingAs($this->clerk());
+        $this->open($patient);
+        $this->get(route('patients.show', $patient))
+            ->assertOk()
+            ->assertSee(route('visits.stage.create', [$patient, 'reception']), false)
+            ->assertDontSee(route('visits.stage.create', [$patient, 'triage']), false);
+        $this->post(route('visits.stage.store', [$patient, 'reception']), ['reason' => 'Review']);
+
+        $this->actingAs($this->nurse());
+        $this->open($patient);
+        $this->get(route('patients.show', $patient))
+            ->assertOk()
+            ->assertSee(route('visits.stage.create', [$patient, 'triage']), false)
+            ->assertDontSee(route('visits.stage.create', [$patient, 'consultation']), false);
+        $this->post(route('visits.stage.store', [$patient, 'triage']), ['symptoms' => 'Review']);
+
+        $this->actingAs($this->doctor());
+        $this->open($patient);
+        $this->get(route('patients.show', $patient))
+            ->assertOk()
+            ->assertSee(route('visits.stage.create', [$patient, 'consultation']), false)
+            ->assertDontSee(route('visits.stage.create', [$patient, 'dispensing']), false);
     }
 }

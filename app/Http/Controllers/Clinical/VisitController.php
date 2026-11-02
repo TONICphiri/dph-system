@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Clinical;
 
 use App\Enums\VisitStageType;
+use App\Enums\VisitStatus;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\VisitStageRequest;
 use App\Models\Patient;
@@ -61,6 +62,23 @@ class VisitController extends Controller
             ->with('success', "The {$stage->label()} stage has been recorded.");
     }
 
+    public function startNewVisit(Request $request, Patient $patient): RedirectResponse
+    {
+        $this->authorize('view', $patient);
+
+        $draft = new Visit([
+            'patient_id' => $patient->id,
+            'facility_id' => $request->user()->facility_id,
+            'status' => VisitStatus::InProgress,
+        ]);
+        $this->authorize('recordStage', [$draft, VisitStageType::Reception->value]);
+
+        $this->visits->startAfterCompleted($patient, $request->user());
+
+        return redirect()->route('visits.stage.create', [$patient, VisitStageType::Reception->value])
+            ->with('success', 'A new visit has been started.');
+    }
+
     public function dispense(Patient $patient, Visit $visit, Request $request): View
     {
         $this->authorize('view', $patient);
@@ -80,7 +98,7 @@ class VisitController extends Controller
         $this->authorize('dispense', $visit);
 
         $data = $request->validate([
-            'medications' => ['required', 'array'],
+            'medications' => ['required', 'array', 'min:1'],
             'medications.*' => ['integer'],
         ], [], ['medications' => 'medicines']);
 

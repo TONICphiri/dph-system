@@ -117,6 +117,7 @@ Route::middleware('auth')->group(function () use ($can) {
         Route::put('patients/{patient}', [Patients\PatientController::class, 'update'])->name('patients.update');
     });
     Route::middleware($can(P::ManageVisits))->group(function () {
+        Route::post('patients/{patient}/visits/start', [Clinical\VisitController::class, 'startNewVisit'])->name('visits.start');
         Route::get('patients/{patient}/visits/stage/{type}', [Clinical\VisitController::class, 'createStage'])->name('visits.stage.create');
         Route::post('patients/{patient}/visits/stage/{type}', [Clinical\VisitController::class, 'storeStage'])->name('visits.stage.store');
     });

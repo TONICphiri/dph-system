@@ -31,8 +31,20 @@ class LoginController extends Controller
             ]);
         }
 
-        $request->session()->regenerate();
         $user = $request->user();
+
+        if (! $user->isActive() || ($user->facility_id && ! $user->facility?->isActive())) {
+            $audit->record('user.sign-in-blocked', 'Sign in blocked for an inactive account or facility.');
+            Auth::logout();
+            $request->session()->invalidate();
+            $request->session()->regenerateToken();
+
+            throw ValidationException::withMessages([
+                'email' => 'The email or password is incorrect.',
+            ]);
+        }
+
+        $request->session()->regenerate();
         $user->forceFill(['last_login_at' => now()])->save();
         $audit->record('user.signed-in', 'Signed in to the system.');
 

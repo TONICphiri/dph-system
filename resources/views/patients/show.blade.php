@@ -143,14 +143,37 @@
                     </div>
 
                     @if ($openVisit)
-                        <x-visit-timeline :visit="$openVisit" />
+                        @php
+                            $nextStage = $openVisit->nextStage();
+                            $nextPosition = $nextStage ? \App\Enums\Position::tryFrom(config("health_passport.stage_positions.{$nextStage->value}")[0] ?? null)?->label() : null;
+                        @endphp
+                        <div class="mb-3 px-5 py-2 border border-brand-200 bg-brand-50 rounded-lg">
+                            <p class="text-sm font-medium text-brand-700">
+                                <span class="font-semibold">Next stage:</span> {{ $nextStage ? $nextStage->label() : 'None – visit complete' }}
+                                @if ($nextPosition)
+                                    <span class="text-xs text-muted">({{ $nextPosition }} to record)</span>
+                                @endif
+                            </p>
+                        </div>
+                        <x-visit-timeline :visit="$openVisit" :highlightNext="true" />
+                    @elseif ($requiresExplicitVisitStart)
+                        <p class="px-5 py-4 text-sm text-muted">The previous visit is complete and locked. A clerk must explicitly start a new visit before another stage can be recorded.</p>
                     @else
                         <p class="px-5 py-4 text-sm text-muted">Reception starts the visit. Triage, consultation and dispensing are added at their stations.</p>
                     @endif
 
                     <div class="flex flex-wrap gap-2 border-t border-line px-5 py-3">
+                        @if ($requiresExplicitVisitStart && $canRecordStage['reception'])
+                            <form method="POST" action="{{ route('visits.start', $patient) }}">
+                                @csrf
+                                <button type="submit" class="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-md shadow-sm bg-brand-600 text-white hover:bg-brand-700 transition-all">
+                                    <x-icon name="door-open" class="h-4 w-4" />
+                                    Start new visit
+                                </button>
+                            </form>
+                        @endif
                         @foreach (\App\Enums\VisitStageType::cases() as $stage)
-                            @if ($canRecordStage[$stage->value])
+                            @if ($canRecordStage[$stage->value] && ! $requiresExplicitVisitStart)
                                 <a href="{{ route('visits.stage.create', [$patient, $stage->value]) }}" class="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-md shadow-sm transition-all {{ $openVisit && $openVisit->stage($stage) ? 'bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100' : ($stage->value === 'triage' ? 'bg-brand-600 text-white hover:bg-brand-700' : 'bg-white text-slate-700 border border-line hover:bg-paper hover:text-brand-700') }}">
                                     <x-icon name="{{ $stage->value === 'triage' ? 'heart-pulse' : ($stage->value === 'reception' ? 'door-open' : ($stage->value === 'consultation' ? 'stethoscope' : ($stage->value === 'dispensing' ? 'pill' : 'clipboard'))) }}" class="h-4 w-4" />
                                     {{ $stage->value === 'triage' ? 'Record Triage' : $stage->label() }}
@@ -177,7 +200,7 @@
                                 <p class="text-sm font-medium">{{ $visit->started_at?->format('j M Y, H:i') ?? 'Unknown date' }}</p>
                                 <div class="flex items-center gap-2">
                                     <x-status :value="$visit->status" />
-                                    <span class="text-[10px] text-muted">{{ $open ? 'Hide' : 'Show' }} details</span>
+                                    <span class="text-[10px] text-muted" x-text="open ? 'Hide details' : 'Show details'">Show details</span>
                                 </div>
                             </div>
                             <div x-show="open" x-transition>

@@ -42,11 +42,11 @@ return [
     'max_medications' => 10,
 
     // Which position may record each stage of a visit. Order is not enforced;
-    // a stage is allowed whenever the worker holds its position and an open
-    // passport. Vitals may be recorded at reception, triage and consultation.
+    // Visit stages proceed in order, and each stage is restricted to its
+    // assigned position. Vitals may be recorded at reception, triage and consultation.
     'stage_positions' => [
         'reception' => ['clerk'],
-        'triage' => ['nurse', 'doctor'],
+        'triage' => ['nurse'],
         'consultation' => ['doctor'],
         'dispensing' => ['pharmacist'],
         'vitals' => ['clerk', 'nurse', 'doctor'],

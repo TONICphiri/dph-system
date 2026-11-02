@@ -3,10 +3,10 @@
  *
  * - STATIC: app shell assets (CSS, JS, images, fonts, manifest) — cached on install.
  * - SHELL:  the offline scan page — no patient data, safe to keep on the device.
- * - PATIENT: patient record pages — cached automatically the first time a
- *   health worker opens them while online. Read-only, never POST forms.
  *
- * Navigation requests try the network first, then fall back to cache.
+ * Navigation requests use the network. Only the non-sensitive offline scan
+ * shell is available as an offline fallback; authenticated records are never
+ * cached on the device.
  * Static assets use cache-first for speed on weak connections.
  * API and form POST requests are never cached.
  *
@@ -15,8 +15,6 @@
  */
 const STATIC = 'dhp-static-v4';
 const SHELL = 'dhp-shell-v3';
-const PATIENT = 'dhp-patient-v2';
-const MAX_PATIENT_PAGES = 50; // keep the device cache from growing without bound
 
 const STATIC_PATHS = [
     '/manifest.webmanifest',
@@ -30,7 +28,6 @@ const scope = new URL(self.registration.scope);
 const shellUrl = new URL('offline/scan', scope).href;
 
 const isAuthPath = (pathname) => AUTH_PATHS.some((p) => pathname.startsWith(p));
-const isPatientPage = (pathname) => pathname.startsWith('/patients/');
 
 const cacheShell = async () => {
     const response = await fetch(shellUrl, { cache: 'no-store', credentials: 'same-origin' });
@@ -49,21 +46,6 @@ const cacheStatic = async () => {
     ]);
 };
 
-/*
- * Store a patient page in the PATIENT cache, enforcing a maximum count so
- * older entries are evicted before the device runs out of storage.
- */
-const cachePatientPage = async (request, response) => {
-    const cache = await caches.open(PATIENT);
-    const cloned = response.clone();
-    await cache.put(request, cloned);
-
-    const keys = await cache.keys();
-    if (keys.length > MAX_PATIENT_PAGES) {
-        await cache.delete(keys[0]);
-    }
-};
-
 self.addEventListener('install', (event) => {
     event.waitUntil(
         Promise.all([cacheShell(), cacheStatic()]).catch(() => {
@@ -78,7 +60,7 @@ self.addEventListener('activate', (event) => {
         caches.keys()
             .then((keys) =>
                 Promise.all(
-                    keys.filter((key) => ![STATIC, SHELL, PATIENT].includes(key)).map((key) => caches.delete(key)),
+                    keys.filter((key) => ![STATIC, SHELL].includes(key)).map((key) => caches.delete(key)),
                 ),
             )
             .then(() => self.clients.claim()),
@@ -103,22 +85,11 @@ self.addEventListener('fetch', (event) => {
     // sessions work correctly across browser tabs and windows.
     if (isAuthPath(url.pathname)) return;
 
-    // Navigation requests: network first, then cache, then shell.
+    // Authenticated pages are never cached; only the generic scan shell is an offline fallback.
     if (request.mode === 'navigate') {
         event.respondWith(
             fetch(request)
-                .then((response) => {
-                    // Automatically cache patient pages for offline use.
-                    if (isPatientPage(url.pathname) && response.ok) {
-                        cachePatientPage(request, response).catch(() => { /* best effort */ });
-                    }
-                    return response;
-                })
                 .catch(async () => {
-                    // Try the PATIENT cache next (offline viewing of a visited patient).
-                    const cached = await caches.open(PATIENT).then((cache) => cache.match(request));
-                    if (cached) return cached;
-
                     // Fall back to the offline scan shell.
                     const shell = await caches.open(SHELL).then((cache) => cache.match(shellUrl));
                     return shell ?? noConnection();

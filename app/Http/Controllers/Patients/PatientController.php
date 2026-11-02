@@ -98,6 +98,8 @@ class PatientController extends Controller
             ->with(['stages.recordedBy', 'stages.editedBy', 'observations.recordedBy', 'medications.prescribedBy', 'medications.dispensedBy', 'startedBy'])
             ->latest('started_at')
             ->first();
+        $latestVisit = $patient->visits()->latest('started_at')->first();
+        $requiresExplicitVisitStart = $openVisit === null && $latestVisit?->isLocked() === true;
 
         // The stages this worker may record now, and whether they may hand over
         // medicines. A staged visit with no visit yet is checked against a
@@ -122,6 +124,7 @@ class PatientController extends Controller
             'qrCode' => $qr->forPatient($patient, 132),
             'access' => $this->access->activeFor($request->user(), $patient),
             'openVisit' => $openVisit,
+            'requiresExplicitVisitStart' => $requiresExplicitVisitStart,
             'pastVisits' => $pastVisits,
             'canRecordStage' => $canRecordStage,
             'canDispense' => $openVisit !== null && Gate::forUser($request->user())->allows('dispense', $openVisit),

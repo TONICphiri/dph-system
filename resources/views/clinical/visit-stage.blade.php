@@ -128,8 +128,41 @@
 
         <section class="panel self-start">
             <div class="panel-header"><h2 class="panel-title">This visit</h2></div>
+
+            @php
+                $previousStage = $visit->exists ? $visit->previousStage($stage) : null;
+            @endphp
+
+            @if ($previousStage)
+                <div class="bg-brand-50 border border-brand-200 rounded-lg p-4 mb-4">
+                    <div class="flex items-center gap-2 mb-2">
+                        <x-icon name="clipboard" class="h-4 w-4 text-brand-600" />
+                        <h3 class="text-sm font-semibold text-brand-700">{{ $previousStage->type->label() }} recorded previously</h3>
+                    </div>
+                    @if ($previousStage->summary)
+                        <p class="text-sm mb-1">{{ $previousStage->summary }}</p>
+                    @endif
+                    @if ($previousStage->type === \App\Enums\VisitStageType::Triage && ! empty($previousStage->payload['tests']))
+                        <p class="text-[13px] text-muted font-semibold mb-1">Tests</p>
+                        <ul class="mt-1 space-y-0.5 text-sm mb-2">
+                            @foreach ($previousStage->payload['tests'] as $test)
+                                <li><span class="font-medium">{{ $test['name'] }}</span>@if (! empty($test['result'])): <span class="text-muted"> – {{ $test['result'] }}</span>@endif</li>
+                            @endforeach
+                        </ul>
+                    @endif
+                    @if ($previousStage->type === \App\Enums\VisitStageType::Consultation && ! empty($previousStage->payload['treatment']))
+                        <p class="text-[13px] text-muted font-semibold mb-1">Treatment plan</p>
+                        <p class="text-sm mb-2">{{ $previousStage->payload['treatment'] }}</p>
+                    @endif
+                    <p class="text-[12px] text-muted">
+                        Recorded by {{ $previousStage->recordedBy?->name ?? 'an unknown user' }}
+                        on {{ $previousStage->recorded_at->format('j M Y, H:i') }}
+                    </p>
+                </div>
+            @endif
+
             @if ($visit->exists)
-                <x-visit-timeline :visit="$visit" />
+                <x-visit-timeline :visit="$visit" :highlightNext="true" />
             @else
                 <p class="px-5 py-4 text-sm text-muted">No stage has been recorded yet. Reception, triage, consultation and dispensing are shown here as they are recorded.</p>
             @endif

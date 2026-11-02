@@ -90,6 +90,92 @@ class Visit extends Model
         return $this->stages->firstWhere('type', $type);
     }
 
+    public function isStageAvailable(VisitStageType $type): bool
+    {
+        return $type !== VisitStageType::Dispensing
+            && $this->missingStagePrerequisite($type) === null;
+    }
+
+    /**
+     * The stage types that have been recorded, in workflow order.
+     *
+     * @return \Illuminate\Support\Collection<int, VisitStageType>
+     */
+    public function recordedStages(): \Illuminate\Support\Collection
+    {
+        return $this->stages
+            ->pluck('type')
+            ->filter(fn (VisitStageType $type) => $type !== VisitStageType::Dispensing)
+            ->values();
+    }
+
+    /**
+     * The first stage that has not yet been recorded, or null when every
+     * clinical stage is complete (dispensing is recorded separately when
+     * medicines are handed over).
+     */
+    public function nextStage(): ?VisitStageType
+    {
+        $order = [VisitStageType::Reception, VisitStageType::Triage, VisitStageType::Consultation];
+
+        foreach ($order as $type) {
+            if (! $this->stages()->where('type', $type->value)->exists()) {
+                return $type;
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * The stage recorded immediately before the given type, or null when there
+     * is none. Used so the next actor can see what the last actor wrote.
+     */
+    public function previousStage(VisitStageType $type): ?VisitStage
+    {
+        $order = [VisitStageType::Reception, VisitStageType::Triage, VisitStageType::Consultation];
+
+        $index = array_search($type, $order, true);
+
+        if ($index === false || $index === 0) {
+            return null;
+        }
+
+        foreach (array_slice($order, 0, $index) as $earlier) {
+            if ($stage = $this->stage($earlier)) {
+                return $stage;
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * Whether every clinical stage (reception, triage, consultation) has been
+     * recorded, regardless of whether medicines have been dispensed.
+     */
+    public function clinicalStagesComplete(): bool
+    {
+        return $this->nextStage() === null;
+    }
+
+    public function missingStagePrerequisite(VisitStageType $type): ?VisitStageType
+    {
+        $prerequisites = match ($type) {
+            VisitStageType::Reception, VisitStageType::Dispensing => [],
+            VisitStageType::Triage => [VisitStageType::Reception],
+            VisitStageType::Consultation => [VisitStageType::Reception, VisitStageType::Triage],
+        };
+
+        foreach ($prerequisites as $prerequisite) {
+            if (! $this->stages()->where('type', $prerequisite->value)->exists()) {
+                return $prerequisite;
+            }
+        }
+
+        return null;
+    }
+
     /**
      * The newest reading of a vital sign, or null when it was never taken.
      */

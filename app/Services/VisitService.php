@@ -17,8 +17,8 @@ use Illuminate\Support\Facades\DB;
 
 /**
  * Writes the stages of a staged visit. The caller has already checked, through
- * the VisitPolicy, that the worker holds the stage's position and an open
- * passport. A locked visit cannot be changed.
+ * the VisitPolicy, that the worker holds the stage's position, has an open
+ * passport and is recording the next stage. A locked visit cannot be changed.
  */
 class VisitService
 {
@@ -41,11 +41,46 @@ class VisitService
                 return $open;
             }
 
+            $latest = $patient->visits()->latest('started_at')->first();
+
+            if ($latest?->isLocked()) {
+                throw new WorkflowException('This holder has a completed visit. Start a new visit explicitly before recording another stage.');
+            }
+
             return new Visit([
                 'patient_id' => $patient->id,
                 'facility_id' => $worker->facility_id,
                 'status' => VisitStatus::InProgress,
             ]);
+        });
+    }
+
+    public function startAfterCompleted(Patient $patient, User $worker): Visit
+    {
+        return DB::transaction(function () use ($patient, $worker) {
+            $patient = Patient::query()->whereKey($patient->id)->lockForUpdate()->firstOrFail();
+
+            if ($patient->visits()->open()->exists()) {
+                throw new WorkflowException('A visit is already in progress for this holder.');
+            }
+
+            $latest = $patient->visits()->latest('started_at')->first();
+
+            if (! $latest?->isLocked()) {
+                throw new WorkflowException('A new visit can only be started after a completed visit.');
+            }
+
+            $visit = Visit::create([
+                'patient_id' => $patient->id,
+                'facility_id' => $worker->facility_id,
+                'status' => VisitStatus::InProgress,
+                'started_by' => $worker->id,
+                'started_at' => now(),
+            ]);
+
+            $this->audit->record('visit.started', "Started a new visit for {$patient->full_name}.", $visit);
+
+            return $visit;
         });
     }
 
@@ -55,19 +90,38 @@ class VisitService
     public function saveStage(Patient $patient, Visit $visit, VisitStageType $type, array $data, User $worker): Visit
     {
         return DB::transaction(function () use ($patient, $visit, $type, $data, $worker) {
+            if ($type === VisitStageType::Dispensing) {
+                throw new WorkflowException('Record dispensing by handing over the prescribed medicines.');
+            }
+
+            $patient = Patient::query()->whereKey($patient->id)->lockForUpdate()->firstOrFail();
+
             if (! $visit->exists) {
-                $visit = Visit::create([
-                    'patient_id' => $patient->id,
-                    'facility_id' => $worker->facility_id,
-                    'status' => VisitStatus::InProgress,
-                    'started_by' => $worker->id,
-                    'started_at' => now(),
-                ]);
+                if ($type !== VisitStageType::Reception) {
+                    throw new WorkflowException('Record reception before moving to the next visit stage.');
+                }
+
+                $visit = $patient->visits()->open()->lockForUpdate()->latest('started_at')->first()
+                    ?? Visit::create([
+                        'patient_id' => $patient->id,
+                        'facility_id' => $worker->facility_id,
+                        'status' => VisitStatus::InProgress,
+                        'started_by' => $worker->id,
+                        'started_at' => now(),
+                    ]);
+            } else {
+                $visit = Visit::query()->lockForUpdate()->findOrFail($visit->id);
+            }
+
+            if ($visit->patient_id !== $patient->id || $visit->facility_id !== $worker->facility_id) {
+                throw new WorkflowException('This visit cannot be continued from your facility.');
             }
 
             if ($visit->isLocked()) {
                 throw new WorkflowException('This visit is complete and can no longer be changed.');
             }
+
+            $this->assertStageOrder($visit, $type);
 
             $this->writeStage($visit, $type, $data, $worker);
             $this->recordVitals($visit, $data, $worker);
@@ -99,11 +153,32 @@ class VisitService
     public function dispense(Visit $visit, array $ids, User $worker): Visit
     {
         return DB::transaction(function () use ($visit, $ids, $worker) {
+            $visit = Visit::query()->lockForUpdate()->findOrFail($visit->id);
+
             if ($visit->isLocked()) {
                 throw new WorkflowException('This visit is complete and can no longer be changed.');
             }
 
-            $visit->medications()->whereIn('id', $ids)->where('visit_id', $visit->id)->where('dispensed', false)->update([
+            if (
+                $visit->status !== VisitStatus::AwaitingDispense
+                || ! $visit->stages()->where('type', VisitStageType::Consultation->value)->exists()
+                || ! $visit->medications()->exists()
+            ) {
+                throw new WorkflowException('Dispensing is available only after consultation when medicines have been prescribed.');
+            }
+
+            $ids = collect($ids)->map(fn ($id) => (int) $id)->unique()->values();
+            $pendingIds = $visit->medications()
+                ->whereIn('id', $ids)
+                ->where('dispensed', false)
+                ->pluck('id')
+                ->map(fn ($id) => (int) $id);
+
+            if ($pendingIds->isEmpty() || $pendingIds->count() !== $ids->count()) {
+                throw new WorkflowException('Select one or more medicines that are still waiting to be handed over.');
+            }
+
+            $visit->medications()->whereIn('id', $pendingIds)->where('dispensed', false)->update([
                 'dispensed' => true,
                 'dispensed_by' => $worker->id,
                 'dispensed_at' => now(),
@@ -231,6 +306,15 @@ class VisitService
                 'completed_at' => now(),
                 'locked_at' => now(),
             ]);
+    }
+
+    private function assertStageOrder(Visit $visit, VisitStageType $type): void
+    {
+        $prerequisite = $visit->missingStagePrerequisite($type);
+
+        if ($prerequisite) {
+            throw new WorkflowException("Record the {$prerequisite->label()} stage before moving to {$type->label()}.");
+        }
     }
 
     private function syncFollowUpReminder(Visit $visit, User $worker): void

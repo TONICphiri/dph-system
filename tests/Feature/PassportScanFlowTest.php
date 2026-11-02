@@ -110,7 +110,16 @@ class PassportScanFlowTest extends TestCase
         $this->actingAs($this->worker())->post(route('visits.stage.store', [$patient, 'consultation']), $payload)->assertForbidden();
         $this->assertDatabaseMissing('visits', ['patient_id' => $patient->id]);
 
-        $this->post(route('patients.open'), ['code' => $this->scanned($patient)]);
+        $clerk = User::query()->where('email', 'clerk@healthpassport.mw')->firstOrFail();
+        $nurse = User::query()->where('email', 'healthworker2@healthpassport.mw')->firstOrFail();
+
+        $this->actingAs($clerk)->post(route('patients.open'), ['code' => $this->scanned($patient)]);
+        $this->post(route('visits.stage.store', [$patient, 'reception']), ['reason' => 'Chest infection']);
+
+        $this->actingAs($nurse)->post(route('patients.open'), ['code' => $this->scanned($patient)]);
+        $this->post(route('visits.stage.store', [$patient, 'triage']), ['symptoms' => 'Cough']);
+
+        $this->actingAs($this->worker())->post(route('patients.open'), ['code' => $this->scanned($patient)]);
         $this->post(route('visits.stage.store', [$patient, 'consultation']), $payload)->assertRedirect(route('patients.show', $patient));
 
         $visit = Visit::query()->where('patient_id', $patient->id)->firstOrFail();
@@ -150,6 +159,17 @@ class PassportScanFlowTest extends TestCase
         $visit = Visit::query()->where('patient_id', $patient->id)->firstOrFail();
         $this->assertSame($clerk->id, $visit->stage(VisitStageType::Reception)->recorded_by);
         $this->assertSame($nurse->id, $visit->stage(VisitStageType::Triage)->recorded_by);
+    }
+
+    public function test_a_visit_cannot_skip_reception_or_triage(): void
+    {
+        $patient = $this->patient();
+        $nurse = User::query()->where('email', 'healthworker2@healthpassport.mw')->firstOrFail();
+
+        $this->actingAs($nurse)->post(route('patients.open'), ['code' => $this->scanned($patient)]);
+        $this->post(route('visits.stage.store', [$patient, 'triage']), ['symptoms' => 'Dry cough'])
+            ->assertForbidden();
+        $this->assertDatabaseMissing('visits', ['patient_id' => $patient->id]);
     }
 
     public function test_vaccinations_and_reminders_also_need_an_open_passport(): void

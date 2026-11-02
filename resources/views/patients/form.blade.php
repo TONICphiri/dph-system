@@ -47,11 +47,7 @@
                     <fieldset>
                         <legend class="label">Emergency registration</legend>
                         <label class="flex cursor-pointer items-start gap-3 border p-3" :class="emergency ? 'border-gold-600 bg-gold-100' : 'border-line'">
-                            <input type="checkbox" name="emergency" value="1" x-model="emergency" class="mt-1 h-4 w-4 rounded border-line text-brand-700 focus:ring-brand-600">
-                            <span>
-                                <span class="block font-medium">Register without the normal identity details</span>
-                                <span class="block text-[13px] text-muted">Use this when the patient is unconscious, unidentified, has no documents, or the person who can confirm their details is not available.</span>
-                            </span>
+                            <input type="checkbox" name="emergency" value="1" x-model="emergency" aria-label="Emergency registration" class="mt-1 h-4 w-4 rounded border-line text-brand-700 focus:ring-brand-600">
                         </label>
                     </fieldset>
 
@@ -82,7 +78,7 @@
                     <x-field.input name="middle_name" label="Middle name" :value="$patient->middle_name" />
                     <x-field.input name="last_name" label="Surname" :value="$patient->last_name" required />
                     <x-field.input name="date_of_birth" label="Date of birth" type="date" :value="$patient->date_of_birth?->toDateString()" :max="now()->toDateString()" required />
-                    <x-field.select name="sex" label="Sex" :options="$sexes" :value="$patient->sex" help="Unknown is allowed only for an emergency registration. Correct it when the patient's sex is confirmed." required />
+                    <x-field.select name="sex" label="Sex" :options="$sexes" :value="$patient->sex" required />
                     @if ($editing)
                         <x-field.select name="status" label="Record status" :options="$statuses" :value="$patient->status" :placeholder="false" required />
                     @endif

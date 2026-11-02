@@ -4,15 +4,17 @@ namespace App\Policies;
 
 use App\Enums\PatientStatus;
 use App\Enums\Permission;
+use App\Enums\VisitStageType;
+use App\Enums\VisitStatus;
 use App\Models\User;
 use App\Models\Visit;
 use App\Services\PassportAccessService;
 
 /**
  * Decides who may record each stage of a visit. A worker needs the visits
- * permission, the position that owns the stage, an open passport, and a visit
- * that is not yet locked. This is checked on the server for every save, so a
- * stage cannot be recorded by posting the form directly.
+ * permission, the position that owns the stage, an open passport, and the next
+ * stage in the workflow (or an existing stage to correct). This is checked on
+ * the server for every save, so a stage cannot be recorded by posting directly.
  */
 class VisitPolicy
 {
@@ -22,12 +24,20 @@ class VisitPolicy
 
     public function recordStage(User $user, Visit $visit, string $type): bool
     {
-        return $this->allowed($user, $visit, Permission::ManageVisits, $this->positionsFor($type));
+        $stage = VisitStageType::tryFrom($type);
+
+        return $stage !== null
+            && $stage !== VisitStageType::Dispensing
+            && $visit->isStageAvailable($stage)
+            && $this->allowed($user, $visit, Permission::ManageVisits, $this->positionsFor($type));
     }
 
     public function dispense(User $user, Visit $visit): bool
     {
-        return $this->allowed($user, $visit, Permission::DispenseMedications, $this->positionsFor('dispensing'));
+        return $visit->status === VisitStatus::AwaitingDispense
+            && $visit->stages()->where('type', VisitStageType::Consultation->value)->exists()
+            && $visit->medications()->exists()
+            && $this->allowed($user, $visit, Permission::DispenseMedications, $this->positionsFor('dispensing'));
     }
 
     /**
@@ -65,4 +75,5 @@ class VisitPolicy
     {
         return (array) config("health_passport.stage_positions.{$type}", []);
     }
+
 }
