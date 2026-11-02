@@ -5,12 +5,11 @@
         </x-slot:actions>
     </x-page-header>
 
-    <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
+    <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <x-stat label="Active health workers" :value="number_format($stats['staff'])" icon="users" :href="route('facility.staff.index')" />
         <x-stat label="Passports opened today" :value="number_format($stats['openedToday'])" icon="qr" />
         <x-stat label="Visits today" :value="number_format($stats['visitsToday'])" icon="stethoscope" />
         <x-stat label="Passports issued this month" :value="number_format($stats['issuedThisMonth'])" icon="heart" :href="route('facility.reports')" />
-        <x-stat label="Provisional children" :value="number_format($stats['provisional'])" icon="user-plus" hint="Identity pending" />
     </div>
 
     <div class="mt-6 grid gap-6 xl:grid-cols-2">

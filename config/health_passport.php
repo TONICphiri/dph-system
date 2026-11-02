@@ -15,17 +15,6 @@ return [
 
     'blood_groups' => ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'],
 
-    // Why a child is being registered without the mother present. The chosen
-    // reason is kept on the provisional record for the follow-up worklist.
-    'emergency_child_reasons' => [
-        'mother_unwell' => 'Mother is unconscious or too unwell',
-        'mother_absent' => 'Mother is not present',
-        'brought_by_other' => 'Brought by another adult',
-        'unaccompanied' => 'Child arrived alone',
-        'referral' => 'Emergency referral',
-        'other' => 'Other reason',
-    ],
-
     // Accepted range for each measurement, used by the form and its validation.
     'vital_limits' => [
         'temperature' => ['min' => 30, 'max' => 45],

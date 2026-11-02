@@ -62,7 +62,6 @@ class ReportController extends Controller
             fputcsv($handle, ['Visits', $report['visits']]);
             fputcsv($handle, ['Visits completed', $report['visits_completed']]);
             fputcsv($handle, ['Vaccinations', $report['vaccinations']]);
-            fputcsv($handle, ['Provisional registrations', $report['provisional_children']]);
             fputcsv($handle, []);
 
             fputcsv($handle, ['Visits per day']);

@@ -3,7 +3,6 @@
 namespace App\Services;
 
 use App\Enums\AccessMethod;
-use App\Enums\IdentityStatus;
 use App\Enums\VisitStageType;
 use App\Enums\VisitStatus;
 use App\Models\Facility;
@@ -44,10 +43,6 @@ class FacilityReportService
             'visits' => (clone $visits)->count(),
             'visits_completed' => (clone $visits)->where('status', VisitStatus::Completed)->count(),
             'vaccinations' => Vaccination::query()->where('facility_id', $facility->id)->whereBetween('administered_on', [$start->toDateString(), $end->toDateString()])->count(),
-            'provisional_children' => Patient::query()
-                ->where('registered_facility_id', $facility->id)
-                ->where('identity_status', IdentityStatus::Provisional)
-                ->count(),
             // A diagnosis is the summary the doctor writes during consultation.
             'top_diagnoses' => VisitStage::query()
                 ->where('type', VisitStageType::Consultation)

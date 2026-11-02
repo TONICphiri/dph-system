@@ -3,7 +3,6 @@
 namespace App\Http\Controllers;
 
 use App\Enums\FacilityStatus;
-use App\Enums\IdentityStatus;
 use App\Enums\ReminderStatus;
 use App\Enums\RoleName;
 use App\Models\AuditLog;
@@ -65,8 +64,6 @@ class DashboardController extends Controller
                 'visitsToday' => Visit::query()->where('facility_id', $facilityId)
                     ->where('started_at', '>=', $dayStart)->where('started_at', '<', $dayEnd)->count(),
                 'issuedThisMonth' => Patient::query()->where('registered_facility_id', $facilityId)->where('created_at', '>=', today()->startOfMonth())->count(),
-                'provisional' => Patient::query()->where('registered_facility_id', $facilityId)
-                    ->where('identity_status', IdentityStatus::Provisional)->count(),
             ],
             'staff' => User::query()->where('facility_id', $facilityId)->withRole(RoleName::HealthWorker)->orderBy('name')->limit(6)->get(),
             'activity' => AuditLog::query()->with('user')->where('facility_id', $facilityId)->latest()->limit(8)->get(),
@@ -88,8 +85,6 @@ class DashboardController extends Controller
                     ->where('recorded_at', '>=', $dayStart)->where('recorded_at', '<', $dayEnd))->count(),
                 'issuedToday' => Patient::query()->where('registered_facility_id', $facilityId)
                     ->where('created_at', '>=', $dayStart)->where('created_at', '<', $dayEnd)->count(),
-                'provisional' => Patient::query()->where('registered_facility_id', $facilityId)
-                    ->where('identity_status', IdentityStatus::Provisional)->count(),
             ],
             'openPassports' => PassportAccess::query()->with('patient')->where('user_id', $user->id)->open()->latest('opened_at')->get(),
             'recentVisits' => Visit::query()->with('patient')->whereHas('stages', fn ($query) => $query->where('recorded_by', $user->id))->latest('started_at')->limit(8)->get(),

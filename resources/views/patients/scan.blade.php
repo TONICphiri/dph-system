@@ -1,24 +1,17 @@
-<x-layouts.app :title="$linkMother ? 'Link mother' : 'Open a passport'">
+<x-layouts.app title="Open a passport">
     @push('head') @vite('resources/js/scanner.js') @endpush
-    <x-page-header :title="$linkMother ? 'Link mother' : 'Open a passport'">
+    <x-page-header title="Open a passport">
         <x-slot:actions>
             <a href="{{ route('patients.create') }}" class="btn-secondary"><x-icon name="user-plus" class="h-4 w-4" /> Issue a passport</a>
         </x-slot:actions>
     </x-page-header>
 
     <div class="grid items-start gap-6 lg:grid-cols-2" x-data="{ noCard: {{ $errors->hasAny(['identifier', 'date_of_birth']) ? 'true' : 'false' }} }">
-        @if ($linkMother)
-            <div class="mb-6 border border-brand-200 bg-brand-50 px-5 py-3 text-sm lg:col-span-2">
-                <p class="font-medium">Link {{ $linkMother->full_name }} to their mother</p>
-                <p class="text-muted">Scan the mother's passport card, or check her details below. Her passport must be open for the link to be saved.</p>
-            </div>
-        @endif
         <div>
         <form method="POST" action="{{ route('patients.open') }}" id="scan-form" class="panel"
             data-scan-url="{{ route('patients.scan') }}" data-worker="{{ asset('sw.js') }}" data-shell="{{ route('offline.scan') }}" data-keep-minutes="{{ $keepMinutes }}" data-draft-hours="{{ $draftHours }}" data-user-id="{{ auth()->id() }}">
             @csrf
             <input type="hidden" name="code" id="code">
-            @if ($linkMother)<input type="hidden" name="link_mother" value="{{ $linkMother->id }}">@endif
             <div class="panel-header"><h2 class="panel-title">Scan the card</h2></div>
             <div class="panel-body">
                 <div id="qr-reader" class="aspect-square w-full max-w-sm border border-line bg-paper"></div>
@@ -36,7 +29,6 @@
         <div class="space-y-6">
             <form method="POST" action="{{ route('patients.open') }}" class="panel" x-show="noCard" x-cloak>
                 @csrf
-                @if ($linkMother)<input type="hidden" name="link_mother" value="{{ $linkMother->id }}">@endif
                 <div class="panel-header"><h2 class="panel-title">Check the holder's details</h2></div>
                 <div class="panel-body grid gap-4">
                     <x-field.input name="identifier" label="Passport number or National ID" autocomplete="off" required />

@@ -22,43 +22,6 @@
         </div>
     @endif
 
-    @if ($patient->isProvisional())
-        <div class="mb-6 border border-amber-300 bg-amber-50 px-5 py-4 text-sm">
-            <div class="flex flex-wrap items-start justify-between gap-3">
-                <div>
-                    <p class="font-medium text-amber-900">Provisional identity — {{ $patient->provisional_reason_label }}</p>
-                    <p class="mt-1 text-amber-800">
-                        Registered {{ $patient->provisional_registered_at?->format('j M Y, H:i') }}
-                        @if ($patient->provisionalRegisteredBy) by {{ $patient->provisionalRegisteredBy->name }} @endif
-                        @if ($patient->registeredFacility) at {{ $patient->registeredFacility->name }} @endif.
-                    </p>
-                    <p class="mt-1 text-amber-800">
-                        @if ($patient->mother)
-                            Mother: {{ $patient->mother->full_name }}.
-                        @else
-                            Mother not linked yet.
-                        @endif
-                        @if ($patient->dob_is_estimated) Date of birth is estimated. @endif
-                        @if ($patient->sex === \App\Enums\Sex::Unknown) Sex is unknown. @endif
-                    </p>
-                    @if ($patient->guardian_name)
-                        <p class="mt-1 text-amber-800">Guardian: {{ $patient->guardian_name }}@if($patient->guardian_relationship) ({{ $patient->guardian_relationship }})@endif @if($patient->guardian_phone) — {{ $patient->guardian_phone }}@endif</p>
-                    @endif
-                </div>
-                <div class="flex flex-wrap gap-2">
-                    @if (! $patient->mother)
-                        @can('open', App\Models\Patient::class)
-                            <a href="{{ route('patients.scan', ['link_mother' => $patient->id]) }}" class="btn-secondary btn-sm"><x-icon name="qr" class="h-4 w-4" /> Link mother</a>
-                        @endcan
-                    @endif
-                    @can('update', $patient)
-                        <a href="{{ route('patients.edit', $patient) }}" class="btn-secondary btn-sm"><x-icon name="edit" class="h-4 w-4" /> Complete identity</a>
-                    @endcan
-                </div>
-            </div>
-        </div>
-    @endif
-
     <div class="grid items-start gap-6 xl:grid-cols-3">
         <div class="space-y-6">
             <section class="panel">
@@ -66,12 +29,9 @@
                     <div class="h-28 w-28 shrink-0 border border-line [&>svg]:h-full [&>svg]:w-full" role="img" aria-label="QR code of {{ $patient->full_name }}">{!! $qrCode !!}</div>
                     <div class="min-w-0 text-sm">
                         <p class="mono font-medium">{{ $patient->masked_passport_number }}</p>
-                        <p class="text-muted">{{ $patient->sex->label() }}, born {{ $patient->date_of_birth->format('j M Y') }}@if ($patient->dob_is_estimated) (estimated)@endif</p>
+                        <p class="text-muted">{{ $patient->sex->label() }}, born {{ $patient->date_of_birth->format('j M Y') }}</p>
                         <p class="text-muted">{{ $patient->district?->name }}</p>
-                        <div class="flex flex-wrap items-center gap-2">
-                            <x-status :value="$patient->status" />
-                            @if ($patient->isProvisional())<x-badge tone="warning">Provisional identity</x-badge>@endif
-                        </div>
+                        <x-status :value="$patient->status" />
                     </div>
                 </div>
                 <div class="flex flex-wrap gap-2 border-t border-line px-5 py-3">
@@ -99,7 +59,7 @@
                 </section>
             @endif
 
-            @if (! $patient->portalAccount && $patient->email && ! $patient->isProvisional())
+            @if (! $patient->portalAccount && $patient->email)
                 @can('create', App\Models\Patient::class)
                     <section class="panel">
                         <div class="panel-body flex items-center justify-between gap-3">
