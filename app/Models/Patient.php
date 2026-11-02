@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\IdentityStatus;
 use App\Enums\PatientStatus;
 use App\Enums\Sex;
 use App\Services\SettingService;
@@ -44,6 +45,17 @@ class Patient extends Model
         'registered_facility_id',
         'registered_by',
         'status',
+        'identity_status',
+        'provisional_reason',
+        'provisional_reason_note',
+        'next_of_kin_name',
+        'next_of_kin_relationship',
+        'next_of_kin_phone',
+        'dob_is_estimated',
+        'provisional_registered_at',
+        'provisional_registered_by',
+        'identity_completed_at',
+        'identity_completed_by',
     ];
 
     protected $hidden = ['qr_token'];
@@ -56,6 +68,10 @@ class Patient extends Model
             'separated_from_mother_at' => 'datetime',
             'sex' => Sex::class,
             'status' => PatientStatus::class,
+            'identity_status' => IdentityStatus::class,
+            'dob_is_estimated' => 'boolean',
+            'provisional_registered_at' => 'datetime',
+            'identity_completed_at' => 'datetime',
             'allergies' => 'encrypted',
             'chronic_conditions' => 'encrypted',
             'disabilities' => 'encrypted',
@@ -104,6 +120,32 @@ class Patient extends Model
         return $this->age !== null && $this->age < app(SettingService::class)->childSeparationAge();
     }
 
+    /**
+     * A provisional record was registered in an emergency, for example when
+     * the patient was unconscious or had no identity documents.
+     */
+    public function isProvisional(): bool
+    {
+        return $this->identity_status === IdentityStatus::Provisional;
+    }
+
+    /**
+     * Human readable reason for a provisional registration, including the
+     * free text entered when "Other reason" was chosen.
+     */
+    protected function provisionalReasonLabel(): Attribute
+    {
+        return Attribute::get(function () {
+            if ($this->provisional_reason === 'other' && $this->provisional_reason_note) {
+                return $this->provisional_reason_note;
+            }
+
+            $reasons = config('health_passport.emergency_reasons', []);
+
+            return $reasons[$this->provisional_reason] ?? $this->provisional_reason ?? 'Emergency registration';
+        });
+    }
+
     public function district(): BelongsTo
     {
         return $this->belongsTo(District::class);
@@ -127,6 +169,16 @@ class Patient extends Model
     public function registeredBy(): BelongsTo
     {
         return $this->belongsTo(User::class, 'registered_by');
+    }
+
+    public function provisionalRegisteredBy(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'provisional_registered_by');
+    }
+
+    public function identityCompletedBy(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'identity_completed_by');
     }
 
     public function portalAccount(): HasOne
@@ -167,6 +219,11 @@ class Patient extends Model
     public function reminders(): HasMany
     {
         return $this->hasMany(Reminder::class)->orderBy('due_on');
+    }
+
+    public function scopeProvisional(Builder $query): Builder
+    {
+        return $query->where('identity_status', IdentityStatus::Provisional);
     }
 
     /**
@@ -223,4 +280,3 @@ class Patient extends Model
         return Attribute::get(fn () => substr($value, 0, 3).str_repeat('X', $length - 6).substr($value, -3));
     }
 }
-

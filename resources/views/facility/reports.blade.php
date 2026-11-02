@@ -12,7 +12,7 @@
     </form>
 
     <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <x-stat label="Passports issued" :value="$report['passports_issued']" icon="user-plus" />
+        <x-stat label="Passports issued" :value="$report['passports_issued']" icon="user-plus" :hint="$report['provisional_patients'].' provisional patients in total'" />
         <x-stat label="Passports opened" :value="$report['passports_opened']" icon="qr" :hint="$report['scan_rate'].'% opened by scanning the card'" />
         <x-stat label="Visits" :value="$report['visits']" icon="stethoscope" :hint="$report['visits_completed'].' completed'" />
         <x-stat label="Vaccinations" :value="$report['vaccinations']" icon="syringe" />

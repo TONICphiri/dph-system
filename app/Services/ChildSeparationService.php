@@ -13,8 +13,7 @@ class ChildSeparationService
     public function __construct(
         private readonly SettingService $settings,
         private readonly AuditLogger $audit,
-    ) {
-    }
+    ) {}
 
     /**
      * @return int Number of records separated.
@@ -29,6 +28,10 @@ class ChildSeparationService
             ->whereDate('date_of_birth', '<=', $cutoff)
             ->chunkById(200, function ($patients) use (&$count) {
                 foreach ($patients as $patient) {
+                    if ($patient->isProvisional()) {
+                        continue;
+                    }
+
                     $patient->update([
                         'mother_id' => null,
                         'separated_from_mother_at' => now(),

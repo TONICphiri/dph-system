@@ -37,6 +37,7 @@ class FacilityReportService
 
         return [
             'passports_issued' => Patient::query()->where('registered_facility_id', $facility->id)->whereBetween('created_at', [$start, $end])->count(),
+            'provisional_patients' => Patient::query()->where('registered_facility_id', $facility->id)->provisional()->count(),
             'passports_opened' => $opened,
             'opened_by_scan' => $scanned,
             'scan_rate' => $opened > 0 ? round($scanned / $opened * 100) : 0,

@@ -1,10 +1,21 @@
 <x-layouts.app title="Open a passport">
     @push('head') @vite('resources/js/scanner.js') @endpush
-    <x-page-header title="Open a passport">
+    <x-page-header title="{{ $linkMother ? 'Link mother' : 'Open a passport' }}">
         <x-slot:actions>
-            <a href="{{ route('patients.create') }}" class="btn-secondary"><x-icon name="user-plus" class="h-4 w-4" /> Issue a passport</a>
+            @if ($linkMother)
+                <a href="{{ route('patients.show', $linkMother) }}" class="btn-secondary">Cancel linking</a>
+            @else
+                <a href="{{ route('patients.create') }}" class="btn-secondary"><x-icon name="user-plus" class="h-4 w-4" /> Issue a passport</a>
+            @endif
         </x-slot:actions>
     </x-page-header>
+
+    @if ($linkMother)
+        <div class="mb-6 border border-amber-300 bg-amber-50 px-5 py-4 text-sm">
+            <p class="font-medium">Linking {{ $linkMother->full_name }} to their mother</p>
+            <p class="mt-1 text-muted">Scan the mother's passport card, or enter her passport number and date of birth below. The child's passport is already open.</p>
+        </div>
+    @endif
 
     <div class="grid items-start gap-6 lg:grid-cols-2" x-data="{ noCard: {{ $errors->hasAny(['identifier', 'date_of_birth']) ? 'true' : 'false' }} }">
         <div>
@@ -12,6 +23,9 @@
             data-scan-url="{{ route('patients.scan') }}" data-worker="{{ asset('sw.js') }}" data-shell="{{ route('offline.scan') }}" data-keep-minutes="{{ $keepMinutes }}" data-draft-hours="{{ $draftHours }}" data-user-id="{{ auth()->id() }}">
             @csrf
             <input type="hidden" name="code" id="code">
+            @if ($linkMother)
+                <input type="hidden" name="link_mother" value="{{ $linkMother->id }}">
+            @endif
             <div class="panel-header"><h2 class="panel-title">Scan the card</h2></div>
             <div class="panel-body">
                 <div id="qr-reader" class="aspect-square w-full max-w-sm border border-line bg-paper"></div>
@@ -29,7 +43,8 @@
         <div class="space-y-6">
             <form method="POST" action="{{ route('patients.open') }}" class="panel" x-show="noCard" x-cloak>
                 @csrf
-                <div class="panel-header"><h2 class="panel-title">Check the holder's details</h2></div>
+                <input type="hidden" name="link_mother" value="{{ $linkMother?->id }}">
+                <div class="panel-header"><h2 class="panel-title">{{ $linkMother ? "Enter the mother's details" : "Check the holder's details" }}</h2></div>
                 <div class="panel-body grid gap-4">
                     <x-field.input name="identifier" label="Passport number or National ID" autocomplete="off" required />
                     <x-field.input name="date_of_birth" label="Date of birth" type="date" :max="today()->toDateString()" required />

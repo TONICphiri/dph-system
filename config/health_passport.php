@@ -15,6 +15,18 @@ return [
 
     'blood_groups' => ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'],
 
+    // Why a patient is being registered without their normal identity details.
+    // The chosen reason is kept on the provisional record for follow-up.
+    'emergency_reasons' => [
+        'unconscious' => 'Patient is unconscious or unable to give details',
+        'unidentified' => 'Identity not known',
+        'no_documents' => 'No identity documents available',
+        'brought_by_other' => 'Brought in by someone else',
+        'mother_unavailable' => 'Mother not available (child)',
+        'referral' => 'Emergency referral',
+        'other' => 'Other reason',
+    ],
+
     // Accepted range for each measurement, used by the form and its validation.
     'vital_limits' => [
         'temperature' => ['min' => 30, 'max' => 45],

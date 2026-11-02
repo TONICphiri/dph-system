@@ -10,6 +10,7 @@
         <x-stat label="Passports opened today" :value="number_format($stats['openedToday'])" icon="qr" />
         <x-stat label="Visits today" :value="number_format($stats['visitsToday'])" icon="stethoscope" />
         <x-stat label="Passports issued this month" :value="number_format($stats['issuedThisMonth'])" icon="heart" :href="route('facility.reports')" />
+        <x-stat label="Provisional patients" :value="number_format($stats['provisional'])" icon="clipboard" :hint="'Waiting for identity details'" />
     </div>
 
     <div class="mt-6 grid gap-6 xl:grid-cols-2">

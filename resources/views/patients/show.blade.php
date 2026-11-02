@@ -22,6 +22,62 @@
         </div>
     @endif
 
+    @if ($patient->isProvisional())
+        <section class="mb-6 border border-amber-300 bg-amber-50">
+            <div class="flex flex-wrap items-center gap-2 border-b border-amber-200 px-5 py-3">
+                <x-badge tone="warning">Provisional identity</x-badge>
+                <p class="font-medium">{{ $patient->provisionalReasonLabel }}</p>
+            </div>
+            <div class="space-y-4 px-5 py-4">
+                <p class="text-sm text-muted">
+                    Registered {{ $patient->provisional_registered_at?->format('j M Y, H:i') }}
+                    by {{ $patient->provisionalRegisteredBy?->name ?? 'a health worker' }}.
+                    This passport can be used for care now; the identity must be completed before a portal account is created.
+                </p>
+                <dl class="grid gap-3 text-sm sm:grid-cols-2 lg:grid-cols-4">
+                    <div>
+                        <dt class="text-[13px] text-muted">Date of birth</dt>
+                        <dd class="font-medium">{{ $patient->date_of_birth->format('j M Y') }}
+                            @if ($patient->dob_is_estimated)<x-badge tone="warning" class="ml-1">Estimated</x-badge>@endif
+                        </dd>
+                    </div>
+                    <div>
+                        <dt class="text-[13px] text-muted">Sex</dt>
+                        <dd class="font-medium">{{ $patient->sex->label() }}</dd>
+                    </div>
+                    <div>
+                        <dt class="text-[13px] text-muted">Next of kin</dt>
+                        <dd class="font-medium">{{ $patient->next_of_kin_name ?? 'Not recorded' }}
+                            @if ($patient->next_of_kin_relationship) <span class="text-muted">({{ $patient->next_of_kin_relationship }})</span>@endif
+                            @if ($patient->next_of_kin_phone) <span class="block text-muted">{{ $patient->next_of_kin_phone }}</span>@endif
+                        </dd>
+                    </div>
+                    @if ($patient->isChild())
+                        <div>
+                            <dt class="text-[13px] text-muted">Mother</dt>
+                            <dd class="font-medium">{{ $patient->mother?->full_name ?? 'Not linked yet' }}</dd>
+                        </div>
+                    @else
+                        <div>
+                            <dt class="text-[13px] text-muted">National ID</dt>
+                            <dd class="font-medium">{{ $patient->national_id ? $patient->masked_national_id : 'Not recorded yet' }}</dd>
+                        </div>
+                    @endif
+                </dl>
+                <div class="flex flex-wrap gap-2">
+                    @can('update', $patient)
+                        <a href="{{ route('patients.edit', $patient) }}" class="btn-primary btn-sm"><x-icon name="edit" class="h-4 w-4" /> Complete identity</a>
+                    @endcan
+                    @if ($patient->isChild() && ! $patient->mother)
+                        @can('create', App\Models\Patient::class)
+                            <a href="{{ route('patients.scan', ['link_mother' => $patient->id]) }}" class="btn-secondary btn-sm"><x-icon name="qr" class="h-4 w-4" /> Link mother</a>
+                        @endcan
+                    @endif
+                </div>
+            </div>
+        </section>
+    @endif
+
     <div class="grid items-start gap-6 xl:grid-cols-3">
         <div class="space-y-6">
             <section class="panel">
@@ -31,7 +87,12 @@
                         <p class="mono font-medium">{{ $patient->masked_passport_number }}</p>
                         <p class="text-muted">{{ $patient->sex->label() }}, born {{ $patient->date_of_birth->format('j M Y') }}</p>
                         <p class="text-muted">{{ $patient->district?->name }}</p>
-                        <x-status :value="$patient->status" />
+                        <div class="flex flex-wrap items-center gap-2">
+                            <x-status :value="$patient->status" />
+                            @if ($patient->isProvisional())
+                                <x-badge tone="warning">Provisional identity</x-badge>
+                            @endif
+                        </div>
                     </div>
                 </div>
                 <div class="flex flex-wrap gap-2 border-t border-line px-5 py-3">
@@ -59,7 +120,7 @@
                 </section>
             @endif
 
-            @if (! $patient->portalAccount && $patient->email)
+            @if (! $patient->portalAccount && $patient->email && ! $patient->isProvisional())
                 @can('create', App\Models\Patient::class)
                     <section class="panel">
                         <div class="panel-body flex items-center justify-between gap-3">
