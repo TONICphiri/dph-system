@@ -11,7 +11,7 @@
     </x-page-header>
 
     @if ($linkMother)
-        <div class="mb-6 border border-amber-300 bg-amber-50 px-5 py-4 text-sm">
+        <div class="mb-6 border border-gold-600/30 bg-gold-100 px-5 py-4 text-sm">
             <p class="font-medium">Linking {{ $linkMother->full_name }} to their mother</p>
             <p class="mt-1 text-muted">Scan the mother's passport card, or enter her passport number and date of birth below. The child's passport is already open.</p>
         </div>

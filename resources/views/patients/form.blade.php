@@ -46,7 +46,7 @@
 
                     <fieldset>
                         <legend class="label">Emergency registration</legend>
-                        <label class="flex cursor-pointer items-start gap-3 border p-3" :class="emergency ? 'border-amber-400 bg-amber-50' : 'border-line'">
+                        <label class="flex cursor-pointer items-start gap-3 border p-3" :class="emergency ? 'border-gold-600 bg-gold-100' : 'border-line'">
                             <input type="checkbox" name="emergency" value="1" x-model="emergency" class="mt-1 h-4 w-4 rounded border-line text-brand-700 focus:ring-brand-600">
                             <span>
                                 <span class="block font-medium">Register without the normal identity details</span>
@@ -100,7 +100,7 @@
             </div>
             <div class="panel-body space-y-5">
                 @if ($provisional)
-                    <div class="border border-amber-200 bg-amber-50 px-4 py-3 text-sm">
+                    <div class="border border-gold-600/20 bg-gold-100 px-4 py-3 text-sm">
                         <p class="font-medium">This passport has a provisional identity.</p>
                         <p class="mt-1 text-muted">
                             @if ($patient->isChild())
@@ -177,7 +177,7 @@
                 <h2 class="panel-title">Emergency contacts</h2>
                 <button type="button" class="btn-secondary btn-sm" @click="add()" :disabled="rows.length >= 3"><x-icon name="plus" class="h-4 w-4" /> Add contact</button>
             </div>
-            <div x-show="emergency" x-cloak class="border-b border-line bg-amber-50 px-5 py-3 text-[13px] text-muted">
+            <div x-show="emergency" x-cloak class="border-b border-line bg-gold-100 px-5 py-3 text-[13px] text-muted">
                 Optional in an emergency. The next of kin entered above is saved as the first emergency contact if this list is empty.
             </div>
             <template x-for="(row, index) in rows" :key="index">

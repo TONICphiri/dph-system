@@ -23,8 +23,8 @@
     @endif
 
     @if ($patient->isProvisional())
-        <section class="mb-6 border border-amber-300 bg-amber-50">
-            <div class="flex flex-wrap items-center gap-2 border-b border-amber-200 px-5 py-3">
+        <section class="mb-6 border border-gold-600/30 bg-gold-100">
+            <div class="flex flex-wrap items-center gap-2 border-b border-gold-600/20 px-5 py-3">
                 <x-badge tone="warning">Provisional identity</x-badge>
                 <p class="font-medium">{{ $patient->provisionalReasonLabel }}</p>
             </div>

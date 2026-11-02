@@ -13,7 +13,7 @@
             <div class="flex flex-1 gap-3 p-3">
                 <div class="min-w-0 flex-1 space-y-1 text-[10px] leading-tight">
                     <p class="text-[12px] font-semibold text-ink">{{ $patient->full_name }}
-                        @if ($patient->isProvisional())<span class="ml-1 rounded border border-amber-400 px-1 text-[8px] uppercase tracking-wide text-amber-700">Provisional</span>@endif
+                        @if ($patient->isProvisional())<span class="ml-1 rounded border border-gold-600 px-1 text-[8px] uppercase tracking-wide text-gold-700">Provisional</span>@endif
                     </p>
                     <p><span class="text-muted">Passport</span> <span class="mono text-[11px] font-semibold">{{ $patient->masked_passport_number }}</span></p>
                     <p><span class="text-muted">National ID</span> <span class="mono">{{ $patient->national_id ? $patient->masked_national_id : 'Not recorded' }}</span></p>
