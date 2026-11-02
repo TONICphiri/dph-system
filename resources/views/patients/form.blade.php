@@ -62,9 +62,6 @@
                     <div x-show="!isChild" x-cloak>
                         <x-field.input name="national_id" label="National ID" :value="$patient->national_id" :maxlength="$nationalIdLength" :placeholder="str_repeat('X', $nationalIdLength)" x-bind:disabled="isChild" />
                     </div>
-                    <div x-show="isChild" x-cloak class="flex items-end pb-2 text-[13px] text-muted">
-                        National ID not required — a child is identified by their passport number and linked to the mother's passport.
-                    </div>
                     <x-field.input name="first_name" label="First name" :value="$patient->first_name" required />
                     <x-field.input name="middle_name" label="Middle name" :value="$patient->middle_name" />
                     <x-field.input name="last_name" label="Surname" :value="$patient->last_name" required />
