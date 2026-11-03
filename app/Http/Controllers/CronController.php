@@ -7,9 +7,9 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Artisan;
 
 /**
- * Background work that Vercel has no long running process for. Vercel Cron
- * calls these endpoints, and the shared secret keeps them closed to the
- * public.
+ * Background work for hosts that cannot run a system scheduler. An external
+ * cron calls these endpoints with the shared secret; servers with cron should
+ * use `php artisan schedule:run` instead.
  */
 class CronController extends Controller
 {

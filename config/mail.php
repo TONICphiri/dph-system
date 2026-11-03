@@ -121,7 +121,7 @@ return [
     */
 
     'from' => [
-        'address' => env('MAIL_FROM_ADDRESS', 'phiritonic550@gmail.com'),
+        'address' => env('MAIL_FROM_ADDRESS', 'no-reply@example.com'),
         'name' => env('MAIL_FROM_NAME', env('APP_NAME', 'Laravel')),
     ],
 

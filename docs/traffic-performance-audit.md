@@ -1,5 +1,10 @@
 # DPH Health Passport — Traffic Flow & Processing Performance Audit
 
+> **Deployment note (3 November 2026):** Vercel is no longer a supported
+> target. References to it below are historical; the application now deploys
+> with nginx/PHP-FPM or cPanel (see `deploy/PRODUCTION-CHECKLIST.md`). The
+> Redis advice applies only when `ext-redis` is installed on every server.
+
 Read-only analysis of `C:\Users\Adaline\Desktop\dph-system` followed by targeted,
 low-risk fixes. Every finding cites the file that proves it. Query counts are
 derived from the code paths, not from a profiler, because the application could

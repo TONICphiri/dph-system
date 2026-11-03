@@ -25,6 +25,8 @@ class SystemHealthService
             $this->storageCheck(),
             $this->backupStorageCheck(),
             $this->cronCheck(),
+            $this->mailCheck(),
+            $this->smsCheck(),
             $this->queueCheck(),
             $this->failedJobsCheck(),
             [
@@ -118,8 +120,8 @@ class SystemHealthService
     }
 
     /**
-     * Vercel only offers temporary local storage, so a local backup disk
-     * means the nightly copy disappears when the function is recycled.
+     * A durable disk is required in production. A local disk is only a warning
+     * on a single server, but it would lose every copy on an ephemeral host.
      */
     private function backupStorageCheck(): array
     {
@@ -130,14 +132,14 @@ class SystemHealthService
             'label' => 'Backup storage',
             'value' => $durable
                 ? "Using the {$disk} disk"
-                : 'Backups are stored on the local disk, which is temporary on Vercel. Set BACKUP_DISK=s3.',
+                : 'Backups are stored on the local disk. Set BACKUP_DISK=s3 for an off-server copy.',
             'healthy' => $durable,
         ];
     }
 
     /**
-     * The cron secret protects the endpoints Vercel calls for reminders,
-     * backups and adult separation.
+     * The cron secret protects the optional endpoints on hosts without a
+     * system scheduler. A server cron running schedule:run is equally valid.
      */
     private function cronCheck(): array
     {
@@ -147,8 +149,37 @@ class SystemHealthService
             'label' => 'Scheduled jobs',
             'value' => $configured
                 ? 'Protected cron endpoint configured'
-                : 'CRON_SECRET is not set, so Vercel cron requests are refused.',
-            'healthy' => $configured || ! app()->isProduction(),
+                : 'Using the server cron (schedule:run). Set CRON_SECRET only if the HTTP cron endpoints are used.',
+            'healthy' => true,
+        ];
+    }
+
+    private function mailCheck(): array
+    {
+        $driver = (string) config('mail.default', 'log');
+        $healthy = $driver !== 'log' || ! app()->isProduction();
+
+        return [
+            'label' => 'Email delivery',
+            'value' => $healthy
+                ? "Using the {$driver} mailer"
+                : 'Mail is still set to log, so no email leaves the server. Set MAIL_MAILER in production.',
+            'healthy' => $healthy,
+        ];
+    }
+
+    private function smsCheck(): array
+    {
+        $enabled = app(SettingService::class)->get('sms_notifications_enabled') === '1';
+        $driver = (string) config('services.sms.driver', 'log');
+        $healthy = ! $enabled || $driver !== 'log' || ! app()->isProduction();
+
+        return [
+            'label' => 'Text message delivery',
+            'value' => ! $enabled
+                ? 'Not enabled'
+                : ($healthy ? "Using the {$driver} gateway" : 'Text messages are enabled but SMS_DRIVER is log. No message leaves the server.'),
+            'healthy' => $healthy,
         ];
     }
 

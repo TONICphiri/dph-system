@@ -30,9 +30,9 @@ class AppServiceProvider extends ServiceProvider
 
     public function boot(): void
     {
-        // Vercel serves the site over HTTPS but reaches PHP through a proxy,
-        // so every generated link, asset and form action must use https.
-        if (config('app.env') === 'production') {
+        // Behind a TLS terminating proxy, every generated link, asset and form
+        // action must use https once FORCE_HTTPS is on.
+        if (app()->isProduction() && config('security.force_https')) {
             URL::forceScheme('https');
         }
 
@@ -42,12 +42,22 @@ class AppServiceProvider extends ServiceProvider
         Event::listen(NotificationFailed::class, [RecordReminderDelivery::class, 'onFailed']);
 
         // Five sign in attempts per minute for each email address and device.
-        RateLimiter::for('login', fn (Request $request) => Limit::perMinute(5)
-            ->by(strtolower((string) $request->input('email')).'|'.$request->ip()));
+        RateLimiter::for('login', fn (Request $request) => Limit::perMinute(
+            (int) config('security.rate_limit.limits.login', 5)
+        )->by(strtolower((string) $request->input('email')).'|'.$request->ip()));
 
         // Opening passports is limited so a stolen account cannot be used to
         // try many passport numbers.
         RateLimiter::for('passport-open', fn (Request $request) => Limit::perMinute(20)->by((string) $request->user()?->id));
+
+        // Protects the signed-in API surface and the public cron endpoints.
+        RateLimiter::for('api', fn (Request $request) => Limit::perMinute(
+            (int) config('security.rate_limit.limits.api', 120)
+        )->by((string) ($request->user()?->id ?: $request->ip())));
+
+        RateLimiter::for('register', fn (Request $request) => Limit::perMinute(
+            (int) config('security.rate_limit.limits.register', 3)
+        )->by($request->ip().':register'));
 
         // The system name is edited on the Settings page, so every page reads
         // it from the settings table instead of a fixed value.

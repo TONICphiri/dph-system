@@ -18,7 +18,7 @@ return [
         'x_content_type_options' => env('X_CONTENT_TYPE_OPTIONS', 'nosniff'),
         'x_xss_protection' => env('X_XSS_PROTECTION', '1; mode=block'),
         'referrer_policy' => env('REFERRER_POLICY', 'strict-origin-when-cross-origin'),
-        'content_security_policy' => env('CONTENT_SECURITY_POLICY', "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self';"),
+        'content_security_policy' => env('CONTENT_SECURITY_POLICY', "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self' data:; connect-src 'self'; worker-src 'self'; manifest-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none';"),
     ],
 
     /*
@@ -35,7 +35,7 @@ return [
         'enabled' => env('RATE_LIMIT_ENABLED', true),
         'limits' => [
             'login' => env('RATE_LIMIT_LOGIN', 5),
-            'api' => env('RATE_LIMIT_API', 60),
+            'api' => env('RATE_LIMIT_API', 120),
             'register' => env('RATE_LIMIT_REGISTER', 3),
         ],
     ],
@@ -79,5 +79,16 @@ return [
         'failed_login_lockout_minutes' => env('FAILED_LOGIN_LOCKOUT_MINUTES', 15),
         'max_failed_login_attempts' => env('MAX_FAILED_LOGIN_ATTEMPTS', 5),
     ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Audit log retention
+    |--------------------------------------------------------------------------
+    |
+    | Rows older than this are removed by the scheduled audit:prune command.
+    |
+    */
+
+    'audit_retention_days' => (int) env('AUDIT_LOG_RETENTION_DAYS', 365),
 
 ];

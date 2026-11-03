@@ -8,6 +8,14 @@ UI, and not a repeat of `report.md` (workflow audit) or `docs/traffic-performanc
 **Overall rating: 87 / 100 — production-capable, with five gaps worth closing before a
 real facility depends on it.**
 
+> **Status after the November 2026 production-readiness pass:** F-03 (silent
+> `log` mailer/SMS delivery) and F-04 (migration order) are now covered by the
+> health checks and `deploy/PRODUCTION-CHECKLIST.md`. F-02 (first-dose
+> reminders) remains a deliberate product decision: the service only chases
+> vaccines that already have at least one recorded dose, and the pinned test
+> still asserts that behaviour. The boot, middleware and deployment blockers
+> found in `report.md` were also fixed.
+
 ---
 
 ## 1. How this was tested

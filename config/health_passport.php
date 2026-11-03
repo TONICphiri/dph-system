@@ -83,8 +83,8 @@ return [
         'chunk_rows' => 200,
     ],
 
-    // Shared secret Vercel Cron sends in the Authorization header. When it is
-    // empty, the cron endpoints refuse every request.
+    // Shared secret for the optional /api/cron endpoints, for hosts without a
+    // system scheduler. When it is empty, the endpoints refuse every request.
     'cron_secret' => env('CRON_SECRET'),
 
     // The first System Administrator account created by the seeder.

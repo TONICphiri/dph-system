@@ -12,7 +12,7 @@ It is not a hospital management system or a patient record system. It has no war
 - Demonstration accounts
 - Running the tests
 - Hosting on cPanel
-- Hosting on Vercel
+- Production deployment
 - Backups
 - Design rules
 
@@ -90,23 +90,19 @@ Created when `SEED_DEMO_DATA=true`. Every demonstration account uses the value o
 
 ## Running the tests
 
-The tests use a separate database so your working data is never touched.
-
-1. Create a second database named `health_passport_test`.
-2. The tests connect with the MySQL user in `.env`. The test database name is set in `phpunit.xml`. Demonstration data is needed for most tests, so `SEED_DEMO_DATA` must be true when they run.
-3. Run:
+The test suite uses an in-memory SQLite database, so it never touches your working data and needs no extra database server. Configuration is in `phpunit.xml`.
 
 ```bash
-SEED_DEMO_DATA=true php artisan test tests/Feature
-```
-
-A lighter alternative needs no database server at all:
-
-```bash
-DB_CONNECTION=sqlite DB_DATABASE=:memory: SEED_DEMO_DATA=true php artisan test tests/Feature
+php artisan test
 ```
 
 The tests cover page access for every role, the scan gate (a passport stays closed until the card is scanned, and closes again when it expires), the identity check used when a card is missing, the staged visit workflow from reception to handover, linking a child through the mother's passport, and the access history shown to the holder.
+
+A full run takes about five minutes on a laptop. Individual areas can be run faster:
+
+```bash
+php artisan test tests/Feature/ImmunisationStatusTest.php
+```
 
 ## Hosting on cPanel
 
@@ -114,11 +110,12 @@ The tests cover page access for every role, the scan gate (a passport stays clos
 2. **Upload.** Compress the project without `node_modules` and `.env`, upload it with File Manager to a folder outside `public_html`, for example `/home/USERNAME/health-passport`, and extract it.
 3. **Point the domain to the public folder.** In cPanel, set the document root of the domain to `/home/USERNAME/health-passport/public`. If the document root cannot be changed, copy the contents of `public` into `public_html` and edit the two paths in `public_html/index.php` so they point to `../health-passport/vendor/autoload.php` and `../health-passport/bootstrap/app.php`.
 4. **Create the database.** Use MySQL Databases in cPanel to create a database and a user, and give the user all privileges on the database.
-5. **Create `.env`.** Copy `.env.example` to `.env` and set at least:
+5. **Create `.env`.** Use `deploy/env.production.example` as the checklist and set at least:
 
 ```
 APP_ENV=production
 APP_DEBUG=false
+APP_KEY=            # run: php artisan key:generate
 APP_URL=https://your-domain
 DB_DATABASE=cpanel_database_name
 DB_USERNAME=cpanel_database_user
@@ -127,58 +124,67 @@ SEED_DEMO_DATA=false
 ADMIN_EMAIL=your_admin_email
 ADMIN_PASSWORD=a_strong_password
 MAIL_MAILER=smtp
+SESSION_SECURE_COOKIE=true
+FORCE_HTTPS=true
 ```
 
-   Fill in the mail settings from the cPanel email account if you want email notifications.
+   Leave `ASSET_URL` empty unless a CDN actually serves `/build`. Fill in the mail settings from the cPanel email account, and do not leave `MAIL_MAILER=log` on a live server.
 
 6. **Finish the set up** from cPanel Terminal or SSH, inside the project folder:
 
 ```bash
 php artisan key:generate
-php artisan migrate --force --seed
+php artisan migrate --force
 php artisan storage:link
-php artisan config:cache
-php artisan route:cache
-php artisan view:cache
+php artisan optimize
 ```
 
-7. **Add the cron job.** In cPanel Cron Jobs, add one job that runs every minute:
+7. **Add the cron jobs.** In cPanel Cron Jobs, add one job that runs every minute:
 
 ```
 * * * * * php /home/USERNAME/health-passport/artisan schedule:run >> /dev/null 2>&1
 ```
 
-   This makes the database backup at 02:00, sends due reminders at 07:00 and separates adult records at 01:00 every day.
+   If `QUEUE_CONNECTION=database` (the default in the production template), add a second job that drains the queue each minute:
 
-8. **Sign in** as the System Administrator, change the password on the profile page, then register the first facility and its administrator.
-
-After any later update, run `php artisan migrate --force` and repeat the three cache commands.
-
-## Hosting on Vercel
-
-Vercel has no long running scheduler, so the daily work is called by Vercel Cron. The project's `vercel.json` already contains the two schedules, in UTC:
-
-| Schedule | Malawi time | Work |
-|---|---|---|
-| `0 5 * * *` | 07:00 | Create and send due vaccination reminders |
-| `0 0 * * *` | 02:00 | Back up the database and separate adult records |
-
-1. Set these environment variables in the Vercel project:
-   - `APP_ENV=production`, `APP_DEBUG=false`, `APP_URL=https://your-project.vercel.app`
-   - `DB_CONNECTION=mysql` and the TiDB connection values
-   - `SEED_DEMO_DATA=false`
-   - `CRON_SECRET` — a long random value. Vercel sends it as `Authorization: Bearer <CRON_SECRET>`; the endpoints refuse every request when it is empty.
-   - `BACKUP_DISK=s3` and the `AWS_*` values for a durable bucket. For Cloudflare R2, also set `AWS_ENDPOINT` and `AWS_USE_PATH_STYLE_ENDPOINT=true`.
-2. Deploy. Vercel reads the schedules from `vercel.json` and calls the protected endpoints automatically. The Hobby plan allows two daily cron jobs, which matches the two schedules above.
-3. Run the migrations once against the live database:
-
-```bash
-php artisan migrate --force
+```
+* * * * * php /home/USERNAME/health-passport/artisan queue:work --stop-when-empty --max-time=50 >> /dev/null 2>&1
 ```
 
-4. Open **System Health** and confirm that the database schema is up to date, scheduled jobs are protected, and backups use the `s3` disk.
+   Alternatively set `QUEUE_CONNECTION=sync` on a shared host, but then a slow mail provider delays the request that sends the message.
 
-Vercel Cron uses UTC. The schedules above assume the application timezone is Africa/Blantyre (UTC+2). If the timezone changes, update `vercel.json` as well.
+8. **Sign in** as the System Administrator, change the password on the profile page, then register the first facility and its administrator. Open **System Health** and confirm there are no red rows.
+
+After any later update, run `php artisan migrate --force`, then `php artisan optimize` and `php artisan queue:restart`.
+
+## Production deployment
+
+The application is a normal Laravel monolith and does not need Vercel. Two
+supported layouts are documented:
+
+- **nginx + PHP-FPM on a VPS** - use `deploy/nginx-dph-system.conf` and
+  `deploy/supervisor-dph-system.conf`.
+- **cPanel shared hosting** - use the steps above.
+
+Use `deploy/env.production.example` as the environment checklist and follow
+`deploy/PRODUCTION-CHECKLIST.md` before the first request and on every release.
+The important points are:
+
+- Serve only `public/` and keep the rest of the project outside the web root.
+- Set `APP_ENV=production`, `APP_DEBUG=false`, a real `APP_KEY`, a real
+  `APP_URL` and `SEED_DEMO_DATA=false`.
+- Use a real mailer; `MAIL_MAILER=log` silently drops password resets and
+  reminders.
+- Keep `TRUSTED_PROXIES` to the proxy address, never a public subnet.
+- Run the scheduler every minute and a queue worker (or set
+  `QUEUE_CONNECTION=sync` on a host that cannot run one).
+- Run `php artisan migrate --force` before the new code takes traffic and
+  `php artisan optimize` after it.
+
+Hosts without a system scheduler can call the protected endpoints
+`/api/cron/reminders` and `/api/cron/maintenance` with
+`Authorization: Bearer <CRON_SECRET>`. Leave `CRON_SECRET` empty to disable
+them.
 
 ## Backups
 
@@ -186,7 +192,7 @@ The System Administrator opens **Backups** to make a backup now, download any co
 
 A backup file is compressed and encrypted with `APP_KEY`, so it cannot be read without that key. **Keep a copy of `APP_KEY` somewhere safe, away from the server.** A backup cannot be restored with a different key.
 
-On Vercel, set `BACKUP_DISK=s3` (or another S3 compatible bucket such as Cloudflare R2). The `/tmp` folder used by a serverless function is temporary, so a backup written to the local disk would disappear. The backup is written to temporary storage and then streamed to the configured disk, so the same code works on cPanel and on Vercel.
+Set `BACKUP_DISK=s3` (or another S3 compatible bucket such as Cloudflare R2) when the server disk is temporary or not separately backed up. The backup is written to temporary storage and then streamed to the configured disk, so the same code works on cPanel, a VPS and an object store.
 
 To restore on a working installation (same migrations, same `APP_KEY`):
 
@@ -211,5 +217,3 @@ Set `SMS_DRIVER` to `twilio` or `africastalking` and fill in that provider's val
 ## Design rules
 
 - Access is decided on the server by role permissions and by whether the passport is open.
-#   d i g i t a l _ h e a l t h _ p a s s p o r t _ s y s t e m  
- 

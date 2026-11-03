@@ -109,9 +109,12 @@ Route::middleware('auth')->group(function () use ($can) {
         Route::post('patients', [Patients\PatientController::class, 'store'])->name('patients.store');
         Route::post('patients/{patient}/portal-account', [Patients\PatientController::class, 'createPortalAccount'])->name('patients.portal-account');
     });
-    Route::get('patients/{patient}', [Patients\PatientController::class, 'show'])->name('patients.show');
-    Route::get('vaccinations/{vaccination}/certificate', [Clinical\CertificateController::class, 'show'])->name('certificates.show');
-    Route::get('patients/{patient}/card', [Patients\PatientController::class, 'card'])->name('patients.card');
+    Route::get('patients/{patient}', [Patients\PatientController::class, 'show'])
+        ->middleware($can(P::OpenPassports, P::UsePatientPortal))->name('patients.show');
+    Route::get('vaccinations/{vaccination}/certificate', [Clinical\CertificateController::class, 'show'])
+        ->middleware($can(P::OpenPassports, P::UsePatientPortal))->name('certificates.show');
+    Route::get('patients/{patient}/card', [Patients\PatientController::class, 'card'])
+        ->middleware($can(P::RegisterPatients, P::UsePatientPortal))->name('patients.card');
     Route::middleware($can(P::EditPatientDemographics))->group(function () {
         Route::get('patients/{patient}/edit', [Patients\PatientController::class, 'edit'])->name('patients.edit');
         Route::put('patients/{patient}', [Patients\PatientController::class, 'update'])->name('patients.update');

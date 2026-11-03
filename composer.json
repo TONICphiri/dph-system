@@ -28,6 +28,10 @@
         "nunomaduro/collision": "^8.6",
         "phpunit/phpunit": "^11.5.50"
     },
+    "suggest": {
+        "ext-brotli": "Enables brotli compression when RESPONSE_COMPRESSION is on.",
+        "ext-redis": "Required when the cache, queue or session drivers are set to redis."
+    },
     "autoload": {
         "psr-4": {
             "App\\": "app/",

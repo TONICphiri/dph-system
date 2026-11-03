@@ -12,7 +12,7 @@ class LogSlowRequestsMiddleware
     /**
      * Handle an incoming request.
      *
-     * @param  \Closure(\Illuminate\Http\Request): (\Symfony\HttpFoundation\Response)  $next
+     * @param  Closure(Request): (Response)  $next
      */
     public function handle(Request $request, Closure $next): Response
     {
@@ -22,12 +22,13 @@ class LogSlowRequestsMiddleware
 
         $duration = (microtime(true) - $start) * 1000; // milliseconds
 
-        $threshold = (int) config('performance.slow_request_threshold_ms', 1000);
+        $threshold = (int) config('app.performance.slow_request_threshold_ms', 1000);
 
         if ($duration > $threshold) {
             Log::warning('Slow request detected', [
                 'method' => $request->method(),
-                'uri' => $request->fullUrl(),
+                'path' => $request->path(),
+                'route' => $request->route()?->getName(),
                 'duration_ms' => round($duration, 2),
                 'ip' => $request->ip(),
                 'user_id' => $request->user() ? $request->user()->id : null,
@@ -35,8 +36,11 @@ class LogSlowRequestsMiddleware
             ]);
         }
 
-        // Add response timing header for debugging
-        $response->headers->set('X-Response-Time', round($duration, 2).' ms');
+        // Only expose timing while developing; a production response should not
+        // tell a client how long the server took.
+        if (config('app.debug')) {
+            $response->headers->set('X-Response-Time', round($duration, 2).' ms');
+        }
 
         return $response;
     }

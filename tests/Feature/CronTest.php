@@ -7,7 +7,7 @@ use Illuminate\Support\Facades\Artisan;
 use Tests\TestCase;
 
 /**
- * Vercel calls these endpoints on a schedule, so they must stay closed to
+ * External schedulers call these endpoints, so they must stay closed to
  * anyone who does not know the shared secret.
  */
 class CronTest extends TestCase

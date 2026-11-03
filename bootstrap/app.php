@@ -5,9 +5,9 @@ use App\Console\Commands\CreateAdminCommand;
 use App\Exceptions\WorkflowException;
 use App\Http\Middleware\CompressResponseMiddleware;
 use App\Http\Middleware\CorsMiddleware;
-use App\Http\Middleware\LogSlowRequestsMiddleware;
 use App\Http\Middleware\EnsureAccountIsActive;
 use App\Http\Middleware\EnsurePasswordIsChanged;
+use App\Http\Middleware\LogSlowRequestsMiddleware;
 use App\Http\Middleware\PreventAuthenticatedResponseCaching;
 use App\Http\Middleware\RateLimitMiddleware;
 use App\Http\Middleware\SecurityHeadersMiddleware;
@@ -17,9 +17,7 @@ use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
-use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Session\TokenMismatchException;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
@@ -37,7 +35,15 @@ return Application::configure(basePath: dirname(__DIR__))
     )
     ->withMiddleware(function (Middleware $middleware): void {
 
-        $middleware->trustProxies(at: explode(',', config('app.trusted_proxies', '127.0.0.1')));
+        // The container is not bootstrapped yet when this closure runs, so the
+        // config repository is not available here. Read the environment
+        // directly (the same values are read again in config/app.php).
+        $trustedProxies = array_values(array_filter(array_map(
+            'trim',
+            explode(',', (string) env('TRUSTED_PROXIES', '127.0.0.1'))
+        )));
+
+        $middleware->trustProxies(at: $trustedProxies ?: '127.0.0.1');
 
         // These checks need the session-backed user, so run inside the web group.
         $middleware->appendToGroup('web', EnsureAccountIsActive::class);
@@ -47,8 +53,9 @@ return Application::configure(basePath: dirname(__DIR__))
         // Security headers - applied to all web responses
         $middleware->appendToGroup('web', SecurityHeadersMiddleware::class);
 
-        // Rate limiting - applied to all web requests
-        $middleware->appendToGroup('web', RateLimitMiddleware::class.':api');
+        // Rate limiting is applied per route (login, passport opening, password
+        // reset, certificate verification) or to the API group. A single global
+        // per-IP limit breaks facilities that share one NAT address.
 
         // CORS - applied to all web requests
         $middleware->appendToGroup('web', CorsMiddleware::class);
@@ -67,32 +74,6 @@ return Application::configure(basePath: dirname(__DIR__))
             'rate.limit' => RateLimitMiddleware::class,
             'cors' => CorsMiddleware::class,
         ]);
-
-        // Rate limiter definitions
-        RateLimiter::for('login', function (Request $request) {
-            return Limit::perMinute((int) config('security.rate_limit.limits.login', 5))
-                ->by($request->ip().':'.$request->input('email', $request->input('username')))
-                ->response(function () {
-                    if (request()->expectsJson()) {
-                        return response()->json([
-                            'message' => 'Too many login attempts. Please try again later.',
-                        ], 429);
-                    }
-
-                    return back()->withInput()
-                        ->with('error', 'Too many login attempts. Please try again later.');
-                });
-        });
-
-        RateLimiter::for('api', function (Request $request) {
-            return Limit::perMinute((int) config('security.rate_limit.limits.api', 60))
-                ->by($request->ip());
-        });
-
-        RateLimiter::for('register', function (Request $request) {
-            return Limit::perMinute((int) config('security.rate_limit.limits.register', 3))
-                ->by($request->ip().':register');
-        });
 
         $middleware->redirectGuestsTo(fn () => route('login'));
         $middleware->redirectUsersTo(fn () => route('dashboard'));
