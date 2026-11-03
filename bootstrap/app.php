@@ -1,8 +1,11 @@
 <?php
 
+use App\Console\Commands\CleanupSessionsCommand;
 use App\Console\Commands\CreateAdminCommand;
 use App\Exceptions\WorkflowException;
+use App\Http\Middleware\CompressResponseMiddleware;
 use App\Http\Middleware\CorsMiddleware;
+use App\Http\Middleware\LogSlowRequestsMiddleware;
 use App\Http\Middleware\EnsureAccountIsActive;
 use App\Http\Middleware\EnsurePasswordIsChanged;
 use App\Http\Middleware\PreventAuthenticatedResponseCaching;
@@ -50,6 +53,12 @@ return Application::configure(basePath: dirname(__DIR__))
         // CORS - applied to all web requests
         $middleware->appendToGroup('web', CorsMiddleware::class);
 
+        // Response compression - applied to all web responses
+        $middleware->appendToGroup('web', CompressResponseMiddleware::class);
+
+        // Slow request logging - applied to all web requests
+        $middleware->appendToGroup('web', LogSlowRequestsMiddleware::class);
+
         $middleware->alias([
             'role' => RoleMiddleware::class,
             'permission' => PermissionMiddleware::class,
@@ -90,6 +99,7 @@ return Application::configure(basePath: dirname(__DIR__))
     })
     ->withCommands([
         CreateAdminCommand::class,
+        CleanupSessionsCommand::class,
     ])
     ->withExceptions(function (Exceptions $exceptions): void {
         // Business rule messages are expected and shown to the user, not logged.

@@ -69,6 +69,15 @@ return [
 
     'trusted_proxies' => env('TRUSTED_PROXIES', '127.0.0.1'),
 
+    'response_compression' => env('RESPONSE_COMPRESSION', false),
+
+    'asset_url' => env('ASSET_URL', null),
+
+    'performance' => [
+        'slow_request_threshold_ms' => (int) env('SLOW_REQUEST_THRESHOLD_MS', 1000),
+        'db_read_replica_enabled' => (bool) env('DB_READ_REPLICA_ENABLED', false),
+    ],
+
     /*
     |--------------------------------------------------------------------------
     | Application Locale Configuration
