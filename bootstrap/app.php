@@ -33,6 +33,10 @@ return Application::configure(basePath: dirname(__DIR__))
         commands: __DIR__.'/../routes/console.php',
         health: '/up',
     )
+    // Event auto-discovery scans app/Listeners on every request. The listener
+    // is registered by hand, so discovery is switched off (it also crashed
+    // during startup on Vercel).
+    ->withEvents(discover: false)
     ->withMiddleware(function (Middleware $middleware): void {
 
         // The container is not bootstrapped yet when this closure runs, so the
@@ -50,20 +54,20 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->appendToGroup('web', EnsurePasswordIsChanged::class);
         $middleware->appendToGroup('web', PreventAuthenticatedResponseCaching::class);
 
-        // Security headers - applied to all web responses
+        // Security headers, applied to all web responses
         $middleware->appendToGroup('web', SecurityHeadersMiddleware::class);
 
         // Rate limiting is applied per route (login, passport opening, password
         // reset, certificate verification) or to the API group. A single global
         // per-IP limit breaks facilities that share one NAT address.
 
-        // CORS - applied to all web requests
+        // CORS, applied to all web requests
         $middleware->appendToGroup('web', CorsMiddleware::class);
 
-        // Response compression - applied to all web responses
+        // Response compression, applied to all web responses
         $middleware->appendToGroup('web', CompressResponseMiddleware::class);
 
-        // Slow request logging - applied to all web requests
+        // Slow request logging, applied to all web requests
         $middleware->appendToGroup('web', LogSlowRequestsMiddleware::class);
 
         $middleware->alias([
