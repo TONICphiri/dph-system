@@ -6,6 +6,7 @@ use App\Listeners\RecordReminderDelivery;
 use App\Services\PassportAccessService;
 use App\Services\SettingService;
 use Illuminate\Cache\RateLimiting\Limit;
+use Illuminate\Foundation\Support\Providers\EventServiceProvider;
 use Illuminate\Http\Request;
 use Illuminate\Notifications\Events\NotificationFailed;
 use Illuminate\Notifications\Events\NotificationSent;
@@ -21,6 +22,11 @@ class AppServiceProvider extends ServiceProvider
 {
     public function register(): void
     {
+        // Every listener is registered explicitly in boot(). Automatic event
+        // discovery scans the filesystem on each boot, which adds cold-start
+        // work and fails on read-only/serverless hosts such as Vercel.
+        EventServiceProvider::disableEventDiscovery();
+
         $this->app->singleton(SettingService::class);
 
         // One instance per request so the controller and the policies share
