@@ -12,8 +12,7 @@
       "excludeFiles": "{node_modules/**,tests/**,docs/**,deploy/**,storage/**,.env*,.git/**,.vercel/**,database/database.sqlite,phpunit.xml,composer.json,composer.lock,artisan,package.json,package-lock.json,vite.config.js,tailwind.config.js,postcss.config.js}"
     }
   },
-  "routes": [
-  { "handle": "filesystem" },
+"routes": [
   { "src": "/(.*)", "dest": "/api/index.php" }
 ],
   "env": {
