@@ -5,11 +5,19 @@
 | Vercel serverless entrypoint
 |--------------------------------------------------------------------------
 |
-| vercel.json routes every request here. Static files are served from
-| public/ with long-lived cache headers; application routes are handed to
-| Laravel's normal public/index.php entrypoint.
+| vercel.json routes requests here when no static file matches. Static files
+| in public/ are served as a fallback with cache headers; application routes
+| are handed to Laravel's normal public/index.php entrypoint.
 |
 */
+
+// The filesystem is read-only on Vercel except /tmp, so make sure the
+// compiled Blade views folder exists before Laravel needs it.
+$viewsPath = getenv('VIEW_COMPILED_PATH') ?: '/tmp/views';
+
+if (! is_dir($viewsPath)) {
+    @mkdir($viewsPath, 0755, true);
+}
 
 $requestPath = urldecode((string) parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH));
 
