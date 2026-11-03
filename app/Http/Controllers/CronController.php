@@ -37,6 +37,7 @@ class CronController extends Controller
         foreach ([
             'backup:run' => ['--scheduled' => true],
             'patients:separate-adults' => [],
+            'audit:prune' => [],
         ] as $command => $arguments) {
             $exitCode = Artisan::call($command, $arguments);
 

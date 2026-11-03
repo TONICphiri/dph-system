@@ -57,7 +57,7 @@ class CronTest extends TestCase
         $this->assertSame(0, $response->json('results.reminders:send.exit_code'));
     }
 
-    public function test_maintenance_endpoint_runs_the_backup_and_separation_commands(): void
+    public function test_maintenance_endpoint_runs_the_daily_maintenance_commands(): void
     {
         Artisan::shouldReceive('call')
             ->once()
@@ -67,6 +67,10 @@ class CronTest extends TestCase
             ->once()
             ->with('patients:separate-adults', [])
             ->andReturn(0);
+        Artisan::shouldReceive('call')
+            ->once()
+            ->with('audit:prune', [])
+            ->andReturn(0);
         Artisan::shouldReceive('output')->andReturn('ok');
 
         $response = $this->withHeader('Authorization', 'Bearer test-cron-secret')
@@ -75,6 +79,7 @@ class CronTest extends TestCase
         $response->assertOk()->assertJson(['ok' => true]);
         $this->assertSame(0, $response->json('results.backup:run.exit_code'));
         $this->assertSame(0, $response->json('results.patients:separate-adults.exit_code'));
+        $this->assertSame(0, $response->json('results.audit:prune.exit_code'));
     }
 
     public function test_a_failing_command_returns_an_error_status(): void

@@ -159,12 +159,15 @@ After any later update, run `php artisan migrate --force`, then `php artisan opt
 
 ## Production deployment
 
-The application is a normal Laravel monolith and does not need Vercel. Two
-supported layouts are documented:
+The application is a normal Laravel monolith. Three supported layouts are
+documented:
 
 - **nginx + PHP-FPM on a VPS** - use `deploy/nginx-dph-system.conf` and
   `deploy/supervisor-dph-system.conf`.
 - **cPanel shared hosting** - use the steps above.
+- **Vercel (serverless)** - use `vercel.json`, `api/index.php` and the steps in
+  `deploy/VERCEL.md`. Read the platform limits there before choosing this host;
+  a VPS or cPanel is still the better fit for long backups or queue workers.
 
 Use `deploy/env.production.example` as the environment checklist and follow
 `deploy/PRODUCTION-CHECKLIST.md` before the first request and on every release.
