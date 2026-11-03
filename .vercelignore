@@ -21,10 +21,12 @@ vendor
 storage
 bootstrap/cache
 database/database.sqlite
+auth.json
 README.md
 SECURITY.md
 report.md
 TRAFFIC_FLOW.md
+public/hot
 public/storage
 Homestead.json
 Homestead.yaml

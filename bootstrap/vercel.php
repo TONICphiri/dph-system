@@ -41,6 +41,7 @@ foreach ([
     '',
     '/app/private',
     '/app/public',
+    '/bootstrap',
     '/framework/cache/data',
     '/framework/sessions',
     '/framework/views',
@@ -56,6 +57,14 @@ foreach ([
 
 $setEnv('APP_STORAGE_PATH', $storagePath);
 $setEnv('LOG_CHANNEL', 'stderr');
+
+// The runtime runs `composer run vercel` (package discovery) at build time.
+// If that step was skipped, let Laravel write its caches to /tmp instead.
+foreach (['packages', 'services'] as $cache) {
+    if (! is_file(__DIR__.'/cache/'.$cache.'.php')) {
+        $setEnv('APP_'.strtoupper($cache).'_CACHE', $storagePath.'/bootstrap/'.$cache.'.php');
+    }
+}
 
 // Vercel terminates TLS at its edge. Use the direct caller as the trusted
 // proxy so X-Forwarded-For is honoured without trusting arbitrary addresses.
