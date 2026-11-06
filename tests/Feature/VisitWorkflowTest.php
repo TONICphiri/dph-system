@@ -116,7 +116,11 @@ class VisitWorkflowTest extends TestCase
 
         $this->actingAs($pharmacist);
         $this->open($patient);
-        $this->get(route('visits.dispense', [$patient, $visit]))->assertOk();
+        $this->get(route('visits.dispense', [$patient, $visit]))
+            ->assertOk()
+            ->assertSee('Select all')
+            ->assertSee('Select none')
+            ->assertSee("document.getElementsByName('medications[]')", false);
 
         $first = $visit->medications()->first();
         $second = $visit->medications()->whereKeyNot($first->id)->firstOrFail();

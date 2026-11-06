@@ -20,8 +20,8 @@
                     <div class="flex items-center justify-between px-5 py-2 border-b border-line bg-white">
                         <p class="text-xs font-semibold uppercase text-muted">To hand over</p>
                         <div class="flex gap-1">
-                            <button type="button" class="text-[11px] font-medium text-brand-600 hover:text-brand-700" @click="document.querySelectorAll('input[name=\"medications[]\"]').forEach(cb => cb.checked = true)">Select all</button>
-                            <button type="button" class="text-[11px] font-medium text-muted hover:text-ink" @click="document.querySelectorAll('input[name=\"medications[]\"]').forEach(cb => cb.checked = false)">Select none</button>
+                            <button type="button" class="text-[11px] font-medium text-brand-600 hover:text-brand-700" @click="document.getElementsByName('medications[]').forEach(cb => cb.checked = true)">Select all</button>
+                            <button type="button" class="text-[11px] font-medium text-muted hover:text-ink" @click="document.getElementsByName('medications[]').forEach(cb => cb.checked = false)">Select none</button>
                         </div>
                     </div>
                     <div class="divide-y divide-line">
