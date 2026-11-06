@@ -7,7 +7,9 @@ use App\Enums\ReminderStatus;
 use App\Http\Controllers\Controller;
 use App\Models\Patient;
 use App\Models\Reminder;
+use App\Notifications\ReminderScheduledNotification;
 use App\Services\AuditLogger;
+use App\Services\NotificationDispatcher;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -50,7 +52,10 @@ class ReminderController extends Controller
 
         $audit->record('reminder.created', "Set a reminder for {$patient->full_name}.", $reminder);
 
-        return redirect()->route('patients.show', $patient)->with('success', 'The reminder has been set.');
+        return redirect()->route('patients.show', $patient)->with(
+            'success',
+            'The reminder has been set.'.$this->portalNoticeStatus($patient),
+        );
     }
 
     public function stop(Request $request, Reminder $reminder): RedirectResponse
@@ -73,7 +78,7 @@ class ReminderController extends Controller
         ]);
     }
 
-    public function update(Request $request, Reminder $reminder, AuditLogger $audit): RedirectResponse
+    public function update(Request $request, Reminder $reminder, AuditLogger $audit, NotificationDispatcher $notifications): RedirectResponse
     {
         $this->authorize('manageReminders', $reminder->patient);
 
@@ -93,7 +98,20 @@ class ReminderController extends Controller
         ]);
 
         $audit->record('reminder.updated', "Updated a reminder for {$reminder->patient->full_name}.", $reminder);
+        $notifications->toPatient($reminder->patient, new ReminderScheduledNotification($reminder));
 
-        return redirect()->route('patients.show', $reminder->patient)->with('success', 'The reminder has been updated.');
+        return redirect()->route('patients.show', $reminder->patient)->with(
+            'success',
+            'The reminder has been updated.'.$this->portalNoticeStatus($reminder->patient),
+        );
+    }
+
+    private function portalNoticeStatus(Patient $patient): string
+    {
+        $account = $patient->portalAccount ?? $patient->mother?->portalAccount;
+
+        return $account?->isActive()
+            ? ' A notification has been added to the patient portal.'
+            : ' No active patient portal account was found, so no portal notification could be added.';
     }
 }
