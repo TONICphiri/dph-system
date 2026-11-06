@@ -233,4 +233,19 @@ class PassportScanFlowTest extends TestCase
 
         $this->assertTrue(User::query()->where('email', 'new.worker@healthpassport.mw')->firstOrFail()->hasRole('health_worker'));
     }
+
+    public function test_a_health_worker_cannot_be_registered_with_an_existing_professional_registration_number(): void
+    {
+        $admin = User::query()->where('email', 'facility@healthpassport.mw')->firstOrFail();
+        $registrationNumber = $this->worker()->professional_registration_number;
+
+        $this->actingAs($admin)->post(route('facility.staff.store'), [
+            'name' => 'Duplicate Number Worker',
+            'email' => 'duplicate.worker@healthpassport.mw',
+            'position' => 'nurse',
+            'professional_registration_number' => $registrationNumber,
+        ])->assertSessionHasErrors('professional_registration_number');
+
+        $this->assertDatabaseMissing('users', ['email' => 'duplicate.worker@healthpassport.mw']);
+    }
 }

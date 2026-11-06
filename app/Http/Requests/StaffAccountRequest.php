@@ -29,7 +29,12 @@ class StaffAccountRequest extends FormRequest
             'email' => ['required', 'email', 'max:150', Rule::unique('users')->ignore($user)],
             'phone' => ['nullable', 'string', 'max:30'],
             'job_title' => ['nullable', 'string', 'max:100'],
-            'professional_registration_number' => ['nullable', 'string', 'max:50'],
+            'professional_registration_number' => [
+                'nullable',
+                'string',
+                'max:50',
+                Rule::unique('users', 'professional_registration_number')->ignore($user),
+            ],
             'position' => [$forFacilityStaff ? 'required' : 'prohibited', Rule::enum(Position::class)],
             'facility_id' => [$forFacilityStaff ? 'prohibited' : 'required', 'exists:facilities,id'],
             'role' => ['prohibited'],
