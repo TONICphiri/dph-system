@@ -4,6 +4,8 @@ namespace App\Models;
 
 use App\Enums\ReminderCategory;
 use App\Enums\ReminderStatus;
+use App\Notifications\ReminderScheduledNotification;
+use App\Services\NotificationDispatcher;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -12,6 +14,16 @@ use Illuminate\Database\Eloquent\Relations\MorphTo;
 
 class Reminder extends Model
 {
+    protected static function booted(): void
+    {
+        static::created(function (Reminder $reminder): void {
+            app(NotificationDispatcher::class)->toPatient(
+                $reminder->patient,
+                new ReminderScheduledNotification($reminder),
+            );
+        });
+    }
+
     protected $fillable = [
         'patient_id',
         'category',
