@@ -172,15 +172,78 @@ class SystemHealthService
     {
         $enabled = app(SettingService::class)->get('sms_notifications_enabled') === '1';
         $driver = (string) config('services.sms.driver', 'log');
-        $healthy = ! $enabled || $driver !== 'log' || ! app()->isProduction();
+        $gatewayStatus = $enabled
+            ? $this->smsGatewayStatus($driver)
+            : ['value' => 'Not enabled', 'healthy' => true];
 
         return [
             'label' => 'Text message delivery',
-            'value' => ! $enabled
-                ? 'Not enabled'
-                : ($healthy ? "Using the {$driver} gateway" : 'Text messages are enabled but SMS_DRIVER is log. No message leaves the server.'),
-            'healthy' => $healthy,
+            'value' => $gatewayStatus['value'],
+            'healthy' => $gatewayStatus['healthy'],
         ];
+    }
+
+    /**
+     * @return array{value: string, healthy: bool}
+     */
+    private function smsGatewayStatus(string $driver): array
+    {
+        if ($driver === 'log') {
+            return [
+                'value' => 'SMS notifications are enabled, but SMS_DRIVER is log. Messages are only logged, not sent. Configure a real SMS provider.',
+                'healthy' => false,
+            ];
+        }
+
+        if ($driver === 'twilio') {
+            $config = config('services.twilio', []);
+            $missing = [];
+
+            if (empty($config['sid'])) {
+                $missing[] = 'TWILIO_SID';
+            }
+            if (empty($config['token'])) {
+                $missing[] = 'TWILIO_TOKEN';
+            }
+            if (empty($config['from']) && empty($config['messaging_service_sid'])) {
+                $missing[] = 'TWILIO_FROM or TWILIO_MESSAGING_SERVICE_SID';
+            }
+
+            return $this->smsProviderStatus('Twilio', $missing);
+        }
+
+        if ($driver === 'africastalking') {
+            $config = config('services.africastalking', []);
+            $missing = [];
+
+            if (empty($config['username'])) {
+                $missing[] = 'AFRICASTALKING_USERNAME';
+            }
+            if (empty($config['key'])) {
+                $missing[] = 'AFRICASTALKING_KEY';
+            }
+
+            return $this->smsProviderStatus("Africa's Talking", $missing);
+        }
+
+        return [
+            'value' => "SMS_DRIVER is set to unsupported driver '{$driver}'. Use twilio, africastalking or log.",
+            'healthy' => false,
+        ];
+    }
+
+    /**
+     * @param  array<int, string>  $missing
+     * @return array{value: string, healthy: bool}
+     */
+    private function smsProviderStatus(string $provider, array $missing): array
+    {
+        return empty($missing)
+            ? ['value' => "Using the {$provider} gateway; required settings are present.", 'healthy' => true]
+            : [
+                'value' => "SMS_DRIVER is {$provider}, but configure these server environment values: ".implode(', ', $missing).'.',
+                'healthy' => false,
+            ];
     }
 
     private function queueCheck(): array

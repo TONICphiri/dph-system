@@ -13,7 +13,15 @@
                         @php $field = "settings[{$setting->key}]"; @endphp
                         @switch($setting->input_type)
                             @case('boolean')
-                                <x-field.checkbox :name="$field" :label="$setting->label" :checked="$setting->value === '1'" :help="$setting->help_text" class="md:col-span-2" />
+                                <x-field.checkbox
+                                    :name="$field"
+                                    :label="$setting->label"
+                                    :checked="$setting->value === '1'"
+                                    :help="$setting->key === 'sms_notifications_enabled'
+                                        ? 'This switch only enables SMS notifications. To deliver messages, configure SMS_DRIVER and the matching provider credentials in the server environment. The log driver does not send messages; check System Health for configuration errors.'
+                                        : $setting->help_text"
+                                    class="md:col-span-2"
+                                />
                                 @break
                             @case('list')
                                 <x-field.textarea :name="$field" :label="$setting->label" :value="$setting->value" rows="6" :help="$setting->help_text" required />

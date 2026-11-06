@@ -8,6 +8,7 @@ use App\Models\User;
 use App\Notifications\ReminderDueNotification;
 use App\Services\ReminderService;
 use App\Services\SettingService;
+use App\Services\SystemHealthService;
 use App\Services\Sms\SmsManager;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
@@ -28,6 +29,46 @@ class SmsNotificationTest extends TestCase
         $this->assertSame('+265999123456', $sms->normalise('999123456'));
         $this->assertNull($sms->normalise('12'));
         $this->assertNull($sms->normalise(null));
+    }
+
+    public function test_system_health_reports_log_driver_as_not_sending_sms(): void
+    {
+        config(['services.sms.driver' => 'log']);
+        app(SettingService::class)->update(['sms_notifications_enabled' => '1']);
+
+        $check = collect(app(SystemHealthService::class)->checks())->firstWhere('label', 'Text message delivery');
+
+        $this->assertFalse($check['healthy']);
+        $this->assertStringContainsString('only logged, not sent', $check['value']);
+    }
+
+    public function test_system_health_reports_missing_twilio_configuration(): void
+    {
+        config([
+            'services.sms.driver' => 'twilio',
+            'services.twilio' => ['sid' => null, 'token' => null, 'from' => null, 'messaging_service_sid' => null],
+        ]);
+        app(SettingService::class)->update(['sms_notifications_enabled' => '1']);
+
+        $check = collect(app(SystemHealthService::class)->checks())->firstWhere('label', 'Text message delivery');
+
+        $this->assertFalse($check['healthy']);
+        $this->assertStringContainsString('TWILIO_SID', $check['value']);
+        $this->assertStringContainsString('TWILIO_TOKEN', $check['value']);
+    }
+
+    public function test_system_health_accepts_complete_twilio_configuration(): void
+    {
+        config([
+            'services.sms.driver' => 'twilio',
+            'services.twilio' => ['sid' => 'ACtest', 'token' => 'test-token', 'from' => '+15005550006', 'messaging_service_sid' => null],
+        ]);
+        app(SettingService::class)->update(['sms_notifications_enabled' => '1']);
+
+        $check = collect(app(SystemHealthService::class)->checks())->firstWhere('label', 'Text message delivery');
+
+        $this->assertTrue($check['healthy']);
+        $this->assertStringContainsString('Twilio gateway', $check['value']);
     }
 
     private function dueReminderFor(User $account): Reminder
